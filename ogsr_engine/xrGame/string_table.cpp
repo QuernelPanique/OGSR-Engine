@@ -51,7 +51,11 @@ void CStringTable::Load(LPCSTR xml_file)
     string_path xml_file_full;
     strconcat(sizeof(xml_file_full), xml_file_full, xml_file, ".xml");
     string_path _s;
-    strconcat(sizeof(_s), _s, STRING_TABLE_PATH, "\\", *(pData->m_sLanguage));
+    // OP22: язык не задан ([string_table] language пуст, как в ОП 2.2) - тексты лежат прямо в config\text
+    if (pData->m_sLanguage.size())
+        strconcat(sizeof(_s), _s, STRING_TABLE_PATH, "\\", *(pData->m_sLanguage));
+    else
+        xr_strcpy(_s, STRING_TABLE_PATH);
 
     bool xml_result = uiXml.Init(CONFIG_PATH, _s, xml_file_full);
     if (!xml_result)
@@ -79,7 +83,8 @@ void CStringTable::Load(LPCSTR xml_file)
 
 void CStringTable::ReloadLanguage()
 {
-    if (!strcmp(GetLanguagesToken()->name, pData->m_sLanguage.c_str()))
+    const char* lang = GetLanguagesToken()->name; // OP22: может быть nullptr, если язык не задан
+    if (!strcmp(lang ? lang : "", pData->m_sLanguage.size() ? pData->m_sLanguage.c_str() : ""))
         return;
 
     Destroy();
@@ -92,7 +97,12 @@ void CStringTable::ReloadLanguage()
     }
 }
 
-void CStringTable::SetLanguage() { pData->m_sLanguage = GetLanguagesToken()->name; }
+void CStringTable::SetLanguage()
+{
+    pData->m_sLanguage = GetLanguagesToken()->name; // OP22: nullptr -> пустая строка
+    if (!pData->m_sLanguage.size())
+        Msg("~ [string_table] language not set - texts from [config\\%s] (OP 2.2 layout)", STRING_TABLE_PATH);
+}
 
 void CStringTable::ReparseKeyBindings()
 {
