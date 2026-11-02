@@ -107,8 +107,10 @@ void CInventoryItem::Load(LPCSTR section)
             if (slot < SLOTS_TOTAL && !IsPlaceable(slot, slot))
                 m_slots.push_back(slot);
         }
-        if (count)
+        if (count && !m_slots.empty())
             SetSlot(m_slots[0]);
+        else if (count)
+            Msg("! [%s]: slot [%s] is out of range, item has no slot", section, m_slots_sect); // OP22: без вылета на m_slots[0]
     }
 
     if (Core.Features.test(xrCore::Feature::forcibly_equivalent_slots))

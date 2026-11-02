@@ -85,6 +85,7 @@ CInventory::CInventory()
     m_slots[HELMET_SLOT].m_bVisible = false;
     m_slots[NIGHT_VISION_SLOT].m_bVisible = false;
     m_slots[BIODETECTOR_SLOT].m_bVisible = false;
+    m_slots[OP22_BIODEV_SLOT].m_bVisible = false; // OP22: биорадар ОП не активируется
     m_slots[DETECTOR_SLOT].m_bVisible = false; // KRodin: это очень важно! Слот для зп-стайл детекторов должен быть НЕ активируемым!
 
     for (u32 i = 0; i < m_slots.size(); ++i)

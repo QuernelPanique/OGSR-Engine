@@ -19,6 +19,8 @@ enum : u32
     HELMET_SLOT,
     NIGHT_VISION_SLOT,
     BIODETECTOR_SLOT,
+    OP22_SHOTGUN_SLOT, // OP22: слоты ОП 2.2 - 13 (дробовик, второй основной ствол) и 14 (биорадар)
+    OP22_BIODEV_SLOT,
     SLOTS_TOTAL,
     NO_ACTIVE_SLOT = 255
 };
