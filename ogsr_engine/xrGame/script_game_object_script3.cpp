@@ -35,6 +35,12 @@
 
 using namespace luabind;
 
+// OP22: ОП 2.2 вызывает obj:iterate_inventory(f) без второго аргумента - колбэк получает (nil, предмет), как в ТЧ
+static void op22_iterate_inventory(CScriptGameObject* self, const luabind::functor<void>& functor)
+{
+    self->IterateInventory(functor, luabind::object());
+}
+
 class_<CScriptGameObject> script_register_game_object2(class_<CScriptGameObject>&& instance)
 {
     return std::move(instance)
@@ -252,6 +258,7 @@ class_<CScriptGameObject> script_register_game_object2(class_<CScriptGameObject>
         .def("wounded", (void(CScriptGameObject::*)(bool))(&CScriptGameObject::wounded))
 
         .def("iterate_inventory", &CScriptGameObject::IterateInventory)
+        .def("iterate_inventory", &op22_iterate_inventory) // OP22: ОП зовёт и одним аргументом (объект = nil)
         .def("iterate_belt", &CScriptGameObject::IterateBelt)
         .def("iterate_ruck", &CScriptGameObject::IterateRuck)
         .def("mark_item_dropped", &CScriptGameObject::MarkItemDropped)
