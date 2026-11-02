@@ -73,6 +73,25 @@ void CStringTable::Load(LPCSTR xml_file)
 
         LPCSTR string_text = uiXml.Read(uiXml.GetRoot(), "string:text", i, NULL);
 
+        // OP22: в ОП 2.2 вместо <text> теги языков (<rus>, <eng>, <ukr>, <pln>, <fra>); язык - [language_default] default
+        if (!string_text)
+        {
+            static string32 op_lang_path{};
+            if (!op_lang_path[0])
+            {
+                LPCSTR lang = READ_IF_EXISTS(pSettings, r_string, "language_default", "default", "rus");
+                xr_sprintf(op_lang_path, "string:%s", (lang && lang[0]) ? lang : "rus");
+                Msg("~ [string_table] OP 2.2 language tags, using [%s]", op_lang_path);
+            }
+            string_text = uiXml.Read(uiXml.GetRoot(), op_lang_path, i, NULL);
+            if (!string_text)
+                string_text = uiXml.Read(uiXml.GetRoot(), "string:rus", i, NULL);
+            if (!string_text)
+                string_text = uiXml.Read(uiXml.GetRoot(), "string:eng", i, NULL);
+            if (!string_text)
+                string_text = ""; // пустая строка вместо вылета в ParseLine
+        }
+
         VERIFY3(string_text, "string table entry does not has a text", string_name);
 
         STRING_VALUE str_val = ParseLine(string_text, string_name, true);
