@@ -91,7 +91,7 @@ void CTorch::Load(LPCSTR section)
     if (pSettings->line_exist(section, "snd_turn_off"))
         HUD_SOUND::LoadSound(section, "snd_turn_off", sndTurnOff, SOUND_TYPE_ITEM_USING);
 
-    m_bNightVisionEnabled = !!pSettings->r_bool(section, "night_vision");
+    m_bNightVisionEnabled = !!READ_IF_EXISTS(pSettings, r_bool, section, "night_vision", false); // OP22: в ОП 2.2 ПНВ - отдельный предмет, у фонаря ключа нет
     if (m_bNightVisionEnabled)
     {
         HUD_SOUND::LoadSound(section, "snd_night_vision_on", m_NightVisionOnSnd, SOUND_TYPE_ITEM_USING);
