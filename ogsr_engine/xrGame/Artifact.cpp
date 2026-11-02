@@ -102,8 +102,9 @@ void CArtefact::Load(LPCSTR section)
     m_bLightsEnabled = !!pSettings->r_bool(section, "lights_enabled");
     if (m_bLightsEnabled)
     {
-        sscanf(pSettings->r_string(section, "trail_light_color"), "%f,%f,%f", &m_TrailLightColor.r, &m_TrailLightColor.g, &m_TrailLightColor.b);
-        m_fTrailLightRange = pSettings->r_float(section, "trail_light_range");
+        // OP22: у артефактов ОП 2.2 (caps_anom) lights_enabled без цвета/дальности - значения по умолчанию
+        sscanf(READ_IF_EXISTS(pSettings, r_string, section, "trail_light_color", "0.6,0.6,0.6"), "%f,%f,%f", &m_TrailLightColor.r, &m_TrailLightColor.g, &m_TrailLightColor.b);
+        m_fTrailLightRange = READ_IF_EXISTS(pSettings, r_float, section, "trail_light_range", 2.f);
     }
 
     {

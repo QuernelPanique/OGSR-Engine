@@ -55,7 +55,7 @@ void CHairsZone::CheckForAwaking()
 void CHairsZone::Load(LPCSTR section)
 {
     inherited::Load(section);
-    m_min_speed_to_react = pSettings->r_float(section, "min_speed_to_react");
+    m_min_speed_to_react = READ_IF_EXISTS(pSettings, r_float, section, "min_speed_to_react", 0.5f); // OP22: в ОП 2.2 ключа нет
 }
 
 void CHairsZone::Affect(SZoneObjectInfo* O)

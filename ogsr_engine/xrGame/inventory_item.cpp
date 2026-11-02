@@ -86,7 +86,7 @@ void CInventoryItem::Load(LPCSTR section)
         self->spatial.type |= STYPE_VISIBLEFORAI;
 
     m_name = CStringTable().translate(pSettings->r_string(section, "inv_name"));
-    m_nameShort = CStringTable().translate(pSettings->r_string(section, "inv_name_short"));
+    m_nameShort = CStringTable().translate(pSettings->line_exist(section, "inv_name_short") ? pSettings->r_string(section, "inv_name_short") : pSettings->r_string(section, "inv_name")); // OP22: в ОП 2.2 ключа нет у большинства предметов
 
     //.	NameComplex			();
     m_weight = pSettings->r_float(section, "inv_weight");
@@ -150,7 +150,7 @@ void CInventoryItem::Load(LPCSTR section)
 void CInventoryItem::ReloadNames()
 {
     m_name = CStringTable().translate(pSettings->r_string(m_object->cNameSect(), "inv_name"));
-    m_nameShort = CStringTable().translate(pSettings->r_string(m_object->cNameSect(), "inv_name_short"));
+    m_nameShort = CStringTable().translate(READ_IF_EXISTS(pSettings, r_string, m_object->cNameSect(), "inv_name_short", pSettings->r_string(m_object->cNameSect(), "inv_name"))); // OP22
 
     if (pSettings->line_exist(m_object->cNameSect(), "description"))
         m_Description = CStringTable().translate(pSettings->r_string(m_object->cNameSect(), "description"));

@@ -1770,7 +1770,7 @@ void CWeaponMagazined::GetBriefInfo(xr_string& str_name, xr_string& icon_sect_na
         icon_sect_name = m_ammoTypes[m_magazine.back().m_LocalAmmoType].c_str();
 
     string256 sItemName;
-    strcpy_s(sItemName, CStringTable().translate(pSettings->r_string(icon_sect_name.c_str(), "inv_name_short")).c_str());
+    strcpy_s(sItemName, CStringTable().translate(READ_IF_EXISTS(pSettings, r_string, icon_sect_name.c_str(), "inv_name_short", pSettings->r_string(icon_sect_name.c_str(), "inv_name"))).c_str()); // OP22
 
     if (HasFireModes())
         strcat_s(sItemName, GetCurrentFireModeStr());
