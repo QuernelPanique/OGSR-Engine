@@ -25,6 +25,16 @@
 
 #include "saved_game_wrapper.h"
 #include "script_vars_storage.h"
+#include "ai_space.h"
+#include "script_engine.h"
+
+// OP22: хуки прослойки op22_compat.script (keyvals и очереди ОП живут в g_ScriptVars строкой)
+static void op22_compat_call(LPCSTR fn)
+{
+    luabind::functor<void> f;
+    if (ai().script_engine().functor(fn, f))
+        f();
+}
 
 using namespace ALife;
 
@@ -63,6 +73,7 @@ void CALifeStorageManager::save(LPCSTR save_name, bool update_name)
         objects().save(stream);
         registry().save(stream);
 
+        op22_compat_call("op22_compat.on_before_save");
         g_ScriptVars.save(stream);
 
         source_count = stream.tell();
@@ -119,6 +130,7 @@ void CALifeStorageManager::load(void* buffer, const u32& buffer_size, LPCSTR fil
     registry().load(source);
 
     g_ScriptVars.load(source);
+    op22_compat_call("op22_compat.on_after_load");
 
     can_register_objects(true);
 

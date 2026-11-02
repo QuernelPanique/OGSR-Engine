@@ -139,6 +139,9 @@ void CScriptEngine::init()
     export_classes(LSVM); //Тут регистрируются все движковые функции, импортированные в скрипты
     luaL_openlibs(LSVM); //Инициализация функций LuaJIT
     setup_auto_load(); //Построение метатаблицы
+    // OP22: прослойка API движка ОП 2.2 (keyvals, pr_queues, ...) - до _G.script, т.к. модули ОП зовут её при загрузке
+    process_file_if_exists("op22_compat", false);
+
     bool save = m_reload_modules;
     m_reload_modules = true;
     process_file_if_exists(GlobalNamespace, false); //Компиляция _G.script
