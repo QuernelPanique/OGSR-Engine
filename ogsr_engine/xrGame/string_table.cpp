@@ -45,6 +45,24 @@ void CStringTable::Init()
     }
 }
 
+// OP22: тексты ОП 2.2 в UTF-8, шрифты - cp1251 (движок ОП перекодировал при загрузке). Явно в 1251, без
+// системной локали: под Wine она может быть не русской.
+static xr_string op22_utf8_to_1251(const char* s)
+{
+    const int wn = MultiByteToWideChar(CP_UTF8, 0, s, -1, nullptr, 0);
+    if (wn <= 0)
+        return s;
+    std::wstring w(wn, L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, s, -1, w.data(), wn);
+    const int n = WideCharToMultiByte(1251, 0, w.c_str(), -1, nullptr, 0, "?", nullptr);
+    if (n <= 0)
+        return s;
+    xr_string r(n, '\0');
+    WideCharToMultiByte(1251, 0, w.c_str(), -1, r.data(), n, "?", nullptr);
+    r.resize(n - 1);
+    return r;
+}
+
 void CStringTable::Load(LPCSTR xml_file)
 {
     CUIXml uiXml;
@@ -93,6 +111,13 @@ void CStringTable::Load(LPCSTR xml_file)
         }
 
         VERIFY3(string_text, "string table entry does not has a text", string_name);
+
+        xr_string op22_conv;
+        if (string_text[0] && StringHasUTF8(string_text))
+        {
+            op22_conv = op22_utf8_to_1251(string_text);
+            string_text = op22_conv.c_str();
+        }
 
         STRING_VALUE str_val = ParseLine(string_text, string_name, true);
 
