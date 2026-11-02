@@ -2,11 +2,21 @@ name: Main Workflow
 
 on:
   workflow_dispatch:
+    inputs:
+      full:
+        description: 'Полная Release-сборка (LTCG, с нуля, без кэша сборки)'
+        type: boolean
+        default: false
   push:
   pull_request:
   release:
     types:
       - created
+
+# OP22: быстрая сборка для прототипа - кэш сторонних библиотек и промежуточных файлов, время файлов из git,
+# без LTCG (WholeProgramOptimization=false). Полная - ручной запуск с full=true или релиз.
+env:
+  OP22_FULL: ${{ github.event_name == 'release' || inputs.full == true }}
 
 jobs:
   build:
@@ -27,9 +37,60 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Restore file mtimes from git (incremental build)
+      shell: python
+      run: |
+        import os, subprocess
+        out = subprocess.run(['git', '-c', 'core.quotepath=off', 'log', '--format=%x00%ct', '--name-only', '--no-renames'],
+                             capture_output=True, text=True, encoding='utf-8', errors='replace').stdout
+        seen, t = set(), None
+        for line in out.splitlines():
+            if line.startswith('\x00'):
+                t = int(line[1:])
+                continue
+            if not line or line in seen or t is None:
+                continue
+            seen.add(line)
+            if os.path.isfile(line):
+                os.utime(line, (t, t))
+        print('files:', len(seen))
+
+    - name: Cache components
+      id: deps
+      uses: actions/cache@v6.1.0
+      with:
+        path: |
+          3rd_party/Src/DirectXTex/DirectXTex
+          3rd_party/Src/DirectXMesh/DirectXMesh
+          3rd_party/Src/DirectXMath/DirectXMath
+          3rd_party/Src/concurrentqueue/concurrentqueue
+          3rd_party/Src/libsquashfs/squashfs-tools-ng
+          3rd_party/Src/lz4/lz4
+          3rd_party/Src/zstd/zstd
+          3rd_party/Src/mimalloc/mimalloc
+          3rd_party/Src/NVIDIA_DLSS/DLSS
+          3rd_party/Src/cpputils/cpputils
+          3rd_party/Src/DiscordRPC/DiscordRPC
+          3rd_party/Src/FidelityFX-SDK/FidelityFX-SDK
+        key: deps-${{ hashFiles('Update_Components.cmd') }}
+
     - name: Update Components
+      if: steps.deps.outputs.cache-hit != 'true'
       run: |
         ${{ github.workspace }}/Update_Components.cmd
+
+    - name: Cache build
+      if: env.OP22_FULL != 'true'
+      uses: actions/cache@v6.1.0
+      with:
+        path: |
+          ogsr_engine/_TEMP
+          ogsr_engine/_LIB
+          3rd_party/_TEMP
+          3rd_party/_LIB
+          bin_x64
+        key: build-fast-${{ matrix.Platform }}-${{ github.sha }}
+        restore-keys: build-fast-${{ matrix.Platform }}-
 
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v3
@@ -40,7 +101,11 @@ jobs:
         set APPVEYOR_REPO_NAME=${{ github.repository }}
         set CONFIGURATION_GA=${{ matrix.Configuration }}
         
-        msbuild Engine.sln /t:Rebuild /p:Configuration=${{ matrix.ConfigurationReal }} /p:Platform=${{ matrix.Platform }}
+        if "%OP22_FULL%"=="true" (
+          msbuild Engine.sln /m /t:Rebuild /p:Configuration=${{ matrix.ConfigurationReal }} /p:Platform=${{ matrix.Platform }}
+        ) else (
+          msbuild Engine.sln /m /t:Build /p:Configuration=${{ matrix.ConfigurationReal }} /p:Platform=${{ matrix.Platform }} /p:WholeProgramOptimization=false
+        )
     - name: Prepare artifacts
       shell: cmd
       run: |
@@ -56,7 +121,11 @@ jobs:
         
         cd ..\Game\Resources_SoC_1.0006
         
-        7z a -t7z -m0=LZMA2:d=96m:fb=273 -mx=9 -mmt=2 ..\..\%OGSR_ARTIFACT_NAME% .\
+        if "%OP22_FULL%"=="true" (
+          7z a -t7z -m0=LZMA2:d=96m:fb=273 -mx=9 -mmt=2 ..\..\%OGSR_ARTIFACT_NAME% .\
+        ) else (
+          7z a -t7z -mx=1 -mmt=on ..\..\%OGSR_ARTIFACT_NAME% .\
+        )
     - name: Upload OGSR artifact
       uses: actions/upload-artifact@v7.0.1
       with:
