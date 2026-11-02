@@ -226,6 +226,9 @@ void CALifeUpdateManager::new_game(LPCSTR save_name)
     spawn_new_objects();
     can_register_objects(true);
 
+    extern void op22_before_register_objects();
+    op22_before_register_objects(); // OP22: колбэки этапов загрузки ОП 2.2
+
     CALifeObjectRegistry::OBJECT_REGISTRY::iterator I = objects().objects().begin();
     CALifeObjectRegistry::OBJECT_REGISTRY::iterator E = objects().objects().end();
     for (; I != E; ++I)

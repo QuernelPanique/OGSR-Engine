@@ -29,11 +29,19 @@
 #include "script_engine.h"
 
 // OP22: хуки прослойки op22_compat.script (keyvals и очереди ОП живут в g_ScriptVars строкой)
-static void op22_compat_call(LPCSTR fn)
+void op22_compat_call(LPCSTR fn)
 {
     luabind::functor<void> f;
     if (ai().script_engine().functor(fn, f))
         f();
+}
+
+// OP22: движок ОП 2.2 звал из _G колбэки этапов загрузки (_g.after_objs_load_callback создаёт контейнер
+// keyvals, Cycle_Task, Treasure... - до регистрации объектов: se_stalker:on_register зовёт Cycle_Task)
+void op22_before_register_objects()
+{
+    op22_compat_call("after_objs_load_callback");
+    op22_compat_call("before_onregs_callback");
 }
 
 using namespace ALife;
@@ -133,6 +141,8 @@ void CALifeStorageManager::load(void* buffer, const u32& buffer_size, LPCSTR fil
     op22_compat_call("op22_compat.on_after_load");
 
     can_register_objects(true);
+
+    op22_before_register_objects();
 
     for (I = B; I != E; ++I)
         (*I).second->on_register();
