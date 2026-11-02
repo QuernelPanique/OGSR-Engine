@@ -105,11 +105,38 @@ void CSE_Abstract::script_register(lua_State* L)
                   .def("save_spawn_ini", &save_spawn_ini)];
 }
 
+// OP22: методы форм ОП 2.2 - скрипты создают рестрикторы/аномалии на ходу (add_shape(радиус)), se_zones читает радиус
+static void cse_shape_add_shape(CSE_Shape* self, float radius)
+{
+    CShapeData::shape_def d;
+    d.type = CShapeData::cfSphere;
+    d.data.sphere.P.set(0.f, 0.f, 0.f);
+    d.data.sphere.R = radius;
+    self->shapes.push_back(d);
+}
+
+static float cse_shape_get_max_radius(CSE_Shape* self)
+{
+    float r = 0.f;
+    for (const auto& s : self->shapes)
+    {
+        if (s.type == CShapeData::cfSphere)
+            r = _max(r, s.data.sphere.P.magnitude() + s.data.sphere.R);
+        else
+        {
+            const Fmatrix& m = s.data.box; // полуоси i, j, k и центр c
+            r = _max(r, m.c.magnitude() + _sqrt(m.i.square_magnitude() + m.j.square_magnitude() + m.k.square_magnitude()));
+        }
+    }
+    return r;
+}
+
 void CSE_Shape::script_register(lua_State* L)
 {
     module(L)[class_<CSE_Shape>("cse_shape")
-              //			.def(		constructor<>())
-    ];
+                  //			.def(		constructor<>())
+                  .def("add_shape", &cse_shape_add_shape)
+                  .def("get_max_radius", &cse_shape_get_max_radius)];
 }
 
 void CSE_Visual::script_register(lua_State* L)
