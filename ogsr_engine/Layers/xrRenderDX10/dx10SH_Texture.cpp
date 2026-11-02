@@ -440,8 +440,9 @@ void CTexture::Load(const char* Name)
             flags.seqCycles = TRUE;
             _fs->r_string(buffer, sizeof(buffer));
         }
-        const u32 fps = atoi(buffer);
-        seqMSPF = 1000 / fps;
+        // OP22: в ОП 2.2 частота дробная («0.2» - слайд-шоу заставок intro_*.seq, ui_load.seq); atoi давал 0 и деление на ноль
+        const float fps = (float)atof(buffer);
+        seqMSPF = fps > 0.f ? u32(1000.f / fps) : 1000;
 
         while (!_fs->eof())
         {
