@@ -151,7 +151,7 @@
 // 117 - CSE_ALifeLevelChanger			appended with property m_bSilentMode
 // 118 - CALifeHumanBrain				removed property m_tpKnownCustomers, sad but true
 //------------------------------------------------------------------------------
-#define SPAWN_VERSION u16(118)
+#define SPAWN_VERSION u16(129) // OP22: формат объектов ОП 2.2 (поля предметов, оружия, экзы); 118 - all.spawn ТЧ
 
 SERVER_ENTITY_DECLARE_BEGIN2(CSE_Shape, ISE_Shape, CShapeData)
 public:

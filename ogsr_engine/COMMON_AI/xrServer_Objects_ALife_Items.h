@@ -43,6 +43,9 @@ public:
 float m_fCondition;
 float m_fMass;
 u32 m_dwCost;
+// OP22: поля предмета движка ОП 2.2 (SPAWN_VERSION 129): радиация и энергия (вес и цена - m_fMass/m_dwCost)
+float m_fRadiation{};
+float m_fEnergy{};
 
 float m_fDeteriorationValue;
 CSE_ALifeObject* m_self{};
@@ -175,6 +178,7 @@ add_to_type_list(CSE_ALifeItemWeapon)
 #define script_type_list save_type_list(CSE_ALifeItemWeapon)
 
     SERVER_ENTITY_DECLARE_BEGIN(CSE_ALifeItemWeaponMagazined, CSE_ALifeItemWeapon) u8 m_u8CurFireMode;
+float m_fSilencerCondition{1.f}; // OP22: состояние глушителя (ОП 2.2)
 CSE_ALifeItemWeaponMagazined(LPCSTR caSection);
 virtual ~CSE_ALifeItemWeaponMagazined();
 
@@ -263,6 +267,8 @@ add_to_type_list(CSE_ALifeItemBolt)
 #define script_type_list save_type_list(CSE_ALifeItemBolt)
 
     SERVER_ENTITY_DECLARE_BEGIN(CSE_ALifeItemCustomOutfit, CSE_ALifeItem) u32 m_ef_equipment_type;
+shared_str m_battery_section; // OP22: батарея экзоскелета ОП 2.2 (секция и заряд 0..1)
+float m_battery_charge{};
 CSE_ALifeItemCustomOutfit(LPCSTR caSection);
 virtual ~CSE_ALifeItemCustomOutfit();
 virtual u32 ef_equipment_type() const;

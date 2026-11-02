@@ -61,6 +61,11 @@ CSE_ALifeInventoryItem::~CSE_ALifeInventoryItem() {}
 void CSE_ALifeInventoryItem::STATE_Write(NET_Packet& tNetPacket)
 {
     tNetPacket.w_float(m_fCondition);
+    // OP22: формат ОП 2.2 (SPAWN_VERSION 129) - вес, цена, радиация, энергия
+    tNetPacket.w_float(m_fMass);
+    tNetPacket.w_u32(m_dwCost);
+    tNetPacket.w_float(m_fRadiation);
+    tNetPacket.w_float(m_fEnergy);
     State.position = base()->o_Position;
 }
 
@@ -69,6 +74,13 @@ void CSE_ALifeInventoryItem::STATE_Read(NET_Packet& tNetPacket, u16 size)
     u16 m_wVersion = base()->m_wVersion;
     if (m_wVersion > 52)
         tNetPacket.r_float(m_fCondition);
+    if (m_wVersion > 118) // OP22: формат ОП 2.2
+    {
+        tNetPacket.r_float(m_fMass);
+        tNetPacket.r_u32(m_dwCost);
+        tNetPacket.r_float(m_fRadiation);
+        tNetPacket.r_float(m_fEnergy);
+    }
 
     State.position = base()->o_Position;
 }
@@ -445,8 +457,24 @@ void CSE_ALifeItemWeaponShotGun::UPDATE_Write(NET_Packet& P)
         P.w_u8(u8(m_AmmoIDs[i]));
     }
 }
-void CSE_ALifeItemWeaponShotGun::STATE_Read(NET_Packet& P, u16 size) { inherited::STATE_Read(P, size); }
-void CSE_ALifeItemWeaponShotGun::STATE_Write(NET_Packet& P) { inherited::STATE_Write(P); }
+void CSE_ALifeItemWeaponShotGun::STATE_Read(NET_Packet& P, u16 size)
+{
+    inherited::STATE_Read(P, size);
+    if (m_wVersion > 118) // OP22: формат ОП 2.2 - патроны в стволе
+    {
+        m_AmmoIDs.clear();
+        const u8 n = P.r_u8();
+        for (u8 i = 0; i < n; ++i)
+            m_AmmoIDs.push_back(P.r_u8());
+    }
+}
+void CSE_ALifeItemWeaponShotGun::STATE_Write(NET_Packet& P)
+{
+    inherited::STATE_Write(P);
+    P.w_u8(u8(m_AmmoIDs.size())); // OP22
+    for (u32 i = 0; i < m_AmmoIDs.size(); ++i)
+        P.w_u8(u8(m_AmmoIDs[i]));
+}
 
 ////////////////////////////////////////////////////////////////////////////
 // CSE_ALifeItemWeaponMagazined
@@ -483,7 +511,9 @@ void CSE_ALifeItemWeaponMagazined::STATE_Read(NET_Packet& P, u16 size)
 {
     inherited::STATE_Read(P, size);
 
-    if (!P.r_eof())
+    if (m_wVersion > 118) // OP22: формат ОП 2.2 - состояние глушителя вместо режима огня (режим - в UPDATE)
+        m_fSilencerCondition = P.r_float();
+    else if (!P.r_eof())
     {
         m_u8CurFireMode = P.r_u8();
     }
@@ -492,7 +522,7 @@ void CSE_ALifeItemWeaponMagazined::STATE_Write(NET_Packet& P)
 {
     inherited::STATE_Write(P);
 
-    P.w_u8(m_u8CurFireMode);
+    P.w_float(m_fSilencerCondition); // OP22
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -809,9 +839,25 @@ CSE_ALifeItemCustomOutfit::~CSE_ALifeItemCustomOutfit() {}
 
 u32 CSE_ALifeItemCustomOutfit::ef_equipment_type() const { return (m_ef_equipment_type); }
 
-void CSE_ALifeItemCustomOutfit::STATE_Read(NET_Packet& tNetPacket, u16 size) { inherited::STATE_Read(tNetPacket, size); }
+void CSE_ALifeItemCustomOutfit::STATE_Read(NET_Packet& tNetPacket, u16 size)
+{
+    inherited::STATE_Read(tNetPacket, size);
+    if (m_wVersion > 118 && m_tClassID == CLSID_EQUIPMENT_EXO) // OP22: батарея экзоскелета ОП 2.2
+    {
+        tNetPacket.r_stringZ(m_battery_section);
+        tNetPacket.r_float_q8(m_battery_charge, 0.f, 1.f);
+    }
+}
 
-void CSE_ALifeItemCustomOutfit::STATE_Write(NET_Packet& tNetPacket) { inherited::STATE_Write(tNetPacket); }
+void CSE_ALifeItemCustomOutfit::STATE_Write(NET_Packet& tNetPacket)
+{
+    inherited::STATE_Write(tNetPacket);
+    if (m_tClassID == CLSID_EQUIPMENT_EXO) // OP22
+    {
+        tNetPacket.w_stringZ(m_battery_section);
+        tNetPacket.w_float_q8(m_battery_charge, 0.f, 1.f);
+    }
+}
 
 void CSE_ALifeItemCustomOutfit::UPDATE_Read(NET_Packet& tNetPacket)
 {
