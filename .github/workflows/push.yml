@@ -1,6 +1,7 @@
 name: Main Workflow
 
 on:
+  workflow_dispatch:
   push:
   pull_request:
   release:
@@ -14,14 +15,12 @@ jobs:
       fail-fast: false
       matrix:
 #        Configuration: [Debug, Release, ReleaseTracyProfiler]
-        Configuration: [Release, ReleaseTracyProfiler]
+        Configuration: [Release]   # OP22: только Release
         Platform: [x64]
         include:
 #          - Configuration: Debug
 #            ConfigurationReal: Debug
           - Configuration: Release
-            ConfigurationReal: Release
-          - Configuration: ReleaseTracyProfiler
             ConfigurationReal: Release
     steps:
     - uses: actions/checkout@v7.0.1
