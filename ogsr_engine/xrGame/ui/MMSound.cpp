@@ -2,6 +2,17 @@
 
 #include "MMSound.h"
 #include "xrUIXmlParser.h"
+#include "../../xr_3da/XR_IOConsole.h"
+
+// OP22: музыка главного меню ОП 2.2 - mm_music (вкл./выкл.) и snd_mm_volume_music (громкость), op22_console.cpp
+static bool op22_mm_music_on() { return !Console->GetCommand("mm_music") || Console->GetBool("mm_music"); }
+static float op22_mm_music_vol()
+{
+    if (!Console->GetCommand("snd_mm_volume_music"))
+        return 1.f;
+    float mn = 0.f, mx = 1.f;
+    return Console->GetFloat("snd_mm_volume_music", mn, mx);
+}
 
 CMMSound::CMMSound() {}
 
@@ -52,7 +63,7 @@ void CMMSound::whell_UpdateMoving(float frequency) { m_whell.set_frequency(frequ
 
 void CMMSound::music_Play()
 {
-    if (m_play_list.empty())
+    if (m_play_list.empty() || !op22_mm_music_on())
         return;
 
     const int i = Random.randI(m_play_list.size());
@@ -91,6 +102,15 @@ void CMMSound::music_Play()
 
 void CMMSound::music_Update()
 {
+    if (!op22_mm_music_on()) // OP22
+    {
+        music_Stop();
+        return;
+    }
+    const float vol = op22_mm_music_vol();
+    for (auto& src : m_music_sources)
+        if (src._feedback())
+            src.set_volume(vol);
     if (!m_music_sources[0]._feedback() || (m_music_sources[1]._handle() && !m_music_sources[1]._feedback()))
         music_Play();
 }

@@ -342,6 +342,7 @@ float ps_pnv_params_4_2 = 1;
 float ps_r2_img_exposure = 1.0f; // r2-only
 float ps_r2_img_gamma = 1.0f; // r2-only
 float ps_r2_img_saturation = 1.0f; // r2-only
+float ps_r2_img_contrast = 1.0f; // OP22: контраст (rs_c_contrast ОП 2.2 -> ssfx_contrast)
 
 Fvector ps_r2_img_cg{0.5f, 0.5f, 0.5f};
 
@@ -1023,6 +1024,7 @@ void xrRender_initconsole()
     CMD4(CCC_Float, "ssfx_exposure", &ps_r2_img_exposure, 0.5f, 1.5f);
     CMD4(CCC_Float, "ssfx_gamma", &ps_r2_img_gamma, 0.5f, 1.5f);
     CMD4(CCC_Float, "ssfx_saturation", &ps_r2_img_saturation, 0.5f, 1.5f);
+    CMD4(CCC_Float, "ssfx_contrast", &ps_r2_img_contrast, 0.5f, 1.5f); // OP22
 
     CMD1(CCC_PART_Export, "particles_export");
     CMD1(CCC_PART_Import, "particles_import");

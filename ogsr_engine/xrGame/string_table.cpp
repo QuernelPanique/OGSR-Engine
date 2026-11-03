@@ -45,8 +45,31 @@ void CStringTable::Init()
     }
 }
 
-// OP22: тексты ОП 2.2 в UTF-8, шрифты - cp1251 (движок ОП перекодировал при загрузке). Явно в 1251, без
-// системной локали: под Wine она может быть не русской.
+#include "../xr_3da/XR_IOConsole.h"
+
+// OP22: язык и кодировка текстов ОП 2.2 - переменные g_lang (rus/eng/ukr/fra/pln) и g_langc (east_1251/cent_1250/west_1252),
+// op22_console.cpp; применяются при запуске, как в ОП. Нет переменной - [language_default] и 1251.
+static LPCSTR op22_con_str(LPCSTR name)
+{
+    if (!Console || !Console->GetCommand(name))
+        return nullptr;
+    LPCSTR v = Console->GetString(name);
+    return (v && *v) ? v : nullptr;
+}
+static UINT op22_codepage()
+{
+    LPCSTR c = op22_con_str("g_langc");
+    if (!c)
+        return 1251;
+    LPCSTR d = c + xr_strlen(c);
+    while (d > c && isdigit((unsigned char)d[-1]))
+        --d;
+    const int cp = atoi(d);
+    return cp > 0 ? UINT(cp) : 1251;
+}
+
+// OP22: тексты ОП 2.2 в UTF-8, шрифты - однобайтные (движок ОП перекодировал при загрузке). Явно в кодовую страницу
+// g_langc (по умолчанию 1251), без системной локали: под Wine она может быть не русской.
 static xr_string op22_utf8_to_1251(const char* s)
 {
     const int wn = MultiByteToWideChar(CP_UTF8, 0, s, -1, nullptr, 0);
@@ -54,11 +77,12 @@ static xr_string op22_utf8_to_1251(const char* s)
         return s;
     std::wstring w(wn, L'\0');
     MultiByteToWideChar(CP_UTF8, 0, s, -1, w.data(), wn);
-    const int n = WideCharToMultiByte(1251, 0, w.c_str(), -1, nullptr, 0, "?", nullptr);
+    const UINT cp = op22_codepage();
+    const int n = WideCharToMultiByte(cp, 0, w.c_str(), -1, nullptr, 0, "?", nullptr);
     if (n <= 0)
         return s;
     xr_string r(n, '\0');
-    WideCharToMultiByte(1251, 0, w.c_str(), -1, r.data(), n, "?", nullptr);
+    WideCharToMultiByte(cp, 0, w.c_str(), -1, r.data(), n, "?", nullptr);
     r.resize(n - 1);
     return r;
 }
@@ -97,7 +121,9 @@ void CStringTable::Load(LPCSTR xml_file)
             static string32 op_lang_path{};
             if (!op_lang_path[0])
             {
-                LPCSTR lang = READ_IF_EXISTS(pSettings, r_string, "language_default", "default", "rus");
+                LPCSTR lang = op22_con_str("g_lang"); // OP22: язык из опций
+                if (!lang)
+                    lang = READ_IF_EXISTS(pSettings, r_string, "language_default", "default", "rus");
                 xr_sprintf(op_lang_path, "string:%s", (lang && lang[0]) ? lang : "rus");
                 Msg("~ [string_table] OP 2.2 language tags, using [%s]", op_lang_path);
             }

@@ -6,6 +6,9 @@
 #include "stdafx.h"
 #include "..\xr_3da\XR_IOConsole.h"
 #include "..\xr_3da\xr_ioc_cmd.h"
+#include "..\xr_3da\CustomHUD.h"
+#include "ui_base.h"
+#include "HUDManager.h"
 
 namespace
 {
@@ -97,21 +100,58 @@ void alias(LPCSTR name, float def, float mn, float mx, LPCSTR target)
     float* v = xr_new<float>(def);
     add(xr_new<CCC_OP22Alias>(name, v, mn, mx, target));
 }
+// профиль шрифтов ОП: значения - описания из [font_profiles] (default_fonts, bigger_fonts), ключ профиля - по описанию;
+// смена профиля сразу перезагружает шрифты
+xr_vector<std::pair<shared_str, shared_str>> g_font_profiles; // описание -> ключ
+u32 g_font_profile = 0;
+
+class CCC_OP22FontProfile : public CCC_Token
+{
+public:
+    CCC_OP22FontProfile(LPCSTR N, u32* V, const xr_token* T) : CCC_Token(N, V, T) {}
+    virtual void Execute(LPCSTR args)
+    {
+        const u32 old = *value;
+        CCC_Token::Execute(args);
+        if (old != *value && g_hud && UI() && UI()->Font())
+            UI()->Font()->InitializeFonts();
+    }
+};
+
+void font_profile()
+{
+    if (pSettings && pSettings->section_exist("font_profiles"))
+        for (const auto& it : pSettings->r_section("font_profiles").Ordered_Data)
+            g_font_profiles.emplace_back(it.second.size() ? it.second : it.first, it.first);
+    if (g_font_profiles.empty())
+        g_font_profiles.emplace_back("default_fonts", "default");
+    xr_token* t = xr_alloc<xr_token>(g_font_profiles.size() + 1);
+    for (u32 i = 0; i < g_font_profiles.size(); ++i)
+    {
+        t[i].name = xr_strdup(g_font_profiles[i].first.c_str());
+        t[i].id = int(i);
+    }
+    t[g_font_profiles.size()].name = nullptr;
+    t[g_font_profiles.size()].id = 0;
+    add(xr_new<CCC_OP22FontProfile>("font_profile", &g_font_profile, t));
+}
 } // namespace
+
+LPCSTR op22_font_profile_key() { return g_font_profile < g_font_profiles.size() ? g_font_profiles[g_font_profile].second.c_str() : nullptr; }
 
 void op22_register_console()
 {
-    // яркость окна опций ОП: гамма и яркость - через коррекцию изображения OGSR; контраста в OGSR нет - только значение
+    // яркость окна опций ОП: гамма, яркость, контраст - через коррекцию изображения OGSR
     alias("rs_c_gamma", 1.f, 0.5f, 1.5f, "ssfx_gamma");
     alias("rs_c_brightness", 1.f, 0.5f, 1.5f, "ssfx_exposure");
-    flt("rs_c_contrast", 1.f, 0.5f, 1.5f);
+    alias("rs_c_contrast", 1.f, 0.5f, 1.5f, "ssfx_contrast"); // ssfx_contrast - форк, рендер (pp_img_corrections.w)
     flag("r2_sun", true);           // в OGSR солнце не отключается
     flag("rs_refresh_60hz", false);
     flag("ext_animations", false); // _g.script ОП выключает при загрузке уровня
 
     // окно опций ОП: options_item
-    token("renderer", "op22_no_section", "renderer_r2"); // в OGSR один рендер - значение для показа
-    token("font_profile", "font_profiles", "default");
+    token("renderer", "op22_no_section", "st_op22_renderer"); // в OGSR один рендер (DX11) - значение для показа
+    font_profile();
     token("g_lang", "languages", "rus");
     token("g_langc", "lang_codes", "east_1251");
     token("g_langf", "lang_fonts", "east");

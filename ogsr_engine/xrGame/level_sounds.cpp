@@ -3,6 +3,11 @@
 #include "level.h"
 #include "level_sounds.h"
 #include "Actor_Flags.h"
+#include "../xr_3da/XR_IOConsole.h"
+
+// OP22: звуки уровня ОП 2.2 - snd_level_emb_sounds (статичные фоновые звуки), snd_level_emb_music (музыкальные треки);
+// переменные - op22_console.cpp; нет переменной - включено
+static bool op22_bool(LPCSTR n) { return !Console->GetCommand(n) || Console->GetBool(n); }
 
 //-----------------------------------------------------------------------------
 // static level sounds
@@ -246,16 +251,23 @@ void CLevelSoundManager::Update()
     u32 game_time = Level().GetGameDayTimeMS();
     u32 engine_time = Device.dwTimeGlobal;
 
+    const bool op22_sounds = op22_bool("snd_level_emb_sounds");
     for (u32 k = 0; k < m_StaticSounds.size(); ++k)
     {
         SStaticSound& s = m_StaticSounds[k];
+        if (!op22_sounds) // OP22
+        {
+            if (s.m_Source._feedback())
+                s.m_Source.stop();
+            continue;
+        }
         s.Update(game_time, engine_time);
     }
 
     // music track
     if (!m_MusicTracks.empty())
     {
-        if (!psActorFlags.test(AF_MUSIC_TRACKS))
+        if (!psActorFlags.test(AF_MUSIC_TRACKS) || !op22_bool("snd_level_emb_music")) // OP22
         {
             if (m_CurrentTrack >= 0)
             {

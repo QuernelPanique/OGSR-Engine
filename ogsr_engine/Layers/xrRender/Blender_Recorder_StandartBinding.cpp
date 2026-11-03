@@ -570,7 +570,7 @@ static class ssfx_wetsurfaces_2 final : public R_constant_setup
 
 static class pp_image_corrections : public R_constant_setup
 {
-    void setup(CBackend& cmd_list, R_constant* C) { cmd_list.set_c(C, ps_r2_img_exposure, ps_r2_img_gamma, ps_r2_img_saturation, 1); }
+    void setup(CBackend& cmd_list, R_constant* C) { cmd_list.set_c(C, ps_r2_img_exposure, ps_r2_img_gamma, ps_r2_img_saturation, ps_r2_img_contrast); } // OP22: w - контраст (было 1)
 } pp_image_corrections;
 
 static class pp_color_grading final : public R_constant_setup

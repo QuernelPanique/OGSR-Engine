@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../xr_3da/XR_IOConsole.h"
 #include "HUDManager.h"
 #include "hudtarget.h"
 
@@ -92,9 +93,45 @@ LPCSTR CFontManager::GetFontTexName(LPCSTR section)
     return pSettings->r_string(section, tex_names[def_idx]);
 }
 
-void CFontManager::InitializeFont(CGameFont*& F, LPCSTR section, u32 flags)
+// OP22: профиль шрифтов ОП 2.2 (font_profile, op22_console.cpp): [font_profiles] ключ = описание; секция
+// [font_profile_<ключ>] переназначает движковый шрифт на свою секцию (xbigger - крупные). Нет записи - секция как есть.
+extern LPCSTR op22_font_profile_key();
+static LPCSTR op22_font_section(LPCSTR section)
 {
+    LPCSTR key = op22_font_profile_key();
+    if (!key || !*key)
+        return section;
+    string128 prof;
+    xr_sprintf(prof, "font_profile_%s", key);
+    if (pSettings->section_exist(prof) && pSettings->line_exist(prof, section))
+    {
+        LPCSTR real = pSettings->r_string(prof, section);
+        if (real && *real && pSettings->section_exist(real))
+            return real;
+    }
+    return section;
+}
+
+void CFontManager::InitializeFont(CGameFont*& F, LPCSTR section_engine, u32 flags)
+{
+    LPCSTR section = op22_font_section(section_engine);
     LPCSTR font_tex_name = GetFontTexName(section);
+    // OP22: шрифты языка ОП 2.2 (g_langf: east - без суффикса, cent/west - текстуры <имя>_cent/_west), при наличии файла
+    shared_str op22_tex;
+    if (Console && Console->GetCommand("g_langf"))
+    {
+        LPCSTR lf = Console->GetString("g_langf");
+        if (lf && *lf && xr_strcmp(lf, "east"))
+        {
+            string_path tn, fn;
+            xr_sprintf(tn, "%s_%s", font_tex_name, lf);
+            if (FS.exist(fn, fsgame::game_textures, tn, ".dds"))
+            {
+                op22_tex = tn;
+                font_tex_name = op22_tex.c_str();
+            }
+        }
+    }
     R_ASSERT(font_tex_name);
 
     const char* sh_name = READ_IF_EXISTS(pSettings, r_string, section, "shader", "font");
@@ -106,7 +143,7 @@ void CFontManager::InitializeFont(CGameFont*& F, LPCSTR section, u32 flags)
     else
         F->Initialize(sh_name, font_tex_name, section);
 
-    F->m_font_name = section;
+    F->m_font_name = section_engine; // OP22: имя движкового шрифта (переинициализация - через профиль)
 
     if (!(flags & CGameFont::fsDeviceIndependent))
     {

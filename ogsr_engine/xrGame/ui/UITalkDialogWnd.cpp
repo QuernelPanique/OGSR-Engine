@@ -1,6 +1,23 @@
 #include "stdafx.h"
 #include <dinput.h>
 #include "UITalkDialogWnd.h"
+#include "../../xr_3da/XR_IOConsole.h"
+
+// OP22: настройки окна диалога ОП 2.2 (op22_console.cpp): dialog_numbered - номера ответов, g_dialog_wnd_alpha - прозрачность фона
+static bool op22_dialog_numbers()
+{
+    if (Console->GetCommand("dialog_numbered"))
+        return Console->GetBool("dialog_numbered");
+    return Core.Features.test(xrCore::Feature::show_dialog_numbers);
+}
+static u32 op22_with_alpha(u32 c)
+{
+    if (!Console->GetCommand("g_dialog_wnd_alpha"))
+        return c;
+    int mn = 0, mx = 255;
+    const int a = Console->GetInteger("g_dialog_wnd_alpha", mn, mx);
+    return color_rgba(color_get_R(c), color_get_G(c), color_get_B(c), u32(clampr(a, 0, 255)));
+}
 
 #include "xrUIXmlParser.h"
 #include "UIXmlInit.h"
@@ -111,6 +128,12 @@ void CUITalkDialogWnd::Show()
     inherited::Show(true);
     inherited::Enable(true);
 
+    // OP22: прозрачность фона окна диалога (g_dialog_wnd_alpha)
+    UIStaticTop.SetTextureColor(op22_with_alpha(UIStaticTop.GetTextureColor()));
+    UIStaticBottom.SetTextureColor(op22_with_alpha(UIStaticBottom.GetTextureColor()));
+    UIDialogFrame.SetColor(op22_with_alpha(color_rgba(255, 255, 255, 255)));
+    UIOurPhrasesFrame.SetColor(op22_with_alpha(color_rgba(255, 255, 255, 255)));
+
     ResetAll();
     PlaySnd(eTalkSndOpen);
 }
@@ -152,7 +175,7 @@ void CUITalkDialogWnd::AddQuestion(LPCSTR str, LPCSTR value, int number)
 
     if (number <= 10)
     {
-        if (Core.Features.test(xrCore::Feature::show_dialog_numbers))
+        if (op22_dialog_numbers())
         {
             if (itm->m_num_text)
             {
@@ -257,7 +280,7 @@ CUIQuestionItem::CUIQuestionItem(CUIXml* xml_doc, LPCSTR path)
 
     strconcat(sizeof(str), str, path, ":num_text");
 
-    if (Core.Features.test(xrCore::Feature::show_dialog_numbers) && xml_doc->NavigateToNode(str, 0))
+    if (op22_dialog_numbers() && xml_doc->NavigateToNode(str, 0))
     {
         m_num_text = xr_new<CUIStatic>();
         m_num_text->SetAutoDelete(true);
