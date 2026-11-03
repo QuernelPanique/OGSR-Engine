@@ -279,7 +279,12 @@ void CPhraseDialog::AddPhrase(CUIXml* pXml, XML_NODE* phrase_node, const shared_
     {
         LPCSTR next_phrase_id_str = pXml->Read(phrase_node, "next", i, "");
         XML_NODE* next_phrase_node = pXml->NavigateToNodeWithAttribute("phrase", "id", next_phrase_id_str);
-        ASSERT_FMT(next_phrase_node, "!!Can`t find next phrase with id: [%s]! Phrase text: [%s]. Phrase dialog [%s]", next_phrase_id_str, sText, m_DialogId.c_str());
+        // OP22: в чистой ОП 2.2 есть next на несуществующие фразы (trade_dialog_sherstyk, snp_monolith3, ...) - пропускаем
+        if (!next_phrase_node)
+        {
+            Msg("! [%s] Can`t find next phrase with id: [%s]! Phrase text: [%s]. Phrase dialog [%s] - skipped", __FUNCTION__, next_phrase_id_str, sText, m_DialogId.c_str());
+            continue;
+        }
 
         AddPhrase(pXml, next_phrase_node, next_phrase_id_str, phrase_id);
     }
