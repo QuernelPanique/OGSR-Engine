@@ -111,22 +111,38 @@ void CUIInventoryWnd::ActivatePropertiesBox()
         b_show = true;
     }
 
+    // OP22: как в ОП 2.2 (Ghidra) - «отсоединить» + краткое имя аддона («отсоединить ГП-25»)
+    auto op22_detach_text = [](LPCSTR st, const shared_str& addon_sect) -> xr_string {
+        xr_string t = CStringTable().translate(st).c_str();
+        if (addon_sect.size() && pSettings->section_exist(addon_sect))
+        {
+            LPCSTR nm = pSettings->line_exist(addon_sect, "inv_name_short") ? pSettings->r_string(addon_sect, "inv_name_short")
+                                                                            : READ_IF_EXISTS(pSettings, r_string, addon_sect, "inv_name", "");
+            if (nm && nm[0])
+            {
+                t += " ";
+                t += CStringTable().translate(nm).c_str();
+            }
+        }
+        return t;
+    };
+
     //отсоединение аддонов от вещи
     if (pWeapon)
     {
         if (pWeapon->GrenadeLauncherAttachable() && pWeapon->IsGrenadeLauncherAttached())
         {
-            UIPropertiesBox.AddItem("st_detach_gl", NULL, INVENTORY_DETACH_GRENADE_LAUNCHER_ADDON);
+            UIPropertiesBox.AddItem(op22_detach_text("st_detach_gl", pWeapon->GetGrenadeLauncherName()).c_str(), NULL, INVENTORY_DETACH_GRENADE_LAUNCHER_ADDON);
             b_show = true;
         }
         if (pWeapon->ScopeAttachable() && pWeapon->IsScopeAttached())
         {
-            UIPropertiesBox.AddItem("st_detach_scope", NULL, INVENTORY_DETACH_SCOPE_ADDON);
+            UIPropertiesBox.AddItem(op22_detach_text("st_detach_scope", pWeapon->GetScopeName()).c_str(), NULL, INVENTORY_DETACH_SCOPE_ADDON);
             b_show = true;
         }
         if (pWeapon->SilencerAttachable() && pWeapon->IsSilencerAttached())
         {
-            UIPropertiesBox.AddItem("st_detach_silencer", NULL, INVENTORY_DETACH_SILENCER_ADDON);
+            UIPropertiesBox.AddItem(op22_detach_text("st_detach_silencer", pWeapon->GetSilencerName()).c_str(), NULL, INVENTORY_DETACH_SILENCER_ADDON);
             b_show = true;
         }
         if (smart_cast<CWeaponMagazined*>(pWeapon))

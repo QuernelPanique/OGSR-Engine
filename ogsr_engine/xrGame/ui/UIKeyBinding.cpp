@@ -63,6 +63,14 @@ void CUIKeyBinding::FillUpList(CUIXml& xml_doc_ui, LPCSTR path_ui)
             // first field of list item
             shared_str command_id = xml_doc.ReadAttrib("command", j, "id");
 
+            // OP22: в раскладке ОП 2.2 есть действия, которых нет в OGSR (creep, wpn_7, быстрые слоты) - строку пропускаем
+            // (раньше проверка была только в DEBUG, в релизе - вылет в CUIEditKeyBind::Register)
+            if (kNOTBINDED == action_name_to_id(*xml_doc.ReadAttrib("command", j, "exe")))
+            {
+                Msg("! [%s] key binding action [%s] not exist - skipped", __FUNCTION__, xml_doc.ReadAttrib("command", j, "exe"));
+                continue;
+            }
+
             pItem = xr_new<CUIStatic>();
             CUIXmlInit::InitStatic(xml_doc_ui, strconcat(sizeof(buf), buf, path_ui, ":scroll_view:item_key"), 0, pItem);
             pItem->SetTextST(command_id.c_str());
