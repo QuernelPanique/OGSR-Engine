@@ -51,9 +51,9 @@ static CSE_ALifeItemGameBox* op22_gbox_server(CGBox* self)
 {
     if (!ai().get_alife())
         return nullptr;
-    auto* se = smart_cast<CSE_ALifeItemGameBox*>(ai().alife().objects().object(self->object().ID(), true));
+    auto* se = smart_cast<CSE_ALifeItemGameBox*>(ai().alife().objects().object(self->CInventoryItem::object().ID(), true));
     if (!se)
-        Msg("! WARNING server_entry is not CSE_ALifeItemGameBox for [%s]. data not retreive!", self->object().cName().c_str());
+        Msg("! WARNING server_entry is not CSE_ALifeItemGameBox for [%s]. data not retreive!", self->CInventoryItem::object().cName().c_str());
     return se;
 }
 
