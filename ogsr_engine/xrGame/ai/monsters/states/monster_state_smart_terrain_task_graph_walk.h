@@ -1,5 +1,6 @@
 #pragma once
 #include "../state.h"
+#include "game_graph_space.h" // OP22: m_task_gvid
 
 template <typename _Object>
 class CStateMonsterSmartTerrainTaskGraphWalk : public CStateMove<_Object>
@@ -7,7 +8,9 @@ class CStateMonsterSmartTerrainTaskGraphWalk : public CStateMove<_Object>
     typedef CStateMove<_Object> inherited;
     using inherited::inherited::object;
 
-    CALifeSmartTerrainTask* m_task;
+    // OP22: храним вершину графа, а не указатель: задание создаёт скрипт (CALifeSmartTerrainTask(...) в
+    // se_smart_terrain:task), им владеет Lua - после сборки мусора указатель висячий (вылет в execute)
+    GameGraph::_GRAPH_ID m_task_gvid{GameGraph::_GRAPH_ID(-1)};
 
 public:
     CStateMonsterSmartTerrainTaskGraphWalk(_Object* obj) : inherited(obj) {}

@@ -201,7 +201,15 @@ void CPhraseDialog::load_shared(LPCSTR)
     data()->m_PhraseGraph.clear();
 
     XML_NODE* phrase_list_node = pXML->NavigateToNode(dialog_node, "phrase_list", 0);
-    if (NULL == phrase_list_node && !GetForceReload())
+    // OP22: диалог без phrase_list строит init_func. С force_reload="1" (ОП: dm_help_wounded_medkit_dialog,
+    // dialog_charge_exo) её вызывает Load() при каждой загрузке - здесь только запомнить имя и выйти; раньше
+    // такой диалог шёл дальше искать фразы в NULL-узле (вылет NavigateToNode в AddPhrase).
+    if (NULL == phrase_list_node && GetForceReload())
+    {
+        data()->m_sInitFunction = pXML->Read(dialog_node, "init_func", 0, "");
+        return;
+    }
+    if (NULL == phrase_list_node)
     {
         data()->m_sInitFunction = pXML->Read(dialog_node, "init_func", 0, "");
 
