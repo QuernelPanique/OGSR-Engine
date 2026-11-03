@@ -155,7 +155,7 @@ public:
     CUICellItem* m_op22_fly_cell{};
     u32 m_op22_fly_t{};
     bool m_op22_fly_on{};
-    CUICellItem* op22_cell_under_cursor();
+    CUICellItem* op22_fly_cell_at_cursor();
     void op22_fly_update();
 
 protected:

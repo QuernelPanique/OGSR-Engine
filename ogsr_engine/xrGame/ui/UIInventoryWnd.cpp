@@ -32,6 +32,7 @@ using namespace InventoryUtilities;
 #include <format>
 #include "../UICursor.h" // OP22: плавающее описание
 #include "UIScrollView.h"
+#include "UICellItem.h"
 #include "../ui_base.h"
 #include "..\..\xr_3da\xr_input.h"
 #include "..\..\xr_3da\xr_ioconsole.h"
@@ -349,7 +350,7 @@ void CUIInventoryWnd::Draw()
 }
 
 // OP22: ячейка предмета под курсором (рюкзак, пояс, костюм, слоты)
-CUICellItem* CUIInventoryWnd::op22_cell_under_cursor()
+CUICellItem* CUIInventoryWnd::op22_fly_cell_at_cursor()
 {
     const Fvector2 c = GetUICursor()->GetCursorPosition();
     auto test = [&c](CUIDragDropListEx* l) -> CUICellItem* {
@@ -385,7 +386,7 @@ void CUIInventoryWnd::op22_fly_update()
 {
     if (!m_op22_fly)
         return;
-    CUICellItem* ci = (UIPropertiesBox.IsShown() || pInput->iGetAsyncKeyState(MOUSE_1)) ? nullptr : op22_cell_under_cursor();
+    CUICellItem* ci = (UIPropertiesBox.IsShown() || pInput->iGetAsyncKeyState(MOUSE_1)) ? nullptr : op22_fly_cell_at_cursor();
     if (ci != m_op22_fly_cell)
     {
         m_op22_fly_cell = ci;
