@@ -638,6 +638,11 @@ bool CScriptEngine::do_file(
     if (l_iErrorCode)
     {
         print_output(lua(), caScriptName, l_iErrorCode);
+        if (luabind::get_op22_nofatal()) // OP22: режим «не падать» - файл не загружен, игра идёт (ошибка уже в логе)
+        {
+            Msg("!! [OP22 nofatal] script file [%s] failed to load - namespace incomplete, game continues", caScriptName);
+            return false;
+        }
         R_ASSERT(false); // НЕ ЗАКОММЕНТИРОВАТЬ!
         return false;
     }

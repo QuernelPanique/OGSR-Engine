@@ -48,7 +48,10 @@ void key_binding_registrator::script_register(lua_State* L)
                     //				value("DIK_UNDERLINE",					int(DIK_UNDERLINE	)),
                     //				value("DIK_STOP",						int(DIK_STOP		)),
                     //				value("DIK_UNLABELED",					int(DIK_UNLABELED	)),
-                    value("DIK_RCONTROL", int(DIK_RCONTROL)), value("DIK_DIVIDE", int(DIK_DIVIDE)), value("DIK_RMENU", int(DIK_RMENU)), value("DIK_UP", int(DIK_UP)),
+                    value("DIK_RCONTROL", int(DIK_RCONTROL)), value("DIK_DIVIDE", int(DIK_DIVIDE)), value("DIK_RMENU", int(DIK_RMENU)),
+                    // OP22: коды клавиш ОП 2.2 (скрипты аддона: ui_xyinux - ввод текста; DIK_LALT/RALT - синонимы LMENU/RMENU)
+                    value("DIK_NUMPADEQUALS", int(DIK_NUMPADEQUALS)), value("DIK_NUMPADCOMMA", int(DIK_NUMPADCOMMA)),
+                    value("DIK_LALT", int(DIK_LMENU)), value("DIK_RALT", int(DIK_RMENU)), value("DIK_UP", int(DIK_UP)),
                     value("DIK_LEFT", int(DIK_LEFT)), value("DIK_END", int(DIK_END)), value("DIK_NEXT", int(DIK_NEXT)), value("DIK_DELETE", int(DIK_DELETE)),
                     value("DIK_RWIN", int(DIK_RWIN)), value("DIK_PAUSE", int(DIK_PAUSE)), value("MOUSE_2", int(MOUSE_2)), value("DIK_1", int(DIK_1)), value("DIK_3", int(DIK_3)),
                     value("DIK_5", int(DIK_5)), value("DIK_7", int(DIK_7)), value("DIK_9", int(DIK_9)), value("DIK_MINUS", int(DIK_MINUS)), value("DIK_BACK", int(DIK_BACK)),
