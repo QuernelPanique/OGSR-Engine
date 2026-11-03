@@ -279,9 +279,10 @@ void CDetailManager::UpdateVisibleM()
                             Item.data.data[1] = M._21 * Item.scale_calculated;
                             Item.data.data[2] = M._31 * Item.scale_calculated;
 
-                            Item.data.data[4] = M._12 * Item.scale_calculated;
-                            Item.data.data[5] = M._22 * Item.scale_calculated;
-                            Item.data.data[6] = M._32 * Item.scale_calculated;
+                            // OP22: высота травы (r__detail_height) - только вертикаль, от земли; ширина та же
+                            Item.data.data[4] = M._12 * Item.scale_calculated * ps_r__detail_height;
+                            Item.data.data[5] = M._22 * Item.scale_calculated * ps_r__detail_height;
+                            Item.data.data[6] = M._32 * Item.scale_calculated * ps_r__detail_height;
 
                             Item.data.data[8] = M._13 * Item.scale_calculated;
                             Item.data.data[9] = M._23 * Item.scale_calculated;

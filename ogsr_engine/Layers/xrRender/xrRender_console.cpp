@@ -316,6 +316,7 @@ float dm_current_fade = 47.5; // float(2*dm_current_size)-.5f;
 
 float ps_current_detail_density = 0.6;
 float ps_current_detail_scale = 1.f;
+float ps_r__detail_height = 1.f; // OP22: высота травы (в CP22 трава была ниже: 0.42)
 float ps_r2_no_details_radius = 0.f;
 float ps_r2_no_rain_radius = 0.f;
 
@@ -735,6 +736,7 @@ void xrRender_initconsole()
     CMD4(CCC_detail_radius, "r__detail_radius", &ps_r__detail_radius, 70, 300);
     CMD4(CCC_detail_reset, "r__detail_density", &ps_current_detail_density, 0.2f, 0.9f);
     CMD4(CCC_detail_reset, "r__detail_scale", &ps_current_detail_scale, 0.7f, 1.5f);
+    CMD4(CCC_Float, "r__detail_height", &ps_r__detail_height, 0.3f, 1.5f); // OP22
 
     CMD4(CCC_Float, "r2_no_details_radius", &ps_r2_no_details_radius, 0.f, 5.f);
     CMD4(CCC_Float, "r2_no_rain_radius", &ps_r2_no_rain_radius, 0.f, 5.f);

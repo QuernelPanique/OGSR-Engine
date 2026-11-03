@@ -114,6 +114,7 @@ extern ECORE_API float ps_r2_img_exposure; // r2-only
 extern ECORE_API float ps_r2_img_gamma; // r2-only
 extern ECORE_API float ps_r2_img_saturation; // r2-only
 extern ECORE_API float ps_r2_img_contrast; // OP22
+extern ECORE_API float ps_r__detail_height; // OP22: высота травы
 
 extern ECORE_API Fvector ps_r2_img_cg; // r2-only
 
