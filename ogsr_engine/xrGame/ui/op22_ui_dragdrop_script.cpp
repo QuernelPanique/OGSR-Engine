@@ -16,6 +16,10 @@
 #include "../inventory_item.h"
 #include "../GameObject.h"
 #include "../game_object_space.h"
+#include "UIInventoryWnd.h"
+#include "UICarBodyWnd.h"
+#include "UITradeWnd.h"
+#include "inventory_space.h"
 #include "../ai_space.h"
 #include "../script_engine.h"
 
@@ -303,8 +307,198 @@ static void ci_SetChildsCount(CUICellItem*, int) {}
 static CUICellItem* cch_item_section(LPCSTR section) { return xr_new<CUIOP22SectionCell>(section, 1.f); }
 static CUICellItem* cch_item_section_condition(LPCSTR section, float cond) { return xr_new<CUIOP22SectionCell>(section, cond); }
 
+
+////////////////////////////////////////////////////////////////////////////
+// OP22: колбэки окон инвентаря ОП 2.2 - функции из [maingame_ui] system.ltx (callback_ui.*). Ищутся при каждом
+// вызове (ссылка на функцию стала бы висячей после перезапуска скриптов при загрузке сейва).
+////////////////////////////////////////////////////////////////////////////
+template <typename R>
+static bool op22_ui_func(LPCSTR key, luabind::functor<R>& f)
+{
+    if (!pSettings->line_exist("maingame_ui", key))
+        return false;
+    LPCSTR name = pSettings->r_string("maingame_ui", key);
+    if (!ai().script_engine().functor(name, f))
+    {
+        Msg("! ERROR function [%s] not exist for %s callback", name, key);
+        return false;
+    }
+    return true;
+}
+
+// item_place_change ОП: REMOVE_FROM_RUCK 0, REMOVE_FROM_SLOT 1, REMOVE_FROM_BELT 2, PUT_TO_SLOT 3, PUT_TO_BELT 4, PUT_TO_RUCK 5
+void op22_item_place_change(CGameObject* owner, CInventoryItem* item, int prev_place, int new_place)
+{
+    if (!owner || !item)
+        return;
+    luabind::functor<void> f;
+    if (!op22_ui_func("on_item_place_change", f))
+        return;
+    auto call = [&](int t) { f(owner->lua_game_object(), item->object().lua_game_object(), t); };
+    switch (prev_place)
+    {
+    case eItemPlaceRuck: call(0); break;
+    case eItemPlaceSlot: call(1); break;
+    case eItemPlaceBelt:
+    case eItemPlaceBeltActor: call(2); break;
+    default: break;
+    }
+    switch (new_place)
+    {
+    case eItemPlaceSlot: call(3); break;
+    case eItemPlaceBelt:
+    case eItemPlaceBeltActor: call(4); break;
+    case eItemPlaceRuck: call(5); break;
+    default: break;
+    }
+}
+
+static CUICellItem* op22_cell_under_cursor(CUIDragDropListEx* l, CUICellItem* except)
+{
+    if (!l)
+        return nullptr;
+    for (u32 i = 0, n = l->ItemsCount(); i < n; ++i)
+    {
+        CUICellItem* c = l->GetItemIdx(i);
+        if (c && c != except && c->CursorOverWindow())
+            return c;
+    }
+    return nullptr;
+}
+
+// бросок в окне инвентаря: как в ОП (Ghidra, CUIInventoryWnd::OnItemDrop) - предмет на предмет в рюкзаке надевает аддон
+// на оружие под курсором; затем callback_ui.on_cell_item_drop(окно, откуда, куда, перетаскиваемая, под курсором, обработано)
+bool CUIInventoryWnd::OnItemDropOP22(CUICellItem* itm)
+{
+    CUIDragDropListEx* from = itm->OwnerList();
+    CUIDragDropListEx* to = CUIDragDropListEx::m_drag_item ? CUIDragDropListEx::m_drag_item->BackList() : nullptr;
+    CUICellItem* focused = op22_cell_under_cursor(to, itm);
+    bool processed = false;
+    if (from && from == to && focused && GetType(to) == iwBag)
+    {
+        PIItem addon = static_cast<PIItem>(itm->m_pData);
+        PIItem target = static_cast<PIItem>(focused->m_pData);
+        if (addon && target && target->CanAttach(addon))
+        {
+            SetCurrentItem(itm);
+            AttachAddon(target);
+            processed = true;
+        }
+    }
+    const bool res = processed ? true : OnItemDrop(itm);
+    luabind::functor<void> f;
+    if (op22_ui_func("on_cell_item_drop", f))
+        f(this, from, to, itm, focused, processed);
+    return res;
+}
+
+bool CUIInventoryWnd::OnItemSelectedOP22(CUICellItem* itm)
+{
+    const bool res = OnItemSelected(itm);
+    luabind::functor<void> f;
+    if (op22_ui_func("on_cell_after_select", f))
+        f(this, itm, false);
+    return res;
+}
+
+bool CUICarBodyWnd::OnItemSelectedOP22(CUICellItem* itm)
+{
+    const bool res = OnItemSelected(itm);
+    luabind::functor<void> f;
+    if (op22_ui_func("on_cell_after_select", f))
+        f(this, itm, false);
+    return res;
+}
+
+bool CUITradeWnd::OnItemSelectedOP22(CUICellItem* itm)
+{
+    const bool res = OnItemSelected(itm);
+    luabind::functor<void> f;
+    if (op22_ui_func("on_cell_after_select", f))
+        f(this, itm, false);
+    return res;
+}
+
+void CUIInventoryWnd::op22_PlaySnd(int a)
+{
+    if (a >= 0 && a < eInvSndMax)
+        PlaySnd(eInventorySndAction(a));
+}
+
+// методы окон ОП для скриптов; подсветка подходящих - пока без эффекта (TODO)
+template <class W, int WT>
+static int wnd_type(W*) { return WT; }
+template <class W>
+static void wnd_noop(W*) {}
+template <class W>
+static void wnd_play_none(W*, int) {}
+static void wnd_inv_play(CUIInventoryWnd* w, int a) { w->op22_PlaySnd(a); }
+template <class W>
+static void wnd_suit1(W*, LPCSTR) {}
+template <class W>
+static void wnd_suit2(W*, const luabind::object&) {}
+template <class W>
+static void wnd_suit_in1(W*, int, LPCSTR) {}
+template <class W>
+static void wnd_suit_in2(W*, int, const luabind::object&) {}
+template <class W>
+static void wnd_clear_in(W*, int) {}
+
+struct op22_enum_ui_windows_types {};
+struct op22_enum_ui_iw_list_types {};
+struct op22_enum_item_place_change {};
+
+static void op22_register_windows(lua_State* L)
+{
+    module(L)[class_<CUIInventoryWnd, CUIDialogWnd>("CUIInventoryWnd")
+                  .def("GetUIWindowType", &wnd_type<CUIInventoryWnd, 0>)
+                  .def("PlaySnd", &wnd_inv_play)
+                  .def("re_init", &wnd_noop<CUIInventoryWnd>)
+                  .def("ClearAllSuitables", &wnd_noop<CUIInventoryWnd>)
+                  .def("ClearSuitablesInList", &wnd_clear_in<CUIInventoryWnd>)
+                  .def("SetSuitableBySection", &wnd_suit1<CUIInventoryWnd>)
+                  .def("SetSuitableBySection", &wnd_suit2<CUIInventoryWnd>)
+                  .def("SetSuitableBySectionInList", &wnd_suit_in1<CUIInventoryWnd>)
+                  .def("SetSuitableBySectionInList", &wnd_suit_in2<CUIInventoryWnd>),
+              class_<CUITradeWnd, CUIWindow>("CUITradeWnd")
+                  .def("GetUIWindowType", &wnd_type<CUITradeWnd, 1>)
+                  .def("PlaySnd", &wnd_play_none<CUITradeWnd>)
+                  .def("re_init", &wnd_noop<CUITradeWnd>)
+                  .def("ClearAllSuitables", &wnd_noop<CUITradeWnd>)
+                  .def("ClearSuitablesInList", &wnd_clear_in<CUITradeWnd>)
+                  .def("SetSuitableBySection", &wnd_suit1<CUITradeWnd>)
+                  .def("SetSuitableBySection", &wnd_suit2<CUITradeWnd>)
+                  .def("SetSuitableBySectionInList", &wnd_suit_in1<CUITradeWnd>)
+                  .def("SetSuitableBySectionInList", &wnd_suit_in2<CUITradeWnd>),
+              class_<CUICarBodyWnd, CUIDialogWnd>("CUICarBodyWnd")
+                  .def("GetUIWindowType", &wnd_type<CUICarBodyWnd, 2>)
+                  .def("PlaySnd", &wnd_play_none<CUICarBodyWnd>)
+                  .def("re_init", &wnd_noop<CUICarBodyWnd>)
+                  .def("ClearAllSuitables", &wnd_noop<CUICarBodyWnd>)
+                  .def("ClearSuitablesInList", &wnd_clear_in<CUICarBodyWnd>)
+                  .def("SetSuitableBySection", &wnd_suit1<CUICarBodyWnd>)
+                  .def("SetSuitableBySection", &wnd_suit2<CUICarBodyWnd>)
+                  .def("SetSuitableBySectionInList", &wnd_suit_in1<CUICarBodyWnd>)
+                  .def("SetSuitableBySectionInList", &wnd_suit_in2<CUICarBodyWnd>),
+              // значения - из регистрации xrGame.dll ОП (Ghidra 03.11)
+              class_<op22_enum_ui_windows_types>("ui_windows_types")
+                  .enum_("ui_windows_types")[(value("WT_UNKNOWN", -1), value("WT_INVENTORY", 0), value("WT_TRADE", 1), value("WT_CARBODY", 2))],
+              class_<op22_enum_ui_iw_list_types>("ui_iw_list_types")
+                  .enum_("ui_iw_list_types")[(value("LT_UNKNOWN", -1), value("LT_KNIFE", 0), value("LT_PISTOL", 1), value("LT_RIFLE", 2),
+                                              value("LT_GRENADE", 3), value("LT_APPARATUS", 4), value("LT_BOLT", 5), value("LT_OUTFIT", 6),
+                                              value("LT_PDA", 7), value("LT_DETECTOR_ARTS", 8), value("LT_TORCH", 9),
+                                              value("LT_DETECTOR_ANOMS", 11), value("LT_PNV", 12), value("LT_SHOTGUN", 13),
+                                              value("LT_BIODEV", 14), value("LT_BAG", 20), value("LT_BELT", 21), value("LT_TRADE_OUR_BAG", 22),
+                                              value("LT_TRADE_OTHER_BAG", 23), value("LT_TRADE_OUR_TRADE", 24), value("LT_TRADE_OTHER_TRADE", 25),
+                                              value("LT_CARBODY_OUR_TRADE", 26), value("LT_CARBODY_OTHER_BAG", 27))],
+              class_<op22_enum_item_place_change>("item_place_change")
+                  .enum_("item_place_change")[(value("REMOVE_FROM_RUCK", 0), value("REMOVE_FROM_SLOT", 1), value("REMOVE_FROM_BELT", 2),
+                                               value("PUT_TO_SLOT", 3), value("PUT_TO_BELT", 4), value("PUT_TO_RUCK", 5))]];
+}
+
 void op22_register_dragdrop(lua_State* L)
 {
+    op22_register_windows(L);
     module(L)[class_<CUIDragDropListEx, CUIWindow>("CUIDragDropListEx")
                   .def("GetUIListId", &dd_GetUIListId)
                   .def("SetUIListId", &dd_SetUIListId)

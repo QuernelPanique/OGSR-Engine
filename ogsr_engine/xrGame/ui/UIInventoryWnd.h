@@ -27,6 +27,7 @@ private:
     bool m_b_need_update_stats;
 
 public:
+    void op22_PlaySnd(int a); // OP22: PlaySnd ОП для скриптов (callback_ui)
     CUIInventoryWnd();
     virtual ~CUIInventoryWnd();
 
@@ -116,6 +117,8 @@ protected:
     CUIDragDropListEx* GetSlotList(u8 slot_idx);
 
     bool OnItemDrop(CUICellItem* itm);
+    bool OnItemDropOP22(CUICellItem* itm); // OP22: + аддон броском на оружие, callback_ui.on_cell_item_drop
+    bool OnItemSelectedOP22(CUICellItem* itm); // OP22: + callback_ui.on_cell_after_select
     bool OnItemStartDrag(CUICellItem* itm);
     bool OnItemDbClick(CUICellItem* itm);
     bool OnItemSelected(CUICellItem* itm);

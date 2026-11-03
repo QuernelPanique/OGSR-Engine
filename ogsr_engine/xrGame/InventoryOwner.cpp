@@ -430,6 +430,9 @@ void CInventoryOwner::SetReputation(CHARACTER_REPUTATION_VALUE reputation)
 
 void CInventoryOwner::ChangeReputation(CHARACTER_REPUTATION_VALUE delta) { SetReputation(Reputation() + delta); }
 
+// OP22: callback_ui.on_item_place_change ОП 2.2 ([maingame_ui], ui/op22_ui_dragdrop_script.cpp)
+extern void op22_item_place_change(CGameObject* owner, CInventoryItem* item, int prev_place, int new_place);
+
 void CInventoryOwner::OnItemDrop(CInventoryItem* inventory_item)
 {
     CGameObject* object = smart_cast<CGameObject*>(this);
@@ -446,12 +449,14 @@ void CInventoryOwner::OnItemBelt(CInventoryItem* inventory_item, EItemPlace prev
     CGameObject* object = smart_cast<CGameObject*>(this);
     VERIFY(object);
     object->callback(GameObject::eOnItemToBelt)(inventory_item->object().lua_game_object());
+    op22_item_place_change(object, inventory_item, previous_place, eItemPlaceBelt); // OP22
 }
 void CInventoryOwner::OnItemRuck(CInventoryItem* inventory_item, EItemPlace previous_place)
 {
     CGameObject* object = smart_cast<CGameObject*>(this);
     VERIFY(object);
     object->callback(GameObject::eOnItemToRuck)(inventory_item->object().lua_game_object());
+    op22_item_place_change(object, inventory_item, previous_place, eItemPlaceRuck); // OP22
     detach(inventory_item);
 }
 void CInventoryOwner::OnItemSlot(CInventoryItem* inventory_item, EItemPlace previous_place)
@@ -459,6 +464,7 @@ void CInventoryOwner::OnItemSlot(CInventoryItem* inventory_item, EItemPlace prev
     CGameObject* object = smart_cast<CGameObject*>(this);
     VERIFY(object);
     object->callback(GameObject::eOnItemToSlot)(inventory_item->object().lua_game_object());
+    op22_item_place_change(object, inventory_item, previous_place, eItemPlaceSlot); // OP22
     attach(inventory_item);
 }
 

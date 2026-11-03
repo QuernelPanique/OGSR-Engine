@@ -93,6 +93,7 @@ protected:
     bool OnItemStartDrag(CUICellItem* itm);
     bool OnItemDbClick(CUICellItem* itm);
     bool OnItemSelected(CUICellItem* itm);
+    bool OnItemSelectedOP22(CUICellItem* itm); // OP22: + callback_ui.on_cell_after_select
     bool OnItemRButtonClick(CUICellItem* itm);
 
     bool TransferItem(PIItem itm, CInventoryOwner* owner_from, CInventoryOwner* owner_to, bool b_check);
