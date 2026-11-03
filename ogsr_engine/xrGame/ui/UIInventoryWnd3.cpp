@@ -19,6 +19,9 @@
 #include "../string_table.h"
 #include <regex>
 #include "../game_object_space.h" // OP22: item_use_only -> use_object
+// OP22: меню предмета со скриптовыми пунктами ОП 2.2 (ui/op22_ui_dragdrop_script.cpp)
+extern bool op22_show_prop_box(CUIInventoryWnd* wnd, CUIPropertiesBox* box, PIItem item);
+extern bool op22_prop_box_clicked(CUIInventoryWnd* wnd, u32 tag, PIItem item);
 #include "../script_callback_ex.h"
 #include "../script_game_object.h"
 
@@ -204,6 +207,10 @@ void CUIInventoryWnd::ActivatePropertiesBox()
             UIPropertiesBox.AddItem("st_drop_all", (void*)33, INVENTORY_DROP_ACTION);
     }
 
+    // OP22: callback_ui.show_prop_box ОП 2.2 - скрипт убирает/добавляет пункты меню
+    if (op22_show_prop_box(this, &UIPropertiesBox, CurrentIItem()) && UIPropertiesBox.GetItemsCount() > 0)
+        b_show = true;
+
     if (b_show)
     {
         UIPropertiesBox.AutoUpdateSize();
@@ -221,6 +228,8 @@ void CUIInventoryWnd::ActivatePropertiesBox()
 
 void CUIInventoryWnd::ProcessPropertiesBoxClicked()
 {
+    if (UIPropertiesBox.GetClickedItem() && op22_prop_box_clicked(this, UIPropertiesBox.GetClickedItem()->GetTAG(), CurrentIItem())) // OP22
+        return;
     if (UIPropertiesBox.GetClickedItem())
     {
         switch (UIPropertiesBox.GetClickedItem()->GetTAG())

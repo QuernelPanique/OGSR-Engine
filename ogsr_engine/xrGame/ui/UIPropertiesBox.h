@@ -23,6 +23,7 @@ public:
     bool AddItem(const char* str, void* pData = NULL, u32 tag_value = 0);
     bool AddItem_script(const char* str) { return AddItem(str); };
     u32 GetItemsCount() { return m_UIListWnd.GetSize(); };
+    bool op22_has_tag(u32 tag) { return m_UIListWnd.GetItemByTAG(tag) != nullptr; } // OP22: RemoveItemByTAG ОП без вылета на отсутствующем
     void RemoveItemByTAG(u32 tag_value);
     void RemoveAll();
 

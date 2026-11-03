@@ -19,6 +19,8 @@
 #include "UIInventoryWnd.h"
 #include "UICarBodyWnd.h"
 #include "UITradeWnd.h"
+#include "UIPropertiesBox.h"
+#include "UIListBoxItem.h"
 #include "inventory_space.h"
 #include "../ai_space.h"
 #include "../script_engine.h"
@@ -495,6 +497,53 @@ static void op22_register_windows(lua_State* L)
                   .enum_("item_place_change")[(value("REMOVE_FROM_RUCK", 0), value("REMOVE_FROM_SLOT", 1), value("REMOVE_FROM_BELT", 2),
                                                value("PUT_TO_SLOT", 3), value("PUT_TO_BELT", 4), value("PUT_TO_RUCK", 5))]];
 }
+
+
+////////////////////////////////////////////////////////////////////////////
+// OP22: меню предмета ОП 2.2 - callback_ui.show_prop_box(окно, меню, предмет) убирает пункты (RemoveItemByTAG) и
+// добавляет свои (InsertItem(позиция, текст, функция)); клик по своему пункту зовёт функция(окно, предмет)
+////////////////////////////////////////////////////////////////////////////
+constexpr u32 OP22_PROP_TAG_BASE = 0x4F500000;
+static xr_vector<luabind::functor<void>> g_prop_funcs;
+static CUIInventoryWnd* g_prop_wnd = nullptr;
+
+static void pb_InsertItem(CUIPropertiesBox* box, int /*pos: в первой версии - в конец*/, LPCSTR str, const luabind::functor<void>& f)
+{
+    g_prop_funcs.push_back(f);
+    box->AddItem(str, nullptr, OP22_PROP_TAG_BASE + u32(g_prop_funcs.size() - 1));
+}
+static void pb_RemoveItemByTAG(CUIPropertiesBox* box, u32 tag)
+{
+    if (box->op22_has_tag(tag))
+        box->RemoveItemByTAG(tag);
+}
+
+bool op22_show_prop_box(CUIInventoryWnd* wnd, CUIPropertiesBox* box, PIItem item)
+{
+    g_prop_funcs.clear();
+    g_prop_wnd = wnd;
+    if (!item)
+        return false;
+    luabind::functor<bool> f;
+    if (!op22_ui_func("on_ui_show_prop_box", f))
+        return false;
+    const u32 before = box->GetItemsCount();
+    f(wnd, box, item->object().lua_game_object());
+    return !g_prop_funcs.empty() || box->GetItemsCount() != before;
+}
+
+bool op22_prop_box_clicked(CUIInventoryWnd* wnd, u32 tag, PIItem item)
+{
+    if (tag < OP22_PROP_TAG_BASE || tag - OP22_PROP_TAG_BASE >= g_prop_funcs.size())
+        return false;
+    if (item)
+        g_prop_funcs[tag - OP22_PROP_TAG_BASE](wnd, item->object().lua_game_object());
+    return true;
+}
+
+// методы ОП у CUIPropertiesBox регистрируются в UIPropertiesBox_script.cpp (класс уже там)
+void op22_pb_InsertItem(CUIPropertiesBox* box, int pos, LPCSTR str, const luabind::functor<void>& f) { pb_InsertItem(box, pos, str, f); }
+void op22_pb_RemoveItemByTAG(CUIPropertiesBox* box, u32 tag) { pb_RemoveItemByTAG(box, tag); }
 
 void op22_register_dragdrop(lua_State* L)
 {
