@@ -262,6 +262,7 @@ CUIProgressBar* CScriptXmlInit::InitProgressBar(LPCSTR path, CUIWindow* parent)
 }
 
 
+#include "ui/UIDragDropListEx.h" // OP22
 // OP22: API списков перетаскивания ОП 2.2 (ui/op22_ui_dragdrop_script.cpp)
 extern void op22_register_dragdrop(lua_State* L);
 extern CUIDragDropListEx* op22_xml_InitDragDropListEx(CScriptXmlInit* self, LPCSTR path, CUIWindow* parent);

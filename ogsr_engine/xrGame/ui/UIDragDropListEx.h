@@ -145,6 +145,7 @@ public:
     virtual void SetItem(CUICellItem* itm, Fvector2 abs_pos); // start at cursor pos
     virtual void SetItem(CUICellItem* itm, Ivector2 cell_pos); // start at cell
     bool CanSetItem(CUICellItem* itm);
+    bool op22_HasFreeSpace(const Ivector2& size); // OP22: HasFreeSpace() ОП для скриптов
 
     u32 ItemsCount();
     CUICellItem* GetItemIdx(u32 idx);

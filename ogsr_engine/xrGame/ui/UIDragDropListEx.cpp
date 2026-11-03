@@ -984,3 +984,7 @@ void CUICellContainer::clear_select_armament()
         }
     }
 }
+
+// OP22: свободное место для скриптового CUIDragDropListEx:HasFreeSpace() ОП (CUICellContainer::HasFreeSpace защищён,
+// дружба только у CUIDragDropListEx)
+bool CUIDragDropListEx::op22_HasFreeSpace(const Ivector2& size) { return m_container->HasFreeSpace(size); }

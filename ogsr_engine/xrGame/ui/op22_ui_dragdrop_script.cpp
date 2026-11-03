@@ -8,6 +8,7 @@
 #include "UIDragDropListEx.h"
 #include "UICellItem.h"
 #include "UICellItemFactory.h"
+#include "UICellCustomItems.h"
 #include "UIIconParams.h"
 #include "UIXmlInit.h"
 #include "../ScriptXmlInit.h"
@@ -165,7 +166,7 @@ static CUICellItem* make_item_cell(CScriptGameObject* obj)
     CInventoryItem* itm = smart_cast<CInventoryItem*>(&obj->object());
     if (!itm)
         return nullptr;
-    CUICellItem* prev = itm->m_cell_item; // ячейку предмета держит окно инвентаря - не перехватываем
+    auto prev = itm->m_cell_item; // ячейку предмета держит окно инвентаря - не перехватываем
     CUICellItem* cell = create_cell_item(itm);
     itm->m_cell_item = prev;
     return cell;
@@ -183,7 +184,7 @@ static void dd_SetItemCell(CUIDragDropListEx* l, CUICellItem* c)
 }
 static void dd_Compact(CUIDragDropListEx* l) { l->Compact(); }
 static void dd_ClearAll(CUIDragDropListEx* l) { l->ClearAll(true); }
-static bool dd_HasFreeSpace(CUIDragDropListEx* l) { return l->m_container->HasFreeSpace(Ivector2{1, 1}); }
+static bool dd_HasFreeSpace(CUIDragDropListEx* l) { return l->op22_HasFreeSpace(Ivector2{1, 1}); }
 static CUICellItem* dd_FindSimilar(CUIDragDropListEx*, CUICellItem*) { return nullptr; }
 static CUICellItem* dd_RemoveItem(CUIDragDropListEx* l, CUICellItem* c) { return c ? l->RemoveItem(c, false) : nullptr; }
 static void dd_noop(CUIDragDropListEx*) {}
