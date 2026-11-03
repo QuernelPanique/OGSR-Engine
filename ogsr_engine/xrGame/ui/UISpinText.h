@@ -4,6 +4,7 @@
 // author:		Serge Vynnychenko
 //
 
+#pragma once // OP22: подключается и из op22_ui_custom_controls.h
 #include "UICustomSpin.h"
 
 class CUISpinText : public CUICustomSpin

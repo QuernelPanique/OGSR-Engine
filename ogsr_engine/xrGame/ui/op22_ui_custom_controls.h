@@ -4,7 +4,6 @@
 #include "UISpinText.h"
 #include "UI3tButton.h"
 #include "UILines.h"
-#include "../script_space.h"
 #include "../ai_space.h"
 #include "../script_engine.h"
 
