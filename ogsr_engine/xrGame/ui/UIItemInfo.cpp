@@ -149,7 +149,7 @@ void CUIItemInfo::InitItem(CInventoryItem* pInvItem)
     if (UIWeight)
     {
         string256 str;
-        sprintf_s(str, "%3.2f kg", pInvItem->Weight());
+        sprintf_s(str, "%3.2f %s", pInvItem->Weight(), CStringTable().translate("st_kg").c_str()); // OP22: единица веса из строк (ОП - «кг»)
         UIWeight->SetText(str);
     }
     if (UICost)
