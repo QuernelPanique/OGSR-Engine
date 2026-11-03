@@ -75,10 +75,40 @@ void token(LPCSTR name, LPCSTR section, LPCSTR def)
     t[names.size()].id = 0;
     add(xr_new<CCC_Token>(name, v, t));
 }
+// ползунок ОП, у которого в OGSR есть аналог: хранит своё значение и передаёт его переменной OGSR
+// (гамма/яркость ОП -> шейдерная коррекция изображения ssfx_gamma/ssfx_exposure, pp_img_corrections)
+class CCC_OP22Alias : public CCC_Float
+{
+    LPCSTR m_target;
+
+public:
+    CCC_OP22Alias(LPCSTR N, float* V, float mn, float mx, LPCSTR target) : CCC_Float(N, V, mn, mx), m_target(target) {}
+    virtual void Execute(LPCSTR args)
+    {
+        CCC_Float::Execute(args);
+        string256 cmd;
+        xr_sprintf(cmd, "%s %f", m_target, *value);
+        Console->Execute(cmd);
+    }
+};
+
+void alias(LPCSTR name, float def, float mn, float mx, LPCSTR target)
+{
+    float* v = xr_new<float>(def);
+    add(xr_new<CCC_OP22Alias>(name, v, mn, mx, target));
+}
 } // namespace
 
 void op22_register_console()
 {
+    // яркость окна опций ОП: гамма и яркость - через коррекцию изображения OGSR; контраста в OGSR нет - только значение
+    alias("rs_c_gamma", 1.f, 0.5f, 1.5f, "ssfx_gamma");
+    alias("rs_c_brightness", 1.f, 0.5f, 1.5f, "ssfx_exposure");
+    flt("rs_c_contrast", 1.f, 0.5f, 1.5f);
+    flag("r2_sun", true);           // в OGSR солнце не отключается
+    flag("rs_refresh_60hz", false);
+    flag("ext_animations", false); // _g.script ОП выключает при загрузке уровня
+
     // окно опций ОП: options_item
     token("renderer", "op22_no_section", "renderer_r2"); // в OGSR один рендер - значение для показа
     token("font_profile", "font_profiles", "default");
