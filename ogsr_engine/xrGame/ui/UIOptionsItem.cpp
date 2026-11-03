@@ -21,7 +21,11 @@ void CUIOptionsItem::OnMessage(const char* message)
     // do nothing
 }
 
-LPCSTR CUIOptionsItem::GetOptStringValue() { return Console->GetString(m_entry.c_str()); }
+LPCSTR CUIOptionsItem::GetOptStringValue()
+{
+    LPCSTR v = Console->GetString(m_entry.c_str());
+    return v ? v : ""; // OP22: переменной нет в OGSR
+}
 
 void CUIOptionsItem::SaveOptStringValue(const char* val)
 {
@@ -63,12 +67,23 @@ void CUIOptionsItem::SaveOptBoolValue(bool val)
     Console->Execute(command);
 }
 
-LPCSTR CUIOptionsItem::GetOptTokenValue() { return Console->GetToken(m_entry.c_str()); }
+// OP22: окно опций ОП 2.2 ссылается на переменные движка ОП, которых нет в OGSR (renderer, font_profile, g_lang,
+// texture_lod, snd_freq...): вместо фатального ASSERT - пустой список значений и сообщение в логе
+LPCSTR CUIOptionsItem::GetOptTokenValue()
+{
+    LPCSTR v = Console->GetToken(m_entry.c_str());
+    return v ? v : "";
+}
 
 const xr_token* CUIOptionsItem::GetOptToken()
 {
     const auto* token = Console->GetXRToken(m_entry.c_str());
-    ASSERT_FMT(token, "Can't find token [%s]", m_entry.c_str());
+    if (!token)
+    {
+        static const xr_token empty[] = {{nullptr, 0}};
+        Msg("! [OP22] options: no console token [%s] - list is empty", m_entry.c_str());
+        return empty;
+    }
     return token;
 }
 

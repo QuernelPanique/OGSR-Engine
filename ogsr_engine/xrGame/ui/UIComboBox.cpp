@@ -149,6 +149,8 @@ void CUIComboBox::SaveValue()
     CUIOptionsItem::SaveValue();
     const xr_token* tok = GetOptToken();
     const char* cur_val = tok[m_itoken_id].name;
+    if (!cur_val) // OP22: переменной нет в OGSR - список пуст, сохранять нечего
+        return;
     SaveOptTokenValue(cur_val);
 }
 

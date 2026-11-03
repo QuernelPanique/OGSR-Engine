@@ -22,13 +22,15 @@ void CUISpinText::AddItem_(const char* item, int id)
 
 void CUISpinText::SetItem()
 {
-    R_ASSERT(m_curItem != -1);
+    if (m_curItem == -1) // OP22: пустой список (переменной нет в OGSR)
+        return;
     m_pLines->SetText(m_list[m_curItem]._transl.c_str());
 }
 
 LPCSTR CUISpinText::GetTokenText()
 {
-    R_ASSERT(m_curItem != -1);
+    if (m_curItem == -1) // OP22: пустой список
+        return "";
     return m_list[m_curItem]._orig.c_str();
 }
 
@@ -55,11 +57,13 @@ void CUISpinText::SetCurrentValue()
 
 void CUISpinText::SaveValue()
 {
+    if (m_curItem == -1) // OP22: пустой список
+        return;
     CUIOptionsItem::SaveValue();
     SaveOptTokenValue(m_list[m_curItem]._orig.c_str());
 }
 
-bool CUISpinText::IsChanged() { return 0 != xr_strcmp(GetOptTokenValue(), m_list[m_curItem]._orig.c_str()); }
+bool CUISpinText::IsChanged() { return m_curItem != -1 && 0 != xr_strcmp(GetOptTokenValue(), m_list[m_curItem]._orig.c_str()); } // OP22: пустой список
 
 void CUISpinText::OnBtnUpClick()
 {
