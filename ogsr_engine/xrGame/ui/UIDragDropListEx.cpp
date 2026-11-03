@@ -381,7 +381,8 @@ void CUIDragDropListEx::SetItem(CUICellItem* itm) // auto
         return;
     }
 
-    Ivector2 dest_cell_pos = m_container->FindFreeCell(itm->GetGridSize());
+    // OP22: в пустой список adjust_cells предмет встаёт целиком, свободную клетку по его сетке не ищем
+    Ivector2 dest_cell_pos = (GetAdjustCells() && m_container->GetChildWndList().empty()) ? Ivector2().set(0, 0) : m_container->FindFreeCell(itm->GetGridSize());
 
     SetItem(itm, dest_cell_pos);
 }
@@ -404,11 +405,34 @@ void CUIDragDropListEx::SetItem(CUICellItem* itm, Ivector2 cell_pos) // start at
     if (m_container->AddSimilar(itm))
         return;
 
+    // OP22: adjust_cells (ОП 2.2, Ghidra CUIDragDropListEx::SetItem): сетка предмета = ёмкость списка
+    const bool op22_adjust = GetAdjustCells() && m_container->GetChildWndList().empty();
+    if (op22_adjust)
+    {
+        if (itm->m_op22_grid_orig.x < 0)
+            itm->m_op22_grid_orig = itm->GetGridSize();
+        itm->op22_set_grid(m_container->CellsCapacity());
+        cell_pos.set(0, 0);
+    }
+
     if (!(m_container->IsRoomFree(cell_pos, itm->GetGridSize())))
         Msg("!![CUIDragDropListEx::SetItem] !(m_container->IsRoomFree(cell_pos, itm->GetGridSize()))");
     // R_ASSERT						(m_container->IsRoomFree(cell_pos, itm->GetGridSize()));
 
     m_container->PlaceItemAtPos(itm, cell_pos);
+
+    if (op22_adjust) // OP22: иконка вписывается в список по центру, пропорции предмета сохраняются
+    {
+        const Ivector2 g = itm->m_op22_grid_orig;
+        const Fvector2 box = itm->GetWndSize();
+        if (g.x > 0 && g.y > 0 && box.x > 0 && box.y > 0)
+        {
+            const float k = _min(box.x / float(g.x), box.y / float(g.y));
+            const Fvector2 sz{k * g.x, k * g.y};
+            itm->SetWndSize(sz);
+            itm->SetWndPos(Fvector2().set(itm->GetWndPos().x + (box.x - sz.x) / 2, itm->GetWndPos().y + (box.y - sz.y) / 2));
+        }
+    }
 
     itm->SetWindowName("cell_item");
     Register(itm);
@@ -428,6 +452,11 @@ CUICellItem* CUIDragDropListEx::RemoveItem(CUICellItem* itm, bool force_root)
 {
     CUICellItem* i = m_container->RemoveItem(itm, force_root);
     i->SetOwnerList((CUIDragDropListEx*)NULL);
+    if (i->m_op22_grid_orig.x >= 0) // OP22: снят со списка adjust_cells - своя сетка обратно
+    {
+        i->op22_set_grid(i->m_op22_grid_orig);
+        i->m_op22_grid_orig.set(-1, -1);
+    }
     return i;
 }
 

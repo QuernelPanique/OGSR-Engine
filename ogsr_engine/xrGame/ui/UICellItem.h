@@ -54,6 +54,8 @@ public:
     static CUICellItem* m_mouse_selected_item;
     void SetOwnerList(CUIDragDropListEx* p);
     void* m_pData;
+    Ivector2 m_op22_grid_orig{-1, -1}; // OP22: сетка предмета до списка с adjust_cells
+    void op22_set_grid(const Ivector2& g) { m_grid_size = g; } // OP22
     int m_index;
     bool m_b_already_drawn;
     void ColorizeItems(std::initializer_list<CUIDragDropListEx*>);

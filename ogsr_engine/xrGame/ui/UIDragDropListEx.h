@@ -53,7 +53,7 @@ private:
         flVerticalPlacement = (1 << 3),
         flAlwaysShowScroll = (1 << 4),
         flVirtualCells = (1 << 5),
-        // !Место свободно! = (1 << 6),
+        flAdjustCells = (1 << 6), // OP22: adjust_cells ОП 2.2 - предмет занимает весь список
         flHighlightCellSp = (1 << 7),
         flHighlightAllCells = (1 << 8),
     };
@@ -131,6 +131,8 @@ public:
     void SetAlwaysShowScroll(bool b);
     bool GetVirtualCells();
     void SetVirtualCells(bool b);
+    bool GetAdjustCells() { return !!m_flags.test(flAdjustCells); } // OP22
+    void SetAdjustCells(bool b) { m_flags.set(flAdjustCells, b); } // OP22
     bool GetHighlightCellSp();
     void SetHighlightCellSp(bool b);
     bool GetHighlightAllCells();

@@ -67,6 +67,11 @@ struct op22_ui_profile
         static xr_string r;
         r = text();
         r.erase(std::remove(r.begin(), r.end(), '\r'), r.end());
+        // OP22: CUILines переносит строку только по литералу "\n" (как в xml строк), символ перевода строки - нет
+        xr_string o;
+        for (char c : r)
+            o += (c == '\n') ? xr_string("\\n") : xr_string(1, c);
+        r = o;
         return r.c_str();
     }
     // превью - первая .dds в корне профиля: op22skin\<hud|inv>\<профиль>\<файл> (ядро скинов найдёт файл)

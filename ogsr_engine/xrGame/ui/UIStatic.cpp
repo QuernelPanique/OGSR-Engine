@@ -119,6 +119,10 @@ u32 CUIStatic::GetTextureColor() const { return m_UIStaticItem.GetColor(); }
 
 void CUIStatic::InitTextureEx(LPCSTR tex_name, LPCSTR sh_name)
 {
+    // OP22: превью скинов ОП (op22skin\..., ui_mm_opt_huds.script) меняются в одном статике; OGSR запоминает
+    // размер текстуры при первой отрисовке - после пустого превью любое следующее рисовалось одним серым текселем
+    if (!tex_name || !*tex_name || strstr(tex_name, "op22skin\\") == tex_name)
+        ResetOriginalRect();
     m_texture = tex_name;
     m_shader = sh_name;
 
