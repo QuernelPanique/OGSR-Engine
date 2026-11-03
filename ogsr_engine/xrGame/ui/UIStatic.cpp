@@ -8,6 +8,8 @@
 #include "uilines.h"
 #include "../string_table.h"
 #include "../ui_base.h"
+#include "UIButton.h"
+#include "UIBtnHint.h"
 
 const char* const clDefault = "default";
 #define CREATE_LINES \
@@ -154,6 +156,21 @@ void CUIStatic::Draw()
 
     if (m_bClipper)
         UI()->PopScissor();
+
+    // OP22: подсказка статика (у кнопок рисует CUIButton::DrawText)
+    if (m_op22_hint.size() && g_btnHint && g_btnHint->Owner() == this)
+        g_btnHint->Draw_();
+}
+
+// OP22: CUIStatic:SetHintText ОП 2.2. Кнопке (и флажку) - её подсказка, статику - своя.
+void CUIStatic::op22_SetHintText(LPCSTR text)
+{
+    if (CUIButton* b = smart_cast<CUIButton*>(this))
+    {
+        b->m_hint_text = text ? text : "";
+        return;
+    }
+    m_op22_hint = text ? text : "";
 }
 
 void CUIStatic::DrawText()
@@ -225,6 +242,9 @@ void CUIStatic::DrawTexture()
 void CUIStatic::Update()
 {
     inherited::Update();
+    // OP22: подсказка статика - как у кнопки (CUIButton::Update)
+    if (m_op22_hint.size() && g_btnHint && CursorOverWindow() && !g_btnHint->Owner() && Device.dwTimeGlobal > m_dwFocusReceiveTime + 500)
+        op22_PlaceBtnHint(this, *m_op22_hint);
     // update light animation if defined
     if (m_lanim_clr.m_lanim)
     {
@@ -585,6 +605,8 @@ void CUIStatic::OnFocusReceive()
 void CUIStatic::OnFocusLost()
 {
     inherited::OnFocusLost();
+    if (m_op22_hint.size() && g_btnHint && g_btnHint->Owner() == this)
+        g_btnHint->Discard();
     if (GetMessageTarget())
         GetMessageTarget()->SendMessage(this, STATIC_FOCUS_LOST, NULL);
 }

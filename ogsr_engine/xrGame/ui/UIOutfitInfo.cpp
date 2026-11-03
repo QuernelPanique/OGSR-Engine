@@ -114,7 +114,10 @@ void CUIOutfitInfo::Update(CCustomOutfit* outfit)
         {
             _val_outfit = GetArtefactParam(artefactEffects, i);
 
-            float _actor_val = pSettings->r_float("actor_condition", _actor_param_names[i]);
+            // OP22: в ОП 2.2 нет жажды (thirst_v) - ключа нет, параметр пропускаем
+            float _actor_val = READ_IF_EXISTS(pSettings, r_float, "actor_condition", _actor_param_names[i], 0.f);
+            if (fis_zero(_actor_val))
+                continue;
             _val_outfit = (_val_outfit / _actor_val);
         }
         else

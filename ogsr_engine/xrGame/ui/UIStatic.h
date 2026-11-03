@@ -101,6 +101,10 @@ public:
     virtual void OnFocusReceive();
     virtual void OnFocusLost();
 
+    // OP22: всплывающая подсказка у статика (CUIStatic:SetHintText ОП 2.2); у кнопок - их m_hint_text
+    shared_str m_op22_hint;
+    void op22_SetHintText(LPCSTR text);
+
     // IUITextControl
     virtual void SetText(LPCSTR str);
     void SetTextST(LPCSTR str_id);

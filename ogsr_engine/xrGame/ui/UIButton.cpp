@@ -212,13 +212,11 @@ void CUIButton::DrawText()
 
 bool is_in2(const Frect& b1, const Frect& b2) { return (b1.x1 < b2.x1) && (b1.x2 > b2.x2) && (b1.y1 < b2.y1) && (b1.y2 > b2.y2); }
 
-void CUIButton::Update()
+// OP22: показ подсказки рядом с курсором - общий для кнопок и статиков (CUIStatic:SetHintText ОП)
+void op22_PlaceBtnHint(CUIWindow* owner, LPCSTR text)
 {
-    CUIStatic::Update();
-
-    if (CursorOverWindow() && m_hint_text.size() && !g_btnHint->Owner() && Device.dwTimeGlobal > m_dwFocusReceiveTime + 500)
     {
-        g_btnHint->SetHintText(this, *m_hint_text);
+        g_btnHint->SetHintText(owner, text);
 
         Fvector2 c_pos = GetUICursor()->GetCursorPosition();
         Frect vis_rect;
@@ -240,6 +238,14 @@ void CUIButton::Update()
 
         g_btnHint->SetWndPos(r.lt);
     }
+}
+
+void CUIButton::Update()
+{
+    CUIStatic::Update();
+
+    if (CursorOverWindow() && m_hint_text.size() && !g_btnHint->Owner() && Device.dwTimeGlobal > m_dwFocusReceiveTime + 500)
+        op22_PlaceBtnHint(this, *m_hint_text);
 }
 
 void CUIButton::OnFocusLost()

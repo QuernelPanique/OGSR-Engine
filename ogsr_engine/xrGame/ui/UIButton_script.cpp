@@ -7,6 +7,7 @@
 #include "UISpinText.h"
 #include "UITrackBar.h"
 
+void op22_register_custom_controls(lua_State* L); // OP22
 using namespace luabind;
 
 
@@ -60,4 +61,6 @@ void CUIButton::script_register(lua_State* L)
                   .def("GetCheck", &CUITrackBar::GetCheck)
                   .def("SetCheck", &CUITrackBar::SetCheck)
                   .def("GetTrackValue", &CUITrackBar::GetTrackValue))];
+
+    op22_register_custom_controls(L); // OP22: CUITrackBarCustom, CUISpinTextCustom (op22_ui_custom_controls.cpp)
 }

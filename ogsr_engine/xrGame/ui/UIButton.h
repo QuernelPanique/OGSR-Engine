@@ -3,6 +3,8 @@
 #include "UIStatic.h"
 #include "../script_export_space.h"
 
+void op22_PlaceBtnHint(CUIWindow* owner, LPCSTR text); // OP22
+
 class CUIButton : public CUIStatic
 {
 private:

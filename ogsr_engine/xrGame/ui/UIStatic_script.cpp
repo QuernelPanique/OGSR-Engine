@@ -39,6 +39,7 @@ void CUIStatic::script_register(lua_State* L)
                   .def(constructor<>())
 
                   .def("SetText", (void(CUIStatic::*)(LPCSTR))(&CUIStatic::SetText))
+                  .def("SetHintText", &CUIStatic::op22_SetHintText) // OP22: подсказка ОП 2.2
                   .def("SetTextST", (void(CUIStatic::*)(LPCSTR))(&CUIStatic::SetTextST))
                   .def("GetText", &CUIStatic::GetText)
                   .def("IsMultibyteFont", [](CUIStatic* self) -> bool { return self->m_pLines->GetFont()->IsMultibyte(); })

@@ -266,6 +266,10 @@ CUIProgressBar* CScriptXmlInit::InitProgressBar(LPCSTR path, CUIWindow* parent)
 // OP22: API списков перетаскивания ОП 2.2 (ui/op22_ui_dragdrop_script.cpp)
 extern void op22_register_dragdrop(lua_State* L);
 extern CUIDragDropListEx* op22_xml_InitDragDropListEx(CScriptXmlInit* self, LPCSTR path, CUIWindow* parent);
+// OP22: контролы окна опций ОП (ui/op22_ui_custom_controls.cpp)
+#include "ui/op22_ui_custom_controls.h"
+extern CUITrackBarCustom* op22_xml_InitTrackBarCustom(CScriptXmlInit* self, LPCSTR path, CUIWindow* parent);
+extern CUISpinTextCustom* op22_xml_InitSpinTextCustom(CScriptXmlInit* self, LPCSTR path, CUIWindow* parent);
 
 void CScriptXmlInit::script_register(lua_State* L)
 {
@@ -273,6 +277,8 @@ void CScriptXmlInit::script_register(lua_State* L)
     module(L)[class_<CScriptXmlInit>("CScriptXmlInit")
                   .def(constructor<>())
                   .def("InitDragDropListEx", &op22_xml_InitDragDropListEx) // OP22
+                  .def("InitTrackBarCustom", &op22_xml_InitTrackBarCustom) // OP22
+                  .def("InitSpinTextCustom", &op22_xml_InitSpinTextCustom) // OP22
                   .def("ParseFile", &CScriptXmlInit::ParseFile)
                   .def("ParseShTexInfo", &CScriptXmlInit::ParseShTexInfo)
                   .def("InitWindow", &CScriptXmlInit::InitWindow)
