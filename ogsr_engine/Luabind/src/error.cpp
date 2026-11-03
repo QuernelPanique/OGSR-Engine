@@ -65,6 +65,10 @@ namespace luabind
 
 #endif
 
+	static bool op22_nofatal = false; // OP22
+	void set_op22_nofatal(bool v) { op22_nofatal = v; }
+	bool get_op22_nofatal() { return op22_nofatal; }
+
 	void set_pcall_callback(pcall_callback_fun e)
 	{
 		pcall_callback = e;

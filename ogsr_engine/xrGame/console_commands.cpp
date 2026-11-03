@@ -934,6 +934,26 @@ struct CCC_LuaHelp : public IConsole_Command
     virtual void Execute(LPCSTR args) { print_help(ai().script_engine().lua()); }
 };
 
+// OP22: op22_lua <модуль.функция> - вызвать функцию Lua из консоли (автотест прототипа: op22_lua op22_autotest.run)
+struct CCC_OP22Lua : public IConsole_Command
+{
+    CCC_OP22Lua(LPCSTR N) : IConsole_Command(N) { bEmptyArgsHandled = false; };
+
+    virtual void Execute(LPCSTR args)
+    {
+        if (!g_pGameLevel)
+        {
+            Msg("! op22_lua: level is not loaded");
+            return;
+        }
+        luabind::functor<void> f;
+        if (ai().script_engine().functor(args, f))
+            f();
+        else
+            Msg("! op22_lua: function [%s] not found", args);
+    }
+};
+
 //#ifndef MASTER_GOLD
 #include "game_graph.h"
 struct CCC_JumpToLevel : public IConsole_Command
@@ -1700,6 +1720,7 @@ void CCC_RegisterCommands()
     CMD3(CCC_Mask, "g_music_tracks", &psActorFlags, AF_MUSIC_TRACKS);
 
     CMD1(CCC_LuaHelp, "lua_help");
+    CMD1(CCC_OP22Lua, "op22_lua"); // OP22
 
     CMD3(CCC_Mask, "g_zones_dbg", &psActorFlags, AF_ZONES_DBG);
     CMD3(CCC_Mask, "g_vertex_dbg", &psActorFlags, AF_VERTEX_DBG);

@@ -87,6 +87,12 @@ namespace luabind
 	LUABIND_API void set_pcall_callback(pcall_callback_fun e);
 	LUABIND_API pcall_callback_fun get_pcall_callback();
 
+	// OP22: режим «не падать» для прототипа - ошибка в вызове Lua из движка пишется в лог, вызов возвращает nil
+	// (pcall отдаёт успех), игра идёт дальше. Включается файлом userdata/op22_nofatal.
+	LUABIND_API void set_op22_nofatal(bool v);
+	LUABIND_API bool get_op22_nofatal();
+	LUABIND_API unsigned get_op22_nofatal_count();
+
 	typedef void(*pregister_callback_fun)(lua_State*,bool);
 	LUABIND_API void set_pregister_callback(pregister_callback_fun e);
 	LUABIND_API pregister_callback_fun get_pregister_callback();

@@ -24,6 +24,12 @@
 #include <luabind/detail/pcall.hpp>
 #include <luabind/error.hpp>
 
+namespace luabind
+{
+	static unsigned op22_nofatal_count = 0; // OP22
+	unsigned get_op22_nofatal_count() { return op22_nofatal_count; }
+}
+
 namespace luabind { namespace detail
 {
 	int pcall(lua_State *L, int nargs, int nresults)
@@ -40,6 +46,16 @@ namespace luabind { namespace detail
 		int result = lua_pcall(L, nargs, nresults, en);
 		if ( en )
 			lua_remove(L, en);  // remove pcall_callback
+		// OP22: «не падать» - ошибка уже напечатана обработчиком (lua_pcall_failed); убираем сообщение,
+		// отдаём nil вместо результатов и успех: вызывающий код luabind не дойдёт до std::terminate
+		if (result != 0 && get_op22_nofatal())
+		{
+			++op22_nofatal_count;
+			lua_pop(L, 1);
+			for (int i = 0; i < nresults; ++i)
+				lua_pushnil(L);
+			return 0;
+		}
 		return result;
 	}
 

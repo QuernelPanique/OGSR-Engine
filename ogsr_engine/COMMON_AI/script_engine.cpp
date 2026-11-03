@@ -72,6 +72,13 @@ void CScriptEngine::lua_error(lua_State* L) { DEF_LUA_ERROR_TEMPLATE(L) }
 
 int CScriptEngine::lua_pcall_failed(lua_State* L)
 {
+    if (luabind::get_op22_nofatal()) // OP22: только лог, вызов вернёт nil (luabind::detail::pcall)
+    {
+        print_output(L, "[" __FUNCTION__ "]", LUA_ERRRUN);
+        Msg("!! [OP22 nofatal] Lua error #%u: %s - call returned nil, game continues", luabind::get_op22_nofatal_count() + 1,
+            lua_isstring(L, -1) ? lua_tostring(L, -1) : "");
+        return 1; // сообщение остаётся на стеке как результат обработчика
+    }
     DEF_LUA_ERROR_TEMPLATE(L)
     if (lua_isstring(L, -1))
         lua_pop(L, 1);
@@ -133,6 +140,10 @@ void CScriptEngine::init()
     luabind::set_cast_failed_callback(lua_cast_failed);
 #endif
     luabind::set_pcall_callback(lua_pcall_failed); // KRodin: НЕ ЗАКОММЕНТИРОВАТЬ НИ В КОЕМ СЛУЧАЕ!!!
+    // OP22: файл userdata/op22_nofatal - режим «не падать» (только тестовый прототип)
+    luabind::set_op22_nofatal(!!FS.exist("$app_data_root$", "op22_nofatal"));
+    if (luabind::get_op22_nofatal())
+        Msg("! [OP22 nofatal] mode on: Lua errors are logged, game does not stop");
     lua_atpanic(LSVM, lua_panic);
     //-----------------------------------------------------//
     extern void export_classes(lua_State * L);
