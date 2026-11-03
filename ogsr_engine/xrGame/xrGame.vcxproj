@@ -2414,6 +2414,7 @@
     <ClCompile Include="ui\UIDragDropListEx.cpp" />
     <ClCompile Include="ui\op22_ui_dragdrop_script.cpp" />
     <ClCompile Include="ui\op22_ui_custom_controls.cpp" />
+    <ClCompile Include="op22_console.cpp" />
     <ClCompile Include="ui\UILabel.cpp" />
     <ClCompile Include="ui\UIScrollBar.cpp" />
     <ClCompile Include="ui\UIScrollBox.cpp" />

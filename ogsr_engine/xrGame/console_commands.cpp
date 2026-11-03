@@ -1836,4 +1836,7 @@ void CCC_RegisterCommands()
 
     extern BOOL bSenvironmentXrExport;
     CMD4(CCC_Integer, "senvironment_xr_export", &bSenvironmentXrExport, FALSE, TRUE);
+
+    extern void op22_register_console(); // OP22: переменные консоли ОП 2.2 для окна опций (op22_console.cpp)
+    op22_register_console();
 }

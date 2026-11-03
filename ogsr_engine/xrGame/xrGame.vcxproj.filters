@@ -8668,6 +8668,9 @@
     <ClCompile Include="ui\op22_ui_custom_controls.cpp">
       <Filter>AI\AScript\ScriptClasses\UI\UIWindows\DragDrop2</Filter>
     </ClCompile>
+    <ClCompile Include="op22_console.cpp">
+      <Filter>Core\Common\Console Commands</Filter>
+    </ClCompile>
     <ClCompile Include="ui\UILabel.cpp">
       <Filter>AI\AScript\ScriptClasses\UI\UIWindows\Label</Filter>
     </ClCompile>
