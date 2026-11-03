@@ -142,6 +142,15 @@ void CUIInventoryWnd::InitInventory()
         }
     }
 
+    // OP22: слоты ОП 2.2
+    for (u8 s = 0; s < SLOTS_TOTAL; ++s)
+    {
+        if (!m_op22_lists[s])
+            continue;
+        if (PIItem it = m_pInv->m_slots[s].m_pIItem)
+            m_op22_lists[s]->SetItem(create_cell_item(it));
+    }
+
     PIItem _outfit = m_pInv->m_slots[OUTFIT_SLOT].m_pIItem;
     CUICellItem* outfit = (_outfit) ? create_cell_item(_outfit) : NULL;
     m_pUIOutfitList->SetItem(outfit);
@@ -543,6 +552,9 @@ void CUIInventoryWnd::ClearAllLists()
         m_pUIBIODetList->ClearAll(true);
         m_pUIBinocularList->ClearAll(true);
     }
+    for (auto l : m_op22_lists) // OP22
+        if (l)
+            l->ClearAll(true);
 }
 
 void CUIInventoryWnd::UpdateWeight() { InventoryUtilities::UpdateWeight(UIBagWnd, true); }

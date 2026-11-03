@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include <DirectXTex.h>
+#include "../../xrCore/op22_skins.h"
 
 void fix_texture_name(const char* fn)
 {
@@ -19,7 +20,12 @@ ID3DBaseTexture* CRender::texture_load(LPCSTR fRName, u32& ret_msize)
     xr_strcpy(fname, fRName);
     fix_texture_name(fname);
 
-    if (strstr(fname, "_bump") && !FS.exist(fn, "$game_textures$", fname, ".dds"))
+    LPCSTR op22_a{}; // OP22: текстура из скина ОП (HUD/инвентарь) главнее
+    string_path op22_r;
+    if (op22_skins::find_texture(fname, op22_a, op22_r) && FS.exist(fn, op22_a, op22_r))
+    {
+    }
+    else if (strstr(fname, "_bump") && !FS.exist(fn, "$game_textures$", fname, ".dds"))
     {
         Msg("! Fallback to default bump map: [%s]", fname);
 

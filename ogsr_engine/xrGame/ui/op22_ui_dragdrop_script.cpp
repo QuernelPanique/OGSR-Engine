@@ -24,6 +24,8 @@
 #include "inventory_space.h"
 #include "../ai_space.h"
 #include "../script_engine.h"
+#include "../WeaponMagazined.h"
+#include "../WeaponAmmo.h"
 
 using namespace luabind;
 
@@ -376,7 +378,19 @@ bool CUIInventoryWnd::OnItemDropOP22(CUICellItem* itm)
     CUIDragDropListEx* to = CUIDragDropListEx::m_drag_item ? CUIDragDropListEx::m_drag_item->BackList() : nullptr;
     CUICellItem* focused = op22_cell_under_cursor(to, itm);
     bool processed = false;
-    if (from && from == to && focused && GetType(to) == iwBag)
+    // зарядка: патроны брошены на ствол, к которому подходят (в любом списке окна)
+    if (focused && focused != itm)
+    {
+        auto ammo = smart_cast<CWeaponAmmo*>(static_cast<PIItem>(itm->m_pData));
+        auto wpn = smart_cast<CWeaponMagazined*>(static_cast<PIItem>(focused->m_pData));
+        if (ammo && wpn && wpn->op22_LoadAmmoFromUI(ammo->cNameSect()))
+        {
+            PlaySnd(eInvItemToSlot);
+            InitInventory_delayed();
+            processed = true;
+        }
+    }
+    if (!processed && from && from == to && focused && GetType(to) == iwBag)
     {
         PIItem addon = static_cast<PIItem>(itm->m_pData);
         PIItem target = static_cast<PIItem>(focused->m_pData);
@@ -427,7 +441,73 @@ void CUIInventoryWnd::op22_PlaySnd(int a)
         PlaySnd(eInventorySndAction(a));
 }
 
-// методы окон ОП для скриптов; подсветка подходящих - пока без эффекта (TODO)
+// OP22: подсветка подходящих (callback_ui.on_cell_after_select ОП): ячейки с предметом нужной секции получают
+// подсветку OGSR (m_select_armament - ею движок отмечает патроны к стволу); сбрасывается при следующем выборе
+static void op22_collect_lists(CUIWindow* w, xr_vector<CUIDragDropListEx*>& out)
+{
+    for (CUIWindow* c : w->GetChildWndList())
+    {
+        if (auto l = smart_cast<CUIDragDropListEx*>(c))
+            out.push_back(l);
+        op22_collect_lists(c, out);
+    }
+}
+static void op22_mark(CUIDragDropListEx* l, const xr_vector<shared_str>* sects, bool on)
+{
+    if (!l)
+        return;
+    for (u32 i = 0, n = l->ItemsCount(); i < n; ++i)
+    {
+        CUICellItem* c = l->GetItemIdx(i);
+        auto it = static_cast<PIItem>(c->m_pData);
+        if (!sects)
+            c->m_select_armament = on;
+        else if (it && std::find(sects->begin(), sects->end(), it->object().cNameSect()) != sects->end())
+            c->m_select_armament = on;
+    }
+}
+static void op22_sects(const luabind::object& o, xr_vector<shared_str>& out)
+{
+    if (o.type() == LUA_TSTRING)
+    {
+        out.emplace_back(luabind::object_cast<LPCSTR>(o));
+        return;
+    }
+    if (o.type() != LUA_TTABLE)
+        return;
+    for (auto it = o.begin(); it != o.end(); ++it)
+    {
+        luabind::object v = *it;
+        if (v.type() == LUA_TSTRING)
+            out.emplace_back(luabind::object_cast<LPCSTR>(v));
+    }
+}
+// список по типу ui_iw_list_types: в инвентаре - слот (номер слота ОП), 20 рюкзак, 21 пояс; иначе - все списки окна
+static void op22_lists_of(CUIWindow* w, int type, xr_vector<CUIDragDropListEx*>& out)
+{
+    if (auto inv = smart_cast<CUIInventoryWnd*>(w); inv && type >= 0)
+    {
+        if (type < SLOTS_TOTAL)
+            out.push_back(inv->GetSlotList(u8(type)));
+        else if (type == 20)
+            out.push_back(inv->op22_bag());
+        else if (type == 21)
+            out.push_back(inv->op22_belt());
+        if (!out.empty())
+            return;
+    }
+    op22_collect_lists(w, out);
+}
+template <class W>
+static void wnd_clear_all(W* w)
+{
+    xr_vector<CUIDragDropListEx*> ls;
+    op22_collect_lists(w, ls);
+    for (auto l : ls)
+        op22_mark(l, nullptr, false);
+}
+
+// методы окон ОП для скриптов
 template <class W, int WT>
 static int wnd_type(W*) { return WT; }
 template <class W>
@@ -436,15 +516,36 @@ template <class W>
 static void wnd_play_none(W*, int) {}
 static void wnd_inv_play(CUIInventoryWnd* w, int a) { w->op22_PlaySnd(a); }
 template <class W>
-static void wnd_suit1(W*, LPCSTR) {}
+static void wnd_suit_in2(W* w, int type, const luabind::object& o)
+{
+    xr_vector<shared_str> s;
+    op22_sects(o, s);
+    xr_vector<CUIDragDropListEx*> ls;
+    op22_lists_of(w, type, ls);
+    for (auto l : ls)
+        op22_mark(l, &s, true);
+}
 template <class W>
-static void wnd_suit2(W*, const luabind::object&) {}
+static void wnd_suit_in1(W* w, int type, LPCSTR sect)
+{
+    xr_vector<shared_str> s{shared_str(sect)};
+    xr_vector<CUIDragDropListEx*> ls;
+    op22_lists_of(w, type, ls);
+    for (auto l : ls)
+        op22_mark(l, &s, true);
+}
 template <class W>
-static void wnd_suit_in1(W*, int, LPCSTR) {}
+static void wnd_suit1(W* w, LPCSTR sect) { wnd_suit_in1(w, -1, sect); }
 template <class W>
-static void wnd_suit_in2(W*, int, const luabind::object&) {}
+static void wnd_suit2(W* w, const luabind::object& o) { wnd_suit_in2(w, -1, o); }
 template <class W>
-static void wnd_clear_in(W*, int) {}
+static void wnd_clear_in(W* w, int type)
+{
+    xr_vector<CUIDragDropListEx*> ls;
+    op22_lists_of(w, type, ls);
+    for (auto l : ls)
+        op22_mark(l, nullptr, false);
+}
 
 struct op22_enum_ui_windows_types {};
 struct op22_enum_ui_iw_list_types {};
@@ -456,7 +557,7 @@ static void op22_register_windows(lua_State* L)
                   .def("GetUIWindowType", &wnd_type<CUIInventoryWnd, 0>)
                   .def("PlaySnd", &wnd_inv_play)
                   .def("re_init", &wnd_noop<CUIInventoryWnd>)
-                  .def("ClearAllSuitables", &wnd_noop<CUIInventoryWnd>)
+                  .def("ClearAllSuitables", &wnd_clear_all<CUIInventoryWnd>)
                   .def("ClearSuitablesInList", &wnd_clear_in<CUIInventoryWnd>)
                   .def("SetSuitableBySection", &wnd_suit1<CUIInventoryWnd>)
                   .def("SetSuitableBySection", &wnd_suit2<CUIInventoryWnd>)
@@ -466,7 +567,7 @@ static void op22_register_windows(lua_State* L)
                   .def("GetUIWindowType", &wnd_type<CUITradeWnd, 1>)
                   .def("PlaySnd", &wnd_play_none<CUITradeWnd>)
                   .def("re_init", &wnd_noop<CUITradeWnd>)
-                  .def("ClearAllSuitables", &wnd_noop<CUITradeWnd>)
+                  .def("ClearAllSuitables", &wnd_clear_all<CUITradeWnd>)
                   .def("ClearSuitablesInList", &wnd_clear_in<CUITradeWnd>)
                   .def("SetSuitableBySection", &wnd_suit1<CUITradeWnd>)
                   .def("SetSuitableBySection", &wnd_suit2<CUITradeWnd>)
@@ -476,7 +577,7 @@ static void op22_register_windows(lua_State* L)
                   .def("GetUIWindowType", &wnd_type<CUICarBodyWnd, 2>)
                   .def("PlaySnd", &wnd_play_none<CUICarBodyWnd>)
                   .def("re_init", &wnd_noop<CUICarBodyWnd>)
-                  .def("ClearAllSuitables", &wnd_noop<CUICarBodyWnd>)
+                  .def("ClearAllSuitables", &wnd_clear_all<CUICarBodyWnd>)
                   .def("ClearSuitablesInList", &wnd_clear_in<CUICarBodyWnd>)
                   .def("SetSuitableBySection", &wnd_suit1<CUICarBodyWnd>)
                   .def("SetSuitableBySection", &wnd_suit2<CUICarBodyWnd>)
@@ -507,10 +608,11 @@ constexpr u32 OP22_PROP_TAG_BASE = 0x4F500000;
 static xr_vector<luabind::functor<void>> g_prop_funcs;
 static CUIInventoryWnd* g_prop_wnd = nullptr;
 
-static void pb_InsertItem(CUIPropertiesBox* box, int /*pos: в первой версии - в конец*/, LPCSTR str, const luabind::functor<void>& f)
+static void pb_InsertItem(CUIPropertiesBox* box, int pos, LPCSTR str, const luabind::functor<void>& f)
 {
     g_prop_funcs.push_back(f);
     box->AddItem(str, nullptr, OP22_PROP_TAG_BASE + u32(g_prop_funcs.size() - 1));
+    box->op22_MoveLastTo(pos); // позиция с 1 (callback_ui ОП)
 }
 static void pb_RemoveItemByTAG(CUIPropertiesBox* box, u32 tag)
 {

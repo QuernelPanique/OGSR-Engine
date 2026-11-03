@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../xrCore/op22_skins.h"
 #include "ui_base.h"
 #include "GamePersistent.h"
 #include "UICursor.h"
@@ -286,7 +287,8 @@ shared_str ui_core::get_xml_name(LPCSTR fn)
             sprintf_s(str, "%s%s", fn, aspect_name);
 
         string_path str_;
-        if (FS.exist(str_, fsgame::game_configs, "ui\\", str))
+        LPCSTR op22_a{}; // OP22: вариант окна может быть только в скине ОП
+        if (FS.exist(str_, fsgame::game_configs, "ui\\", str) || op22_skins::find_config_ui(str, op22_a, str_))
         {
 #ifdef DEBUG
             Msg("[%s-9] get_xml_name for[%s] returns [%s]", aspect_name, fn, str);

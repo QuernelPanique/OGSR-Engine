@@ -164,6 +164,7 @@
     <ClCompile Include="xr_trims.cpp" />
     <ClCompile Include="FS.cpp" />
     <ClCompile Include="LocatorAPI.cpp" />
+    <ClCompile Include="op22_skins.cpp" />
     <ClCompile Include="LocatorAPI_defs.cpp" />
     <ClCompile Include="log.cpp" />
     <ClCompile Include="Xr_ini.cpp" />
@@ -235,6 +236,7 @@
     <ClInclude Include="FS.h" />
     <ClInclude Include="FS_internal.h" />
     <ClInclude Include="LocatorAPI.h" />
+    <ClInclude Include="op22_skins.h" />
     <ClInclude Include="LocatorAPI_defs.h" />
     <ClInclude Include="log.h" />
     <ClInclude Include="xr_ini.h" />

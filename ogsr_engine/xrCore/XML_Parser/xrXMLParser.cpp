@@ -1,5 +1,20 @@
 #include "stdafx.h"
 #include "xrXMLParser.h"
+#include "../op22_skins.h"
+
+// OP22: файл окна из скина ОП (HUD/инвентарь), иначе - как обычно
+static IReader* op22_open(LPCSTR path, LPCSTR fname)
+{
+    if (path && fname && !_stricmp(path, "$game_config$") && !_strnicmp(fname, "ui\\", 3))
+    {
+        LPCSTR a{};
+        string_path r;
+        if (op22_skins::find_config_ui(fname + 3, a, r))
+            if (IReader* F = FS.r_open(a, r))
+                return F;
+    }
+    return FS.r_open(path, fname);
+}
 
 CXml::CXml() : m_root(NULL), m_pLocalRoot(NULL) {}
 
@@ -19,12 +34,12 @@ void ParseFile(LPCSTR path, CMemoryWriter& W, IReader* F, CXml* xml, LPCSTR curr
             shared_str fn = xml->correct_file_name("ui", strchr(file_name, '\\') + 1);
             string_path buff;
             strconcat(sizeof(buff), buff, "ui\\", fn.c_str());
-            I = FS.r_open(path, buff);
+            I = op22_open(path, buff);
         }
 
         if (!I)
         {
-            I = FS.r_open(path, file_name);
+            I = op22_open(path, file_name);
         }
 
         if (!I)
@@ -88,7 +103,7 @@ bool CXml::Load(LPCSTR path, LPCSTR xml_filename, bool fatal)
 {
     // Load and parse xml file
 
-    IReader* F = FS.r_open(path, xml_filename);
+    IReader* F = op22_open(path, xml_filename);
     if (!F)
     {
         R_ASSERT3(!fatal, "Can't find specified xml file", xml_filename);
@@ -134,7 +149,7 @@ bool CXml::Init(LPCSTR path, LPCSTR xml_filename)
     strcpy_s(m_xml_file_name, xml_filename);
     // Load and parse xml file
 
-    IReader* F = FS.r_open(path, xml_filename);
+    IReader* F = op22_open(path, xml_filename);
 
     if (F == NULL)
         return false;

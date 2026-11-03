@@ -64,6 +64,7 @@ public:
     virtual void SetSelected(CUIWindow*);
     CUIWindow* GetSelected();
     void ForceUpdate();
+    CUIWindow* op22_pad() { return m_pad; } // OP22: порядок пунктов меню предмета (InsertItem ОП)
     void ForceScrollPosition();
     int GetMinScrollPos();
     int GetMaxScrollPos();

@@ -1860,3 +1860,20 @@ bool CWeaponMagazined::ShouldPlayFlameParticles()
 
     return true;
 }
+
+// OP22: зарядка броском патронов на ствол в инвентаре (ОП 2.2): ReloadMagazine сам разрядит патроны другого типа
+// в рюкзак и наберёт патроны нужного типа из инвентаря
+bool CWeaponMagazined::op22_LoadAmmoFromUI(const shared_str& ammo_sect)
+{
+    if (!m_pCurrentInventory || IsGrenadeMode() || GetState() == eReload)
+        return false;
+    const auto it = std::find(m_ammoTypes.begin(), m_ammoTypes.end(), ammo_sect);
+    if (it == m_ammoTypes.end())
+        return false;
+    const u32 type = u32(it - m_ammoTypes.begin());
+    if (type == m_ammoType && iAmmoElapsed >= iMagazineSize)
+        return false;
+    m_set_next_ammoType_on_reload = type;
+    ReloadMagazine();
+    return true;
+}

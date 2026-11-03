@@ -99,6 +99,9 @@
     <ClCompile Include="LocatorAPI.cpp">
       <Filter>FS</Filter>
     </ClCompile>
+    <ClCompile Include="op22_skins.cpp">
+      <Filter>FS</Filter>
+    </ClCompile>
     <ClCompile Include="LocatorAPI_defs.cpp">
       <Filter>FS</Filter>
     </ClCompile>

@@ -109,12 +109,20 @@ protected:
 
     // alpet: для индексированного доступа
     CUIDragDropListEx* m_slots_array[SLOTS_TOTAL];
+    // OP22: списки слотов ОП 2.2 (нож 0, бинокль 4, детекторы 8/11, фонарь 9, ПНВ 12, второй ствол 13, биорадар 14) - без ogse_new_slots
+    CUIDragDropListEx* m_op22_lists[SLOTS_TOTAL]{};
+
+public:
+    CUIDragDropListEx* op22_bag() { return m_pUIBagList; }   // OP22: подсветка подходящих по типу списка
+    CUIDragDropListEx* op22_belt() { return m_pUIBeltList; }
+    CUIDragDropListEx* GetSlotList(u8 slot_idx);
+
+protected:
 
     void ClearAllLists();
     void BindDragDropListEnents(CUIDragDropListEx* lst);
 
     EListType GetType(CUIDragDropListEx* l);
-    CUIDragDropListEx* GetSlotList(u8 slot_idx);
 
     bool OnItemDrop(CUICellItem* itm);
     bool OnItemDropOP22(CUICellItem* itm); // OP22: + аддон броском на оружие, callback_ui.on_cell_item_drop

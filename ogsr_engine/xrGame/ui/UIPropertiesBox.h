@@ -24,6 +24,17 @@ public:
     bool AddItem_script(const char* str) { return AddItem(str); };
     u32 GetItemsCount() { return m_UIListWnd.GetSize(); };
     bool op22_has_tag(u32 tag) { return m_UIListWnd.GetItemByTAG(tag) != nullptr; } // OP22: RemoveItemByTAG ОП без вылета на отсутствующем
+    // OP22: последний добавленный пункт - на позицию pos (с 1, как в ОП)
+    void op22_MoveLastTo(int pos)
+    {
+        auto& l = m_UIListWnd.op22_pad()->GetChildWndList();
+        if (l.size() < 2 || pos < 1 || pos >= int(l.size()))
+            return;
+        CUIWindow* w = l.back();
+        l.pop_back();
+        l.insert(std::next(l.begin(), pos - 1), w); // xr_list
+        m_UIListWnd.ForceUpdate();
+    }
     void RemoveItemByTAG(u32 tag_value);
     void RemoveAll();
 

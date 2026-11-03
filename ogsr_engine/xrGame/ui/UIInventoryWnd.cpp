@@ -203,6 +203,29 @@ void CUIInventoryWnd::Init()
         m_slots_array[TORCH_SLOT] = m_pUITorchList;
     }
 
+    // OP22: слоты ОП 2.2 по узлам разметки (окно порта ОП 2 на OGSR их содержит); нет узла - нет списка
+    if (!Core.Features.test(xrCore::Feature::ogse_new_slots))
+    {
+        static const std::pair<u8, const char*> op22_slots[] = {
+            {KNIFE_SLOT, "dragdrop_knife"},           {APPARATUS_SLOT, "dragdrop_apparatus"}, {DETECTOR_SLOT, "dragdrop_detector_arts"},
+            {TORCH_SLOT, "dragdrop_torch"},           {NIGHT_VISION_SLOT, "dragdrop_detector_anoms"}, // ОП: 11 - детектор аномалий
+            {BIODETECTOR_SLOT, "dragdrop_pnv"},       // ОП: 12 - ПНВ
+            {OP22_SHOTGUN_SLOT, "dragdrop_secondwpn"}, {OP22_SHOTGUN_SLOT, "dragdrop_shotgun"}, {OP22_BIODEV_SLOT, "dragdrop_biodev"},
+        };
+        for (const auto& [slot, node] : op22_slots)
+        {
+            if (m_op22_lists[slot] || m_slots_array[slot] || !uiXml.NavigateToNode(node, 0))
+                continue;
+            CUIDragDropListEx* l = xr_new<CUIDragDropListEx>();
+            AttachChild(l);
+            l->SetAutoDelete(true);
+            xml_init.InitDragDropListEx(uiXml, node, 0, l);
+            BindDragDropListEnents(l);
+            m_op22_lists[slot] = l;
+            m_slots_array[slot] = l;
+        }
+    }
+
     // pop-up menu
     AttachChild(&UIPropertiesBox);
     UIPropertiesBox.Init(0, 0, 300, 300);

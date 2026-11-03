@@ -115,6 +115,8 @@ public:
 
     virtual bool Action(s32 cmd, u32 flags);
     virtual void UnloadMagazine(bool spawn_ammo = true);
+    // OP22: зарядка броском патронов на ствол в инвентаре (ОП 2.2): сразу, без анимации; патроны другого типа - в рюкзак
+    bool op22_LoadAmmoFromUI(const shared_str& ammo_sect);
 
     virtual void GetBriefInfo(xr_string& str_name, xr_string& icon_sect_name, xr_string& str_count);
 

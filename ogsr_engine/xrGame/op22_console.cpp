@@ -9,6 +9,7 @@
 #include "..\xr_3da\CustomHUD.h"
 #include "ui_base.h"
 #include "HUDManager.h"
+#include "../xrCore/op22_skins.h"
 
 namespace
 {
@@ -135,6 +136,29 @@ void font_profile()
     t[g_font_profiles.size()].id = 0;
     add(xr_new<CCC_OP22FontProfile>("font_profile", &g_font_profile, t));
 }
+// скин ОП (g_current_hud / g_current_inventory): задаёт профиль ядру скинов, показывает действующий (с учётом
+// профиля по умолчанию) - окно выбора HUD в опциях ОП отмечает верную строку. Смена - после перезапуска игры
+class CCC_OP22Skin : public CCC_String
+{
+    int m_kind;
+
+public:
+    CCC_OP22Skin(LPCSTR N, LPSTR V, int size, int kind) : CCC_String(N, V, size), m_kind(kind) {}
+    virtual void Execute(LPCSTR args)
+    {
+        CCC_String::Execute(args);
+        op22_skins::set_current(m_kind, value);
+    }
+    virtual void Status(TStatus& S) { xr_strcpy(S, op22_skins::current(m_kind)); }
+};
+
+void skin(LPCSTR name, int kind)
+{
+    constexpr int size = 128;
+    char* v = xr_alloc<char>(size);
+    v[0] = 0;
+    add(xr_new<CCC_OP22Skin>(name, v, size, kind));
+}
 } // namespace
 
 LPCSTR op22_font_profile_key() { return g_font_profile < g_font_profiles.size() ? g_font_profiles[g_font_profile].second.c_str() : nullptr; }
@@ -195,7 +219,7 @@ void op22_register_console()
     flt("r2_sun_near_border", 1.f, 0.f, 1.f);
     str("bolt_visual", "bolt");
     str("hc_unarmed", "");
-    str("g_current_hud", "default_hud");
-    str("g_current_inventory", "default");
+    skin("g_current_hud", op22_skins::eHud);
+    skin("g_current_inventory", op22_skins::eInventory);
     str("buy_item", "nil");
 }
