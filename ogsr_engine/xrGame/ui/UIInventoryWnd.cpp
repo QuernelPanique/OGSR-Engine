@@ -30,6 +30,11 @@ using namespace InventoryUtilities;
 #include "UIOutfitSlot.h"
 #include "UI3tButton.h"
 #include <format>
+#include "../UICursor.h" // OP22: плавающее описание
+#include "UIScrollView.h"
+#include "../ui_base.h"
+#include "..\..\xr_3da\xr_input.h"
+#include "..\..\xr_3da\xr_ioconsole.h"
 
 #define INVENTORY_ITEM_XML "inventory_item.xml"
 #define INVENTORY_XML "inventory_new.xml"
@@ -81,6 +86,19 @@ void CUIInventoryWnd::Init()
 
     UIDescrWnd.AttachChild(&UIItemInfo);
     UIItemInfo.Init(0, 0, UIDescrWnd.GetWidth(), UIDescrWnd.GetHeight(), INVENTORY_ITEM_XML);
+    // OP22: описание предмета ОП 2.2 - плавающее окно у курсора (Ghidra: CUIInventoryWnd::Init создаёт CUIItemInfo из
+    // inventory_item_fly.xml, Draw/Update рисуют его поверх окна, колесо мыши - в его описание); панель descr_static
+    // ОП не заполняет. Окно со своей панелью описания (скин op22_port) помечено узлом op22_panel_info
+    if (!uiXml.NavigateToNode("op22_panel_info", 0))
+    {
+        CUIXml fly_xml;
+        if (fly_xml.Init(CONFIG_PATH, UI_PATH, "inventory_item_fly.xml"))
+        {
+            m_op22_fly = xr_new<CUIItemInfo>();
+            m_op22_fly->Init("inventory_item_fly.xml");
+            UIItemInfo.Show(false);
+        }
+    }
 
     AttachChild(&UIPersonalWnd);
     xml_init.InitFrameWindow(uiXml, "character_frame_window", 0, &UIPersonalWnd);
@@ -291,6 +309,7 @@ CUIInventoryWnd::~CUIInventoryWnd()
 {
     //.	ClearDragDrop(m_vDragDropItems);
     ClearAllLists();
+    xr_delete(m_op22_fly); // OP22
 }
 
 bool CUIInventoryWnd::OnMouse(float x, float y, EUIMessages mouse_action)
@@ -307,12 +326,95 @@ bool CUIInventoryWnd::OnMouse(float x, float y, EUIMessages mouse_action)
         }
     }
 
+    // OP22: колесо мыши при открытом плавающем описании прокручивает его текст (как в ОП 2.2)
+    if (m_op22_fly_on && m_op22_fly && m_op22_fly->UIDesc && (mouse_action == WINDOW_MOUSE_WHEEL_UP || mouse_action == WINDOW_MOUSE_WHEEL_DOWN))
+    {
+        CUIScrollView* d = m_op22_fly->UIDesc;
+        const int step = 20;
+        int p = d->GetCurrentScrollPos() + (mouse_action == WINDOW_MOUSE_WHEEL_UP ? -step : step);
+        d->SetScrollPos(_max(d->GetMinScrollPos(), _min(d->GetMaxScrollPos(), p)));
+        return true;
+    }
+
     CUIWindow::OnMouse(x, y, mouse_action);
 
     return true; // always returns true, because ::StopAnyMove() == true;
 }
 
-void CUIInventoryWnd::Draw() { CUIWindow::Draw(); }
+void CUIInventoryWnd::Draw()
+{
+    CUIWindow::Draw();
+    if (m_op22_fly && m_op22_fly_on) // OP22: плавающее описание поверх окна
+        m_op22_fly->Draw();
+}
+
+// OP22: ячейка предмета под курсором (рюкзак, пояс, костюм, слоты)
+CUICellItem* CUIInventoryWnd::op22_cell_under_cursor()
+{
+    const Fvector2 c = GetUICursor()->GetCursorPosition();
+    auto test = [&c](CUIDragDropListEx* l) -> CUICellItem* {
+        if (!l || !l->IsShown())
+            return nullptr;
+        Frect lr;
+        l->GetAbsoluteRect(lr);
+        if (!lr.in(c.x, c.y))
+            return nullptr;
+        for (u32 i = 0, n = l->ItemsCount(); i < n; ++i)
+        {
+            CUICellItem* ci = l->GetItemIdx(i);
+            Frect r;
+            ci->GetAbsoluteRect(r);
+            if (r.in(c.x, c.y))
+                return ci;
+        }
+        return nullptr;
+    };
+    if (CUICellItem* ci = test(m_pUIBagList))
+        return ci;
+    if (CUICellItem* ci = test(m_pUIBeltList))
+        return ci;
+    for (CUIDragDropListEx* l : m_slots_array)
+        if (CUICellItem* ci = test(l))
+            return ci;
+    return nullptr;
+}
+
+// OP22: плавающее описание: курсор над предметом дольше g_fly_show_info_delay мс - окно у курсора, не за краем экрана;
+// меню предмета, зажатая кнопка (перетаскивание) - скрыто
+void CUIInventoryWnd::op22_fly_update()
+{
+    if (!m_op22_fly)
+        return;
+    CUICellItem* ci = (UIPropertiesBox.IsShown() || pInput->iGetAsyncKeyState(MOUSE_1)) ? nullptr : op22_cell_under_cursor();
+    if (ci != m_op22_fly_cell)
+    {
+        m_op22_fly_cell = ci;
+        m_op22_fly_t = Device.dwTimeGlobal;
+        m_op22_fly_on = false;
+        return;
+    }
+    if (!ci)
+        return;
+    if (!m_op22_fly_on)
+    {
+        int mn = 0, mx = 0;
+        const int delay = Console ? Console->GetInteger("g_fly_show_info_delay", mn, mx) : 1000;
+        PIItem it = (PIItem)ci->m_pData;
+        if (!it || Device.dwTimeGlobal - m_op22_fly_t < u32(_max(delay, 0)))
+            return;
+        m_op22_fly->InitItem(it);
+        m_op22_fly_on = true;
+    }
+    const Fvector2 c = GetUICursor()->GetCursorPosition();
+    const Fvector2 sz = m_op22_fly->GetWndSize();
+    float x = c.x + 16.f, y = c.y + 16.f;
+    if (x + sz.x > 1024.f) // виртуальный экран 1024x768
+        x = c.x - 8.f - sz.x;
+    if (y + sz.y > 768.f)
+        y = 768.f - sz.y;
+    m_op22_fly->SetWndPos(Fvector2().set(_max(x, 0.f), _max(y, 0.f)));
+    m_op22_fly->Update();
+}
 
 void CUIInventoryWnd::Update()
 {
@@ -351,6 +453,7 @@ void CUIInventoryWnd::Update()
     UIStaticTimeString.SetText(*InventoryUtilities::GetGameTimeAsString(InventoryUtilities::etpTimeToMinutes));
 
     CUIWindow::Update();
+    op22_fly_update(); // OP22
 }
 
 void CUIInventoryWnd::Show()
@@ -377,6 +480,8 @@ void CUIInventoryWnd::Hide()
 {
     PlaySnd(eInvSndClose);
     inherited::Hide();
+    m_op22_fly_on = false; // OP22: ячейки удаляются ниже (ClearAllLists)
+    m_op22_fly_cell = nullptr;
 
     SendInfoToActor("ui_inventory_hide");
     ClearAllLists();

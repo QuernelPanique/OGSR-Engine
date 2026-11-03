@@ -149,6 +149,14 @@ protected:
 
 public:
     CUICellItem* m_pCurrentCellItem;
+    // OP22: описание предмета ОП 2.2 - плавающее окно у курсора через g_fly_show_info_delay мс
+    // (inventory_item_fly.xml); окно со своей панелью описания помечено узлом op22_panel_info (скин op22_port)
+    CUIItemInfo* m_op22_fly{};
+    CUICellItem* m_op22_fly_cell{};
+    u32 m_op22_fly_t{};
+    bool m_op22_fly_on{};
+    CUICellItem* op22_cell_under_cursor();
+    void op22_fly_update();
 
 protected:
     bool DropItem(PIItem itm, CUIDragDropListEx* lst);

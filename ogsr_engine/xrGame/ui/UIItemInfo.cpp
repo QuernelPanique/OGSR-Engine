@@ -13,6 +13,7 @@
 #include "UIInventoryUtilities.h"
 #include "../PhysicsShellHolder.h"
 #include "UIWpnParams.h"
+#include "UIFrameWindow.h" // OP22
 #include "ui_af_params.h"
 #include <format>
 
@@ -56,6 +57,15 @@ void CUIItemInfo::Init(LPCSTR xml_name)
         wnd_rect.y2 = uiXml.ReadAttribFlt("main_frame", 0, "height", 0);
 
         inherited::Init(wnd_rect.x1, wnd_rect.y1, wnd_rect.x2, wnd_rect.y2);
+    }
+
+    // OP22: фон плавающего окна описания ОП 2.2 (inventory_item_fly.xml), первым ребёнком - под остальными
+    if (uiXml.NavigateToNode("background_frame", 0))
+    {
+        CUIFrameWindow* back = xr_new<CUIFrameWindow>();
+        back->SetAutoDelete(true);
+        AttachChild(back);
+        xml_init.InitFrameWindow(uiXml, "background_frame", 0, back);
     }
 
     if (uiXml.NavigateToNode("static_name", 0))
