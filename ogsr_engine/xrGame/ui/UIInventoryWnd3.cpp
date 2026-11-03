@@ -18,10 +18,19 @@
 #include "../CustomOutfit.h"
 #include "../string_table.h"
 #include <regex>
+#include "../game_object_space.h" // OP22: item_use_only -> use_object
+#include "../script_callback_ex.h"
+#include "../script_game_object.h"
 
 void CUIInventoryWnd::EatItem(PIItem itm)
 {
     SetCurrentItem(NULL);
+    if (itm->m_bOP22UseOnly) // OP22: предмет ОП «только использовать» - событие актору, без поедания
+    {
+        Actor()->callback(GameObject::eUseObject)(itm->object().lua_game_object());
+        PlaySnd(eInvItemUse);
+        return;
+    }
     if (!itm->Useful())
         return;
 
@@ -174,6 +183,9 @@ void CUIInventoryWnd::ActivatePropertiesBox()
             _action = "st_eat";
     }
 
+    if (CurrentIItem()->m_bOP22UseOnly) // OP22
+        _action = "st_use";
+
     if (_action)
     {
         UIPropertiesBox.AddItem(_action, NULL, INVENTORY_EAT_ACTION);
@@ -294,7 +306,7 @@ bool CUIInventoryWnd::TryUseItem(PIItem itm)
     CAntirad* pAntirad = smart_cast<CAntirad*>(itm);
     CEatableItem* pEatableItem = smart_cast<CEatableItem*>(itm);
 
-    if (pMedkit || pAntirad || pEatableItem || pBottleItem)
+    if (pMedkit || pAntirad || pEatableItem || pBottleItem || itm->m_bOP22UseOnly) // OP22: + item_use_only
     {
         EatItem(itm);
         return true;

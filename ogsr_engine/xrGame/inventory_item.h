@@ -143,6 +143,9 @@ public:
 
     shared_str m_name;
     shared_str m_nameShort;
+    // OP22: item_use_only ОП 2.2 - «Использовать» только посылает актору use_object, предмет не тратится
+    // (контейнеры CL_GBOX, документы doc_view, плеер, спальник, телепортатор, флешки)
+    bool m_bOP22UseOnly{};
     shared_str m_nameComplex;
 
     EItemPlace m_eItemPlace;
