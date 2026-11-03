@@ -65,7 +65,7 @@ void CUIKeyBinding::FillUpList(CUIXml& xml_doc_ui, LPCSTR path_ui)
 
             // OP22: в раскладке ОП 2.2 есть действия, которых нет в OGSR (creep, wpn_7, быстрые слоты) - строку пропускаем
             // (раньше проверка была только в DEBUG, в релизе - вылет в CUIEditKeyBind::Register)
-            if (kNOTBINDED == action_name_to_id(*xml_doc.ReadAttrib("command", j, "exe")))
+            if (kNOTBINDED == action_name_to_id(xml_doc.ReadAttrib("command", j, "exe")))
             {
                 Msg("! [%s] key binding action [%s] not exist - skipped", __FUNCTION__, xml_doc.ReadAttrib("command", j, "exe"));
                 continue;
