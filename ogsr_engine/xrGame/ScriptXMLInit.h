@@ -65,6 +65,7 @@ public:
     CUIWindow* InitKeyBinding(LPCSTR path, CUIWindow* parent);
     CUIScrollView* InitScrollView(LPCSTR path, CUIWindow* parent);
     CUIProgressBar* InitProgressBar(LPCSTR path, CUIWindow* parent);
+    CUIXml& op22_xml() { return m_xml; } // OP22: InitDragDropListEx (ui/op22_ui_dragdrop_script.cpp)
 
 protected:
     CUIXml m_xml;

@@ -160,6 +160,9 @@ luabind::object get_slots(CInventoryItem* itm)
     return table;
 }
 
+// OP22: CInventoryItem:GetGameObject() ОП 2.2
+static CScriptGameObject* op22_item_game_object(CInventoryItem* itm) { return itm ? itm->object().lua_game_object() : nullptr; }
+
 void CInventoryScript::script_register(lua_State* L)
 {
     module(L)[(
@@ -180,7 +183,8 @@ void CInventoryScript::script_register(lua_State* L)
             .property("cost", &CInventoryItem::Cost, &CInventoryItem::SetCost)
             .property("slot", &CInventoryItem::GetSlot, &CInventoryItem::SetSlot)
             .property("slots", &get_slots)
-            .property("description", &get_item_description, &set_item_description),
+            .property("description", &get_item_description, &set_item_description)
+            .def("GetGameObject", &op22_item_game_object), // OP22: ОП 2.2 - cell:GetInventoryItem():GetGameObject()
         class_<CInventoryItemObject, bases<CInventoryItem, CGameObject>>("CInventoryItemObject"),
 
         class_<CInventory>("CInventory")

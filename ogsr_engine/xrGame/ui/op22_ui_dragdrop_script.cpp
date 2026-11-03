@@ -1,0 +1,339 @@
+////////////////////////////////////////////////////////////////////////////
+// OP22: скриптовый API списков перетаскивания ОП 2.2 (CUIDragDropListEx, CUICellItem, create_cell_helper,
+// CScriptXmlInit:InitDragDropListEx). Имена и сигнатуры - по регистрациям в xrGame.dll ОП (Ghidra, 03.11).
+// Потребители в скриптах ОП: container_viewer (контейнер артефактов), charger_viewer, ui_storage_viewer (рюкзак),
+// callback_ui (подсветка подходящих). Первая версия: подсветка подходящих, маски и аддоны на ячейке - заглушки.
+////////////////////////////////////////////////////////////////////////////
+#include "stdafx.h"
+#include "UIDragDropListEx.h"
+#include "UICellItem.h"
+#include "UICellItemFactory.h"
+#include "UIIconParams.h"
+#include "UIXmlInit.h"
+#include "../ScriptXmlInit.h"
+#include "../script_game_object.h"
+#include "../inventory_item.h"
+#include "../GameObject.h"
+#include "../game_object_space.h"
+
+using namespace luabind;
+
+// номера событий ячеек: cell_focus_receive/lost/selected - как у актора в OGSR (on_cell_item_*), cell_dbl_click -
+// свой (прослойка op22_compat.script задаёт callback.cell_dbl_click = OP22_CB_CELL_DBL_CLICK)
+constexpr int OP22_CB_CELL_DBL_CLICK = 200008;
+
+// ячейка, построенная по секции (в контейнере лежат записи о предметах, не сами предметы)
+class CUIOP22SectionCell : public CUICellItem
+{
+    typedef CUICellItem inherited;
+
+public:
+    shared_str m_section;
+    float m_condition{1.f};
+
+    CUIOP22SectionCell(LPCSTR section, float cond) : m_section(section), m_condition(cond)
+    {
+        CIconParams params(m_section);
+        params.set_shader(this);
+        m_grid_size.set(iFloor(params.grid_width + .5f), iFloor(params.grid_height + .5f));
+    }
+    virtual bool EqualTo(CUICellItem*) { return false; }
+};
+
+// данные ячейки для скриптов: id ячейки, условие
+static xr_map<CUICellItem*, shared_str> g_cell_ids;
+
+// список перетаскивания для скриптов: события ячеек в Lua
+class CUIOP22ScriptDDList : public CUIDragDropListEx
+{
+    typedef CUIDragDropListEx inherited;
+
+    struct cb_t
+    {
+        luabind::functor<bool> f;
+        luabind::object o;
+        bool set{};
+    };
+    xr_map<int, cb_t> m_cb;
+    CUICellItem* m_focused{};
+
+public:
+    CUICellItem* m_script_selected{};
+    int m_ui_list_id{};
+
+    CUIOP22ScriptDDList()
+    {
+        m_f_item_selected = fastdelegate::MakeDelegate(this, &CUIOP22ScriptDDList::on_selected);
+        m_f_item_db_click = fastdelegate::MakeDelegate(this, &CUIOP22ScriptDDList::on_db_click);
+        m_f_item_start_drag = fastdelegate::MakeDelegate(this, &CUIOP22ScriptDDList::on_start_drag);
+        m_f_item_drop = fastdelegate::MakeDelegate(this, &CUIOP22ScriptDDList::on_drop);
+    }
+
+    void set_cb(int type, const luabind::functor<bool>& f, const luabind::object& o)
+    {
+        cb_t& c = m_cb[type];
+        c.f = f;
+        c.o = o;
+        c.set = true;
+    }
+    void set_cb(int type, const luabind::functor<bool>& f) { set_cb(type, f, luabind::object()); }
+    void reset_cb(int type) { m_cb.erase(type); }
+
+    bool fire(int type, CUICellItem* itm)
+    {
+        auto it = m_cb.find(type);
+        if (it == m_cb.end() || !it->second.set)
+            return false;
+        if (it->second.o.is_valid() && it->second.o.type() != LUA_TNIL)
+            return it->second.f(it->second.o, itm);
+        return it->second.f(itm);
+    }
+
+    bool on_selected(CUICellItem* itm)
+    {
+        fire(int(GameObject::eCellItemSelect), itm);
+        m_script_selected = itm; // после колбэка: ОП-скрипт снимает выделение с прежней через GetSelectedCell
+        return false;
+    }
+    bool on_db_click(CUICellItem* itm) { return fire(OP22_CB_CELL_DBL_CLICK, itm) || true; } // без переноса движком
+    bool on_start_drag(CUICellItem*) { return true; } // перенос в скриптовых окнах ОП - двойным кликом
+    bool on_drop(CUICellItem*) { return true; }
+
+    virtual CUICellItem* RemoveItem(CUICellItem* itm, bool force_root)
+    {
+        if (itm == m_script_selected)
+            m_script_selected = nullptr;
+        if (itm == m_focused)
+            m_focused = nullptr;
+        return inherited::RemoveItem(itm, force_root);
+    }
+
+    virtual void Update()
+    {
+        inherited::Update();
+        CUICellItem* over = nullptr;
+        for (u32 i = 0, n = ItemsCount(); i < n; ++i)
+        {
+            CUICellItem* c = GetItemIdx(i);
+            if (c && c->CursorOverWindow())
+            {
+                over = c;
+                break;
+            }
+        }
+        if (over != m_focused)
+        {
+            if (m_focused)
+                fire(int(GameObject::eCellItemFocusLost), m_focused);
+            m_focused = over;
+            if (m_focused)
+                fire(int(GameObject::eCellItemFocus), m_focused);
+        }
+    }
+};
+
+static CUIOP22ScriptDDList* script_list(CUIDragDropListEx* l) { return smart_cast<CUIOP22ScriptDDList*>(l); }
+
+// --- CScriptXmlInit
+CUIDragDropListEx* op22_xml_InitDragDropListEx(CScriptXmlInit* self, LPCSTR path, CUIWindow* parent)
+{
+    CUIOP22ScriptDDList* pWnd = xr_new<CUIOP22ScriptDDList>();
+    CUIXmlInit::InitDragDropListEx(self->op22_xml(), path, 0, pWnd);
+    pWnd->SetAutoDelete(true);
+    if (parent)
+        parent->AttachChild(pWnd);
+    return pWnd;
+}
+
+// --- CUIDragDropListEx
+static int dd_GetUIListId(CUIDragDropListEx* l) { auto s = script_list(l); return s ? s->m_ui_list_id : 0; }
+static void dd_SetUIListId(CUIDragDropListEx* l, int id) { if (auto s = script_list(l)) s->m_ui_list_id = id; }
+static void dd_SetCellHeight(CUIDragDropListEx* l, int v) { Ivector2 sz = l->CellSize(); sz.y = v; l->SetCellSize(sz); }
+static void dd_SetCellWidth(CUIDragDropListEx* l, int v) { Ivector2 sz = l->CellSize(); sz.x = v; l->SetCellSize(sz); }
+static void dd_SetCellSize1(CUIDragDropListEx* l, Ivector2 v) { l->SetCellSize(v); }
+static void dd_SetCellSize2(CUIDragDropListEx* l, int x, int y) { l->SetCellSize(Ivector2{x, y}); }
+static void dd_SetCellsRows(CUIDragDropListEx* l, int v) { Ivector2 c = l->CellsCapacity(); c.y = v; l->SetCellsCapacity(c); }
+static void dd_SetCellsColumns(CUIDragDropListEx* l, int v) { Ivector2 c = l->CellsCapacity(); c.x = v; l->SetCellsCapacity(c); }
+static void dd_SetCellsCapacity1(CUIDragDropListEx* l, Ivector2 v) { l->SetCellsCapacity(v); }
+static void dd_SetCellsCapacity2(CUIDragDropListEx* l, int x, int y) { l->SetCellsCapacity(Ivector2{x, y}); }
+static u32 dd_ItemsCount(CUIDragDropListEx* l) { return l->ItemsCount(); }
+
+static CUICellItem* make_item_cell(CScriptGameObject* obj)
+{
+    if (!obj)
+        return nullptr;
+    CInventoryItem* itm = smart_cast<CInventoryItem*>(&obj->object());
+    if (!itm)
+        return nullptr;
+    CUICellItem* prev = itm->m_cell_item; // ячейку предмета держит окно инвентаря - не перехватываем
+    CUICellItem* cell = create_cell_item(itm);
+    itm->m_cell_item = prev;
+    return cell;
+}
+static void dd_SetItemObj(CUIDragDropListEx* l, CScriptGameObject* obj)
+{
+    if (CUICellItem* c = make_item_cell(obj))
+        l->SetItem(c);
+}
+static void dd_SetItemObj2(CUIDragDropListEx* l, CScriptGameObject* obj, bool) { dd_SetItemObj(l, obj); }
+static void dd_SetItemCell(CUIDragDropListEx* l, CUICellItem* c)
+{
+    if (c)
+        l->SetItem(c);
+}
+static void dd_Compact(CUIDragDropListEx* l) { l->Compact(); }
+static void dd_ClearAll(CUIDragDropListEx* l) { l->ClearAll(true); }
+static bool dd_HasFreeSpace(CUIDragDropListEx* l) { return l->m_container->HasFreeSpace(Ivector2{1, 1}); }
+static CUICellItem* dd_FindSimilar(CUIDragDropListEx*, CUICellItem*) { return nullptr; }
+static CUICellItem* dd_RemoveItem(CUIDragDropListEx* l, CUICellItem* c) { return c ? l->RemoveItem(c, false) : nullptr; }
+static void dd_noop(CUIDragDropListEx*) {}
+static void dd_SetSuitable1(CUIDragDropListEx*, LPCSTR) {}
+static void dd_SetSuitable2(CUIDragDropListEx*, const luabind::object&) {}
+static CUICellItem* dd_GetSelectedCell(CUIDragDropListEx* l) { auto s = script_list(l); return s ? s->m_script_selected : nullptr; }
+static CUICellItem* dd_GetItemIdx(CUIDragDropListEx* l, u32 idx, bool) { return idx < l->ItemsCount() ? l->GetItemIdx(idx) : nullptr; }
+static int dd_GetItemPos(CUIDragDropListEx* l, CUICellItem* c)
+{
+    for (u32 i = 0, n = l->ItemsCount(); i < n; ++i)
+        if (l->GetItemIdx(i) == c)
+            return int(i);
+    return -1;
+}
+static CUICellItem* dd_GetCellAt(CUIDragDropListEx*, Fvector2) { return nullptr; }
+static CUICellItem* dd_GetCellByCellId(CUIDragDropListEx* l, LPCSTR id)
+{
+    for (u32 i = 0, n = l->ItemsCount(); i < n; ++i)
+    {
+        CUICellItem* c = l->GetItemIdx(i);
+        auto it = g_cell_ids.find(c);
+        if (it != g_cell_ids.end() && it->second == id)
+            return c;
+    }
+    return nullptr;
+}
+static void dd_set_cb3(CUIDragDropListEx* l, int type, const luabind::functor<bool>& f, const luabind::object& o)
+{
+    if (auto s = script_list(l))
+        s->set_cb(type, f, o);
+}
+static void dd_set_cb2(CUIDragDropListEx* l, int type, const luabind::functor<bool>& f)
+{
+    if (auto s = script_list(l))
+        s->set_cb(type, f);
+}
+static void dd_set_cb1(CUIDragDropListEx* l, int type)
+{
+    if (auto s = script_list(l))
+        s->reset_cb(type);
+}
+
+// --- CUICellItem
+static u32 ci_ChildsCount(CUICellItem* c) { return c->ChildsCount(); }
+static CUICellItem* ci_Child(CUICellItem* c, u32 i) { return i < c->ChildsCount() ? c->Child(i) : nullptr; }
+static bool ci_HasChilds(CUICellItem* c) { return c->ChildsCount() > 0; }
+static void ci_SetCellId(CUICellItem* c, LPCSTR id) { g_cell_ids[c] = id; }
+static LPCSTR ci_GetCellId(CUICellItem* c)
+{
+    auto it = g_cell_ids.find(c);
+    return it != g_cell_ids.end() ? it->second.c_str() : "";
+}
+static CUIDragDropListEx* ci_OwnerList(CUICellItem* c) { return c->OwnerList(); }
+static void ci_SetFocused(CUICellItem*, bool) {}
+static void ci_SetSelected(CUICellItem* c, bool b) { c->m_selected = b; }
+static CInventoryItem* ci_GetInventoryItem(CUICellItem* c) { return static_cast<CInventoryItem*>(c->m_pData); }
+static LPCSTR ci_GetCellSection(CUICellItem* c)
+{
+    if (auto s = smart_cast<CUIOP22SectionCell*>(c))
+        return s->m_section.c_str();
+    if (auto itm = static_cast<CInventoryItem*>(c->m_pData))
+        return itm->object().cNameSect().c_str();
+    return "";
+}
+static void ci_SetCellCondition(CUICellItem* c, float v)
+{
+    if (auto s = smart_cast<CUIOP22SectionCell*>(c))
+        s->m_condition = v;
+}
+static float ci_GetCellCondition(CUICellItem* c)
+{
+    if (auto s = smart_cast<CUIOP22SectionCell*>(c))
+        return s->m_condition;
+    if (auto itm = static_cast<CInventoryItem*>(c->m_pData))
+        return itm->GetCondition();
+    return 1.f;
+}
+static void ci_noop(CUICellItem*) {}
+static void ci_SetColor(CUICellItem* c, u32 clr) { c->SetTextureColor(clr); }
+static u32 ci_GetColor(CUICellItem* c) { return c->GetTextureColor(); }
+static void ci_SetMask(CUICellItem*, LPCSTR) {}
+static void ci_AttachAccum(CUICellItem*, LPCSTR, float) {}
+static void ci_SetChildsCount(CUICellItem*, int) {}
+
+// --- create_cell_helper
+static CUICellItem* cch_item_section(LPCSTR section) { return xr_new<CUIOP22SectionCell>(section, 1.f); }
+static CUICellItem* cch_item_section_condition(LPCSTR section, float cond) { return xr_new<CUIOP22SectionCell>(section, cond); }
+
+void op22_register_dragdrop(lua_State* L)
+{
+    module(L)[class_<CUIDragDropListEx, CUIWindow>("CUIDragDropListEx")
+                  .def("GetUIListId", &dd_GetUIListId)
+                  .def("SetUIListId", &dd_SetUIListId)
+                  .def("SetCellHeight", &dd_SetCellHeight)
+                  .def("SetCellWidth", &dd_SetCellWidth)
+                  .def("SetCellSize", &dd_SetCellSize1)
+                  .def("SetCellSize", &dd_SetCellSize2)
+                  .def("SetCellsRows", &dd_SetCellsRows)
+                  .def("SetCellsColumns", &dd_SetCellsColumns)
+                  .def("SetCellsCapacity", &dd_SetCellsCapacity1)
+                  .def("SetCellsCapacity", &dd_SetCellsCapacity2)
+                  .def("ItemsCount", &dd_ItemsCount)
+                  .def("SetItem", &dd_SetItemObj)
+                  .def("SetItem", &dd_SetItemObj2)
+                  .def("SetItem", &dd_SetItemCell)
+                  .def("Compact", &dd_Compact)
+                  .def("ClearAll", &dd_ClearAll)
+                  .def("HasFreeSpace", &dd_HasFreeSpace)
+                  .def("FindSimilar", &dd_FindSimilar)
+                  .def("RemoveItem", &dd_RemoveItem)
+                  .def("ClearAllSuitables", &dd_noop)
+                  .def("ClearAllHighLighted", &dd_noop)
+                  .def("SetSuitableBySection", &dd_SetSuitable1)
+                  .def("SetSuitableBySection", &dd_SetSuitable2)
+                  .def("GetSelectedCell", &dd_GetSelectedCell)
+                  .def("GetItemIdx", &dd_GetItemIdx)
+                  .def("GetItemPos", &dd_GetItemPos)
+                  .def("GetCellAt", &dd_GetCellAt)
+                  .def("GetCellByCellId", &dd_GetCellByCellId)
+                  .def("set_callback", &dd_set_cb3)
+                  .def("set_callback", &dd_set_cb2)
+                  .def("set_callback", &dd_set_cb1),
+
+              class_<CUICellItem, CUIStatic>("CUICellItem")
+                  .def("ChildsCount", &ci_ChildsCount)
+                  .def("Child", &ci_Child)
+                  .def("HasChilds", &ci_HasChilds)
+                  .def("SetCellId", &ci_SetCellId)
+                  .def("GetCellId", &ci_GetCellId)
+                  .def("OwnerList", &ci_OwnerList)
+                  .def("SetFocused", &ci_SetFocused)
+                  .def("SetSelected", &ci_SetSelected)
+                  .def("GetInventoryItem", &ci_GetInventoryItem)
+                  .def("GetCellSection", &ci_GetCellSection)
+                  .def("SetCellCondition", &ci_SetCellCondition)
+                  .def("GetCellCondition", &ci_GetCellCondition)
+                  .def("ForceConditionShow", &ci_noop)
+                  .def("ForceConditionHide", &ci_noop)
+                  .def("SetColor", &ci_SetColor)
+                  .def("GetColor", &ci_GetColor)
+                  .def("SetMask", &ci_SetMask)
+                  .def("AttachScope", &ci_noop)
+                  .def("DetachScope", &ci_noop)
+                  .def("AttachSilencer", &ci_noop)
+                  .def("DetachSilencer", &ci_noop)
+                  .def("AttachGrenadeLauncher", &ci_noop)
+                  .def("DetachGrenadeLauncher", &ci_noop)
+                  .def("AttachAccum", &ci_AttachAccum)
+                  .def("DetachAccum", &ci_noop)
+                  .def("SetChildsCount", &ci_SetChildsCount)];
+
+    module(L, "create_cell_helper")[def("item_section", &cch_item_section), def("item_section_condition", &cch_item_section_condition)];
+}
