@@ -12,7 +12,6 @@
 #include "UITextureMaster.h"
 #include "UIScrollBar.h"
 #include <dinput.h>
-#include <algorithm> // OP22: std::find
 
 #define CB_HEIGHT 23.0f
 #define BTN_SIZE 23.0f
@@ -34,7 +33,40 @@ CUIComboBox::CUIComboBox()
     m_textColor[0] = 0xff00ff00;
 }
 
-CUIComboBox::~CUIComboBox() {}
+CUIComboBox* CUIComboBox::s_op22_top = nullptr; // OP22
+
+CUIComboBox::~CUIComboBox()
+{
+    if (s_op22_top == this) // OP22
+        s_op22_top = nullptr;
+}
+
+// OP22: раскрытый список - без него, сам список позже (op22_draw_top)
+void CUIComboBox::Draw()
+{
+    if (m_eState == LIST_EXPANDED && m_list.IsShown())
+    {
+        m_list.Show(false);
+        m_frameWnd.Show(false);
+        CUIWindow::Draw();
+        m_list.Show(true);
+        m_frameWnd.Show(true);
+        s_op22_top = this;
+        return;
+    }
+    CUIWindow::Draw();
+}
+
+void CUIComboBox::op22_draw_top()
+{
+    CUIComboBox* c = s_op22_top;
+    s_op22_top = nullptr;
+    if (c && c->m_eState == LIST_EXPANDED)
+    {
+        c->m_frameWnd.Draw();
+        c->m_list.Draw();
+    }
+}
 
 void CUIComboBox::SetListLength(int length)
 {
@@ -187,7 +219,6 @@ void CUIComboBox::ShowList(bool bShow)
         m_frameWnd.Show(true);
 
         m_eState = LIST_EXPANDED;
-        m_op22_raise = true; // OP22: в окне опций ОП разделы, добавленные позже, рисовались поверх раскрытого списка
 
         GetParent()->SetMouseCapture(this, true);
         GetParent()->SetKeyboardCapture(this, true);
@@ -211,20 +242,7 @@ CUIListBox* CUIComboBox::GetListWnd() { return &m_list; }
 void CUIComboBox::Update()
 {
     CUIWindow::Update();
-    if (m_op22_raise) // OP22: не в обработчике мыши - родитель в этот момент перебирает своих детей
-    {
-        m_op22_raise = false;
-        // список наверх со всей цепочкой родителей; splice (а не BringToTop: remove + push_back) не ломает итераторы
-        // родителей, которые сейчас перебирают детей в Update
-        if (m_eState == LIST_EXPANDED)
-            for (CUIWindow* w = this; w->GetParent(); w = w->GetParent())
-            {
-                auto& l = w->GetParent()->GetChildWndList();
-                auto it = std::find(l.begin(), l.end(), w);
-                if (it != l.end())
-                    l.splice(l.end(), l, it);
-            }
-    }
+
     if (!m_bIsEnabled)
     {
         SetState(S_Disabled);

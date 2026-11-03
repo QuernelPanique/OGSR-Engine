@@ -10,7 +10,8 @@
 
 IC const CVisualMemoryManager::VISIBLES& CVisualMemoryManager::objects() const
 {
-    m_objects->erase(std::remove_if(m_objects->begin(), m_objects->end(), [](const auto& obj) { return obj.m_object->getDestroy(); }), m_objects->end());
+    // OP22: запись без объекта (NPC удалён во время боя - автотест ОП: 4 AV) - убрать, а не разыменовать
+    m_objects->erase(std::remove_if(m_objects->begin(), m_objects->end(), [](const auto& obj) { return !obj.m_object || obj.m_object->getDestroy(); }), m_objects->end());
     return *m_objects;
 }
 

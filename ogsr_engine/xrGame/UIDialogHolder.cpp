@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "UIDialogHolder.h"
 #include "ui\UIDialogWnd.h"
+#include "ui\UIComboBox.h" // OP22
 #include "UICursor.h"
 #include "level.h"
 #include "actor.h"
@@ -160,6 +161,7 @@ void CDialogHolder::DoRenderDialogs()
         if ((*it).enabled && (*it).wnd->IsShown())
             (*it).wnd->Draw();
     }
+    CUIComboBox::op22_draw_top(); // OP22: раскрытый выпадающий список - поверх всех окон
 }
 
 CUIDialogWnd* CDialogHolder::MainInputReceiver()

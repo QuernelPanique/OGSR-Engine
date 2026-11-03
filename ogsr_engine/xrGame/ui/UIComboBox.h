@@ -72,7 +72,15 @@ protected:
     int m_iListHeight;
     int m_itoken_id{};
     E_COMBO_STATE m_eState;
-    bool m_op22_raise{}; // OP22: раскрытый список - наверх (со всеми родителями) на следующем кадре
+    // OP22: раскрытый список рисуется последним, поверх всех окон (CDialogHolder::DoRenderDialogs): в окне опций ОП
+    // строки ниже рисовались поверх него; порядок детей менять нельзя - список прокрутки расставляет строки по порядку
+    static CUIComboBox* s_op22_top;
+
+public:
+    virtual void Draw();
+    static void op22_draw_top();
+
+protected:
     int m_backup_itoken_id{};
 
     CUI_IB_FrameLineWnd m_frameLine;
