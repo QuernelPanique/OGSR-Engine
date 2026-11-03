@@ -16,6 +16,8 @@
 #include "../inventory_item.h"
 #include "../GameObject.h"
 #include "../game_object_space.h"
+#include "../ai_space.h"
+#include "../script_engine.h"
 
 using namespace luabind;
 
@@ -52,8 +54,8 @@ class CUIOP22ScriptDDList : public CUIDragDropListEx
     struct cb_t
     {
         luabind::functor<bool> f;
-        luabind::object o;
-        bool set{};
+        luabind::object o; // присваивается только настоящий объект: пустой luabind::object без состояния Lua - вылет
+        bool has_obj{};
     };
     xr_map<int, cb_t> m_cb;
     CUICellItem* m_focused{};
@@ -70,22 +72,50 @@ public:
         m_f_item_drop = fastdelegate::MakeDelegate(this, &CUIOP22ScriptDDList::on_drop);
     }
 
+    // set_callback(тип, nil) ОП снимает обработчик (container_viewer:on_quit) - nil тоже приходит как functor
+    static bool is_function(const luabind::functor<bool>& f)
+    {
+        if (!f.is_valid())
+            return false;
+        lua_State* L = ai().script_engine().lua();
+        f.pushvalue();
+        const bool ok = lua_isfunction(L, -1);
+        lua_pop(L, 1);
+        return ok;
+    }
+
     void set_cb(int type, const luabind::functor<bool>& f, const luabind::object& o)
     {
+        if (!is_function(f))
+        {
+            reset_cb(type);
+            return;
+        }
         cb_t& c = m_cb[type];
         c.f = f;
-        c.o = o;
-        c.set = true;
+        c.has_obj = o.is_valid() && o.type() != LUA_TNIL;
+        if (c.has_obj)
+            c.o = o;
     }
-    void set_cb(int type, const luabind::functor<bool>& f) { set_cb(type, f, luabind::object()); }
+    void set_cb(int type, const luabind::functor<bool>& f)
+    {
+        if (!is_function(f))
+        {
+            reset_cb(type);
+            return;
+        }
+        cb_t& c = m_cb[type];
+        c.f = f;
+        c.has_obj = false;
+    }
     void reset_cb(int type) { m_cb.erase(type); }
 
     bool fire(int type, CUICellItem* itm)
     {
         auto it = m_cb.find(type);
-        if (it == m_cb.end() || !it->second.set)
+        if (it == m_cb.end())
             return false;
-        if (it->second.o.is_valid() && it->second.o.type() != LUA_TNIL)
+        if (it->second.has_obj)
             return it->second.f(it->second.o, itm);
         return it->second.f(itm);
     }
