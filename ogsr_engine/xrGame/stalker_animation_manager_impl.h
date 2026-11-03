@@ -43,10 +43,10 @@ IC bool CStalkerAnimationManager::strapped() const
 IC u32 CStalkerAnimationManager::object_slot() const
 {
     if (m_weapon)
-        return (m_weapon->animation_slot());
+        return (op22_valid_slot(m_weapon->animation_slot())); // OP22
 
     if (m_missile)
-        return (m_missile->animation_slot());
+        return (op22_valid_slot(m_missile->animation_slot()));
 
     return (0);
 }

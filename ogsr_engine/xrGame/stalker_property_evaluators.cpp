@@ -246,8 +246,10 @@ _value_type CStalkerPropertyEvaluatorSmartTerrainTask::evaluate()
     if (!ai().get_alife())
         return (false);
 
-    CSE_ALifeHumanAbstract* stalker = smart_cast<CSE_ALifeHumanAbstract*>(ai().alife().objects().object(m_object->ID()));
-    VERIFY(stalker);
+    // OP22: серверный объект уже удалён (скрипт убрал NPC, клиентский ещё обновляется) - разыменование пустого указателя
+    CSE_ALifeHumanAbstract* stalker = smart_cast<CSE_ALifeHumanAbstract*>(ai().alife().objects().object(m_object->ID(), true));
+    if (!stalker)
+        return (false);
     stalker->brain().select_task();
     return (stalker->m_smart_terrain_id != 0xffff);
 }

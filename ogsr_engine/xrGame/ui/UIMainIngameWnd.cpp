@@ -309,6 +309,21 @@ void CUIMainIngameWnd::SetAmmoIcon(const shared_str& sect_name)
     float h = INV_GRID_HEIGHT;
     w *= UI()->get_current_kx();
 
+    // OP22: как в ОП 2.2 - иконка вписывается в static_wpn_icon разметки HUD (пропорции, по центру); OGSR ставил
+    // размер ячейки инвентаря (50 на клетку) - в скинах ОП с маленьким окном (gamma_*: 46x34) иконка вылезала
+    const float rw = UIWeaponIcon_rect.width(), rh = UIWeaponIcon_rect.height();
+    if (rw > 1.f && rh > 1.f)
+    {
+        const float k = _min(rw / w, rh / h);
+        w *= k;
+        h *= k;
+        UIWeaponIcon.SetStretchTexture(true);
+        UIWeaponIcon.SetWndPos(UIWeaponIcon_rect.x1 + (rw - w) / 2.f, UIWeaponIcon_rect.y1 + (rh - h) / 2.f);
+        UIWeaponIcon.SetWidth(w);
+        UIWeaponIcon.SetHeight(h);
+        return;
+    }
+
     float x = UIWeaponIcon_rect.x1;
     if (iGridWidth < 2.f)
         x += w / 2.0f;

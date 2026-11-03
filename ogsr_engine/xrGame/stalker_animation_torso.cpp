@@ -225,3 +225,22 @@ MotionID CStalkerAnimationManager::assign_torso_animation()
 
     return (unknown_object_animation(object_slot(), body_state));
 }
+
+// OP22: в ОП 2.2 у оружия свои слоты анимаций NPC (wpn_fot - 13), у многих моделей NPC наборов для них нет: движок ОП
+// это прощал, OGSR выбирал анимацию из пустого набора (вылет select_animation). Нет набора - набор автомата (слот 2).
+u32 CStalkerAnimationManager::op22_valid_slot(u32 slot) const
+{
+    if (!slot || !m_data_storage)
+        return slot;
+    const auto& t = m_data_storage->m_part_animations.A[eBodyStateStand].m_torso.A;
+    auto ok = [&t](u32 s) { return s < t.size() && t[s].A.size() > 4 && !t[s].A[0].A.empty() && !t[s].A[1].A.empty(); };
+    if (ok(slot))
+        return slot;
+    static u64 logged = 0;
+    if (slot < 64 && !(logged & (u64(1) << slot)))
+    {
+        logged |= u64(1) << slot;
+        Msg("! [OP22] stalker animations: no torso set for weapon animation slot %u in NPC model - slot 2 used", slot);
+    }
+    return ok(2) ? 2 : slot;
+}

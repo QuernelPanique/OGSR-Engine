@@ -170,6 +170,11 @@ std::pair<LPCSTR, LPCSTR>* CStalkerAnimationPair::blend_id(IKinematicsAnimated* 
 
 void CStalkerAnimationPair::select_animation(const ANIM_VECTOR& array, const ANIMATION_WEIGHTS* weights)
 {
+    if (array.empty()) // OP22: пустой набор (нет анимаций у модели) - выбор из пустого массива падал
+    {
+        Msg("! [OP22] stalker animation: empty animation set - skipped");
+        return;
+    }
     if (!weights)
     {
         m_array_animation = array[::Random.randI(array.size())];

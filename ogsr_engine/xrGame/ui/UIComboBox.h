@@ -72,6 +72,7 @@ protected:
     int m_iListHeight;
     int m_itoken_id{};
     E_COMBO_STATE m_eState;
+    bool m_op22_raise{}; // OP22: раскрытый список - наверх (со всеми родителями) на следующем кадре
     int m_backup_itoken_id{};
 
     CUI_IB_FrameLineWnd m_frameLine;

@@ -41,9 +41,11 @@ MotionID CStalkerAnimationManager::global_critical_hit()
     CWeapon* weapon = smart_cast<CWeapon*>(object().inventory().ActiveItem());
     VERIFY2(weapon, make_string("current active item: %s", object().inventory().ActiveItem() ? *object().inventory().ActiveItem()->object().cName() : "no active item"));
 
-    u32 animation_slot = weapon->animation_slot();
+    u32 animation_slot = op22_valid_slot(weapon->animation_slot());
     VERIFY(animation_slot >= 1);
     VERIFY(animation_slot <= 3);
+    if (animation_slot < 1 || animation_slot > 3) // OP22: слоты ОП 2.2 (4..13) - таблица ранений только для 1..3
+        animation_slot = 2;
 
     return (global().select(m_data_storage->m_part_animations.A[eBodyStateStand].m_global.A[object().critical_wound_type() + 6 * (animation_slot - 1)].A,
                             &object().critical_wound_weights()));

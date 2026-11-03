@@ -84,6 +84,7 @@ private:
     IC bool standing() const;
     IC void fill_object_info();
     IC u32 object_slot() const;
+    u32 op22_valid_slot(u32 slot) const; // OP22: слот анимаций оружия, для которого у модели NPC есть набор
     IC EBodyState body_state() const;
 
 private:
