@@ -273,6 +273,10 @@ void CObjectFactory::register_classes()
     // Info Document
     ADD(CInfoDocument, CSE_ALifeItemDocument, CLSID_IITEM_DOCUMENT, "obj_document");
     ADD(CInventoryItemObject, CSE_ALifeItem, CLSID_IITEM_ATTACH, "obj_attachable");
+    // OP22: пока обычные предметы (покупка, перенос, сейв); механики контейнера (get_gbox) и ПНВ - TODO.
+    // Серверный класс CSE_ALifeItem - клиентский потом можно заменить без смены формата сейва.
+    ADD(CInventoryItemObject, CSE_ALifeItem, CLSID_OP22_GBOX, "op22_gbox");
+    ADD(CInventoryItemObject, CSE_ALifeItem, CLSID_OP22_NVP, "op22_nvp");
 
     // Equipment outfit
     ADD(CScientificOutfit, CSE_ALifeItemCustomOutfit, CLSID_EQUIPMENT_SCIENTIFIC, "equ_scientific");

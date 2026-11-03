@@ -133,6 +133,9 @@ constexpr auto CLSID_OBJECT_PHYSIC = MK_CLSID('O', '_', 'P', 'H', 'Y', 'S', 'I',
 constexpr auto CLSID_PHYSICS_DESTROYABLE = MK_CLSID('P', '_', 'D', 'S', 'T', 'R', 'B', 'L');
 constexpr auto CLSID_INVENTORY_BOX = MK_CLSID('O', '_', 'I', 'N', 'V', 'B', 'O', 'X');
 constexpr auto CLSID_CONTAINER = MK_CLSID('O', '_', 'C', 'O', 'N', 'T', 'N', 'R');
+// OP22: классы предметов ОП 2.2 - переносной контейнер артефактов / зарядник (CL_GBOX) и ПНВ (D_NVP)
+constexpr auto CLSID_OP22_GBOX = MK_CLSID('C', 'L', '_', 'G', 'B', 'O', 'X', ' ');
+constexpr auto CLSID_OP22_NVP = MK_CLSID('D', '_', 'N', 'V', 'P', ' ', ' ', ' ');
 
 // Zones
 constexpr auto CLSID_ZONE = MK_CLSID('Z', '_', 'Z', 'O', 'N', 'E', ' ', ' ');
