@@ -525,7 +525,7 @@ void CActor::OnNextWeaponSlot()
             if (SlotsToCheck[i] == PDA_SLOT)
                 IR_OnKeyboardPress(kACTIVE_JOBS);
             else
-                IR_OnKeyboardPress(kWPN_1 + i);
+                IR_OnKeyboardPress(CInventory::op22_key_of_slot(SlotsToCheck[i])); // OP22: раскладка клавиш ОП
             return;
         }
     }
@@ -557,7 +557,7 @@ void CActor::OnPrevWeaponSlot()
             if (SlotsToCheck[i] == PDA_SLOT)
                 IR_OnKeyboardPress(kACTIVE_JOBS);
             else
-                IR_OnKeyboardPress(kWPN_1 + i);
+                IR_OnKeyboardPress(CInventory::op22_key_of_slot(SlotsToCheck[i])); // OP22: раскладка клавиш ОП
             return;
         }
     }

@@ -590,13 +590,15 @@ bool CInventory::Action(s32 cmd, u32 flags)
     case kWPN_3:
     case kWPN_4:
     case kWPN_5:
-    case kWPN_6: {
-        if (flags & CMD_START)
+    case kWPN_6:
+    case kWPN_7: {
+        const u32 slot = op22_slot_of_key(cmd); // OP22: раскладка клавиш ОП 2.2
+        if ((flags & CMD_START) && slot != NO_ACTIVE_SLOT)
         {
-            if (GetActiveSlot() == cmd - kWPN_1 && ActiveItem())
+            if (GetActiveSlot() == slot && ActiveItem())
                 Activate(NO_ACTIVE_SLOT);
             else
-                Activate(cmd - kWPN_1, eKeyAction);
+                Activate(slot, eKeyAction);
         }
     }
     break;
@@ -1291,4 +1293,25 @@ bool CInventory::IsActiveSlotBlocked() const
         if (slot.CanBeActivated())
             return false;
     return true;
+}
+
+// OP22: клавиши слотов ОП 2.2 (ui.xml ОП: kb_weapon1..7 - нож, пистолет, автомат, дробовик/ПП, граната, бинокль, болт);
+// в режиме OGSR (ogse_new_slots) - как в OGSR: клавиша N -> слот N-1, клавиши 7 нет
+u32 CInventory::op22_slot_of_key(s32 cmd)
+{
+    static constexpr u32 op22[] = {KNIFE_SLOT, FIRST_WEAPON_SLOT, SECOND_WEAPON_SLOT, OP22_SHOTGUN_SLOT, GRENADE_SLOT, APPARATUS_SLOT, BOLT_SLOT};
+    const s32 i = cmd - kWPN_1;
+    if (i < 0 || i > 6)
+        return NO_ACTIVE_SLOT;
+    if (Core.Features.test(xrCore::Feature::ogse_new_slots))
+        return i < 6 ? u32(i) : NO_ACTIVE_SLOT;
+    return op22[i];
+}
+
+s32 CInventory::op22_key_of_slot(u32 slot)
+{
+    for (s32 k = kWPN_1; k <= kWPN_7; ++k)
+        if (op22_slot_of_key(k) == slot)
+            return k;
+    return kWPN_1 + s32(slot);
 }

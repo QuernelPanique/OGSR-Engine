@@ -67,6 +67,8 @@ public:
     PIItem ActiveItem() const { return m_iActiveSlot == NO_ACTIVE_SLOT ? NULL : m_slots[m_iActiveSlot].m_pIItem; }
     PIItem ItemFromSlot(u32 slot) const;
     bool Action(s32 cmd, u32 flags);
+    static u32 op22_slot_of_key(s32 cmd); // OP22: клавиша слота -> слот (раскладка ОП 2.2)
+    static s32 op22_key_of_slot(u32 slot);
     void Update();
     // Ищет на поясе аналогичный IItem
     PIItem Same(const PIItem pIItem, bool bSearchRuck) const;

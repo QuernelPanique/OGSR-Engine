@@ -21,7 +21,7 @@ xr_vector<_action> actions = {
                         DEF_ACTION("cam_1", kCAM_1) DEF_ACTION("cam_2", kCAM_2) DEF_ACTION("cam_3", kCAM_3)
 
                                 DEF_ACTION("torch", kTORCH) DEF_ACTION("night_vision", kNIGHT_VISION) DEF_ACTION("wpn_1", kWPN_1) DEF_ACTION("wpn_2", kWPN_2)
-                                    DEF_ACTION("wpn_3", kWPN_3) DEF_ACTION("wpn_4", kWPN_4) DEF_ACTION("wpn_5", kWPN_5) DEF_ACTION("wpn_6", kWPN_6) DEF_ACTION("wpn_8", kWPN_8)
+                                    DEF_ACTION("wpn_3", kWPN_3) DEF_ACTION("wpn_4", kWPN_4) DEF_ACTION("wpn_5", kWPN_5) DEF_ACTION("wpn_6", kWPN_6) DEF_ACTION("wpn_7", kWPN_7) DEF_ACTION("wpn_8", kWPN_8)
                                         DEF_ACTION("laser_on", kLASER_ON) DEF_ACTION("wpn_next", kWPN_NEXT) DEF_ACTION("wpn_fire", kWPN_FIRE) DEF_ACTION("wpn_zoom", kWPN_ZOOM)
                                             DEF_ACTION("wpn_zoom_inc", kWPN_ZOOM_INC) DEF_ACTION("wpn_zoom_dec", kWPN_ZOOM_DEC) DEF_ACTION("wpn_reload", kWPN_RELOAD) DEF_ACTION(
                                                 "wpn_func", kWPN_FUNC) DEF_ACTION("wpn_firemode_prev", kWPN_FIREMODE_PREV) DEF_ACTION("wpn_firemode_next", kWPN_FIREMODE_NEXT)

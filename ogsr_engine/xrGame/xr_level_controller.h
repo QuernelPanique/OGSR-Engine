@@ -33,6 +33,7 @@ enum EGameActions
     kWPN_4,
     kWPN_5,
     kWPN_6,
+    kWPN_7, // OP22: болт (клавиши ОП 2.2: 4 - дробовик/ПП, 5 - граната, 6 - бинокль, 7 - болт)
     kWPN_8, // kDETECTOR
     kLASER_ON,
     kWPN_NEXT,
