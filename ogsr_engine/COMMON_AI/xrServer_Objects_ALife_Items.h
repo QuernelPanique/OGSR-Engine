@@ -106,6 +106,18 @@ SERVER_ENTITY_DECLARE_END
 add_to_type_list(CSE_ALifeItemTorch)
 #define script_type_list save_type_list(CSE_ALifeItemTorch)
 
+    // OP22: переносной контейнер ОП 2.2 (CL_GBOX: контейнеры артефактов, зарядник) - предмет + данные скрипта
+    // (binder_art_container пишет туда содержимое). Формат сейва как в ОП: u32 длина + байты, при версии > 122.
+    SERVER_ENTITY_DECLARE_BEGIN(CSE_ALifeItemGameBox, CSE_ALifeItem)
+xr_vector<u8> m_user_data;
+CSE_ALifeItemGameBox(LPCSTR caSection);
+virtual ~CSE_ALifeItemGameBox();
+void set_user_data(NET_Packet& P);
+void get_user_data(NET_Packet& P);
+SERVER_ENTITY_DECLARE_END
+add_to_type_list(CSE_ALifeItemGameBox)
+#define script_type_list save_type_list(CSE_ALifeItemGameBox)
+
     SERVER_ENTITY_DECLARE_BEGIN(CSE_ALifeItemAmmo, CSE_ALifeItem) u16 a_elapsed;
 u16 m_boxSize;
 

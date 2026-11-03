@@ -308,6 +308,56 @@ void CSE_ALifeItemTorch::UPDATE_Write(NET_Packet& tNetPacket)
 }
 
 ////////////////////////////////////////////////////////////////////////////
+// CSE_ALifeItemGameBox (OP22)
+////////////////////////////////////////////////////////////////////////////
+CSE_ALifeItemGameBox::CSE_ALifeItemGameBox(LPCSTR caSection) : CSE_ALifeItem(caSection) {}
+CSE_ALifeItemGameBox::~CSE_ALifeItemGameBox() {}
+
+void CSE_ALifeItemGameBox::STATE_Read(NET_Packet& tNetPacket, u16 size)
+{
+    inherited::STATE_Read(tNetPacket, size);
+    m_user_data.clear();
+    if (m_wVersion > 122)
+    {
+        const u32 count = tNetPacket.r_u32();
+        if (count == 0)
+            return;
+        if (count >= 0x4000 || count >= tNetPacket.r_elapsed() + 1)
+        {
+            Msg("! [%s] bad user data size [%u] for [%s] - skipped", __FUNCTION__, count, name_replace());
+            return;
+        }
+        m_user_data.resize(count);
+        tNetPacket.r(m_user_data.data(), count);
+    }
+}
+
+void CSE_ALifeItemGameBox::STATE_Write(NET_Packet& tNetPacket)
+{
+    inherited::STATE_Write(tNetPacket);
+    tNetPacket.w_u32(u32(m_user_data.size()));
+    if (!m_user_data.empty())
+        tNetPacket.w(m_user_data.data(), u32(m_user_data.size()));
+}
+
+void CSE_ALifeItemGameBox::UPDATE_Read(NET_Packet& tNetPacket) { inherited::UPDATE_Read(tNetPacket); }
+void CSE_ALifeItemGameBox::UPDATE_Write(NET_Packet& tNetPacket) { inherited::UPDATE_Write(tNetPacket); }
+
+// скрипт: gbox:set_user_data(packet) - весь записанный пакет в данные; get_user_data(packet) - данные в пакет с начала
+void CSE_ALifeItemGameBox::set_user_data(NET_Packet& P)
+{
+    m_user_data.assign(P.B.data, P.B.data + P.B.count);
+}
+
+void CSE_ALifeItemGameBox::get_user_data(NET_Packet& P)
+{
+    P.write_start();
+    if (!m_user_data.empty())
+        P.w(m_user_data.data(), u32(m_user_data.size()));
+    P.r_seek(0);
+}
+
+////////////////////////////////////////////////////////////////////////////
 // CSE_ALifeItemWeapon
 ////////////////////////////////////////////////////////////////////////////
 CSE_ALifeItemWeapon::CSE_ALifeItemWeapon(LPCSTR caSection) : CSE_ALifeItem(caSection)

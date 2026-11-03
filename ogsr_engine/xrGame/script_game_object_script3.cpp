@@ -32,6 +32,11 @@
 #include "sight_manager_space.h"
 #include "../xr_3da/IGame_Persistent.h"
 #include "InventoryOwner.h"
+#include "op22_gbox.h"
+#include "ai_space.h"
+#include "alife_simulator.h"
+#include "alife_object_registry.h"
+#include "xrServer_Objects_ALife_Items.h"
 
 using namespace luabind;
 
@@ -39,6 +44,42 @@ using namespace luabind;
 static void op22_iterate_inventory(CScriptGameObject* self, const luabind::functor<void>& functor)
 {
     self->IterateInventory(functor, luabind::object());
+}
+
+// OP22: контейнер ОП - данные скрипта лежат в серверном объекте (как в ОП: поиск в alife по ID)
+static CSE_ALifeItemGameBox* op22_gbox_server(CGBox* self)
+{
+    if (!ai().get_alife())
+        return nullptr;
+    auto* se = smart_cast<CSE_ALifeItemGameBox*>(ai().alife().objects().object(self->object().ID(), true));
+    if (!se)
+        Msg("! WARNING server_entry is not CSE_ALifeItemGameBox for [%s]. data not retreive!", self->object().cName().c_str());
+    return se;
+}
+
+void CGBox::get_user_data(NET_Packet& P)
+{
+    if (auto* se = op22_gbox_server(this))
+        se->get_user_data(P);
+    else
+    {
+        P.write_start();
+        P.r_seek(0);
+    }
+}
+
+void CGBox::set_user_data(NET_Packet& P)
+{
+    if (auto* se = op22_gbox_server(this))
+        se->set_user_data(P);
+}
+
+static CGBox* op22_get_gbox(CScriptGameObject* self)
+{
+    CGBox* box = smart_cast<CGBox*>(&self->object());
+    if (!box)
+        Msg("! Cannot cast %s to CGBox", self->object().cName().c_str());
+    return box;
 }
 
 class_<CScriptGameObject> script_register_game_object2(class_<CScriptGameObject>&& instance)
@@ -259,6 +300,7 @@ class_<CScriptGameObject> script_register_game_object2(class_<CScriptGameObject>
 
         .def("iterate_inventory", &CScriptGameObject::IterateInventory)
         .def("iterate_inventory", &op22_iterate_inventory) // OP22: ОП зовёт и одним аргументом (объект = nil)
+        .def("get_gbox", &op22_get_gbox) // OP22: контейнер ОП (CL_GBOX)
         .def("iterate_belt", &CScriptGameObject::IterateBelt)
         .def("iterate_ruck", &CScriptGameObject::IterateRuck)
         .def("mark_item_dropped", &CScriptGameObject::MarkItemDropped)

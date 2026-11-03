@@ -14,6 +14,7 @@
 #include "searchlight.h"
 #include "hit_immunity.h"
 #include "EntityCondition.h"
+#include "op22_gbox.h"
 
 using namespace luabind;
 
@@ -41,6 +42,9 @@ void CScriptGameObject::script_register(lua_State* L)
                .def_readonly("m_object", &CSightParams::m_object)
                .def_readonly("m_vector", &CSightParams::m_vector)
                .def_readonly("m_sight_type", &CSightParams::m_sight_type),
+
+           // OP22: контейнер ОП (game_object:get_gbox())
+           class_<CGBox>("CGBox").def("set_user_data", &CGBox::set_user_data).def("get_user_data", &CGBox::get_user_data),
 
            script_register_game_object3(script_register_game_object2(script_register_game_object1(script_register_game_object_trader(std::move(instance))))),
 

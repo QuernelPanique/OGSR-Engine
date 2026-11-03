@@ -98,6 +98,7 @@
 #include "bolt.h"
 #include "medkit.h"
 #include "antirad.h"
+#include "op22_gbox.h" // OP22
 #include "fooditem.h"
 #include "bottleitem.h"
 #include "explosiveitem.h"
@@ -273,9 +274,9 @@ void CObjectFactory::register_classes()
     // Info Document
     ADD(CInfoDocument, CSE_ALifeItemDocument, CLSID_IITEM_DOCUMENT, "obj_document");
     ADD(CInventoryItemObject, CSE_ALifeItem, CLSID_IITEM_ATTACH, "obj_attachable");
-    // OP22: пока обычные предметы (покупка, перенос, сейв); механики контейнера (get_gbox) и ПНВ - TODO.
-    // Серверный класс CSE_ALifeItem - клиентский потом можно заменить без смены формата сейва.
-    ADD(CInventoryItemObject, CSE_ALifeItem, CLSID_OP22_GBOX, "op22_gbox");
+    // OP22: классы предметов ОП 2.2. ПНВ пока обычный предмет: в ОП серверный формат = CSE_ALifeItemTorch (байт флагов
+    // в UPDATE), подставлять его можно только вместе со своим клиентским классом, пишущим этот байт - TODO.
+    ADD(CGBox, CSE_ALifeItemGameBox, CLSID_OP22_GBOX, "op22_gbox"); // формат и API как в ОП (op22_gbox.h)
     ADD(CInventoryItemObject, CSE_ALifeItem, CLSID_OP22_NVP, "op22_nvp");
 
     // Equipment outfit
