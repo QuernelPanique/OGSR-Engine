@@ -12,6 +12,7 @@
 #include "UIXmlInit.h"
 #include "UIInventoryWnd.h"
 #include "../Weapon.h"
+#include "../Artifact.h" // OP22
 #include "../CustomOutfit.h"
 #include "UICellCustomItems.h"
 
@@ -220,7 +221,8 @@ void CUICellItem::UpdateConditionProgressBar()
         CWeapon* pWeapon = smart_cast<CWeapon*>(itm);
         CCustomOutfit* pOutfit = smart_cast<CCustomOutfit*>(itm);
 
-        if (pWeapon || pOutfit || itm->GetInvShowCondition())
+        // OP22: и артефакты, и всё с use_condition (решение пользователя 04.11)
+        if (pWeapon || pOutfit || itm->GetInvShowCondition() || itm->op22_uses_condition() || smart_cast<CArtefact*>(itm))
         {
             Ivector2 itm_grid_size = GetGridSize();
             if (m_pParentList->GetVerticalPlacement())
@@ -232,7 +234,11 @@ void CUICellItem::UpdateConditionProgressBar()
             if (m_condition_auto_width || fis_zero(m_pConditionState->GetWidth()))
             {
                 x = 2.f;
-                m_pConditionState->SetWidth((float)cell_size.x - 4.f);
+                // OP22: на всю ширину предмета, а не одну клетку; текстура растягивается вместе с полоской
+                const float w = (float)itm_grid_size.x * (cell_size.x + cell_space.x) - 4.f;
+                m_pConditionState->SetWidth(w);
+                m_pConditionState->m_UIProgressItem.SetWidth(w);
+                m_pConditionState->m_UIBackgroundItem.SetWidth(w);
                 m_condition_auto_width = true;
             }
             else

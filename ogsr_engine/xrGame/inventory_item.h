@@ -164,6 +164,7 @@ public:
     int GetYPos() const;
 
     bool GetInvShowCondition() const;
+    bool op22_uses_condition() const { return !!m_flags.test(FUsingCondition); } // OP22
 
     float GetCondition() const { return m_fCondition; }
     virtual float GetConditionToShow() const { return GetCondition(); }
