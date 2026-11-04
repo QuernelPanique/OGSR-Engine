@@ -90,6 +90,7 @@ void CUIComboBox::Init(float x, float y, float width)
 
     // Edit Box on left side of frame line
     m_text.Init(0, 0, width, CB_HEIGHT);
+    m_text.SetTextPosX(4.f); // OP22: value text was clipped at the left edge of the field
     m_text.SetTextColor(m_textColor[0]);
     m_text.Enable(false);
     // Button on right side of frame line
