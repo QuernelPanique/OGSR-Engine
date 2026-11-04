@@ -96,6 +96,9 @@ void CUIOutfitInfo::Update(CCustomOutfit* outfit)
 {
     string128 _buff;
 
+    extern void op22_refresh_items_radiation(); // OP22: панель сразу после смены предметов
+    op22_refresh_items_radiation();
+
     auto artefactEffects = Actor()->ActiveArtefactsOnBelt();
 
     m_listWnd->Clear(false); // clear existing items and do not scroll to top

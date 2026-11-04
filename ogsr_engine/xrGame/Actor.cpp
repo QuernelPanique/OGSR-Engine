@@ -1437,11 +1437,26 @@ void CActor::ApplyArtefactEffects(ActorRestoreParams& r, CArtefact* artefact)
     }
 }
 
+// OP22: облучение предметов инвентаря (inventory_radiation/item_radiation ОП). В ОП список всех предметов с облучением
+// складывается в обновлении артефактов и зависит от игрового времени. Значения живут в Lua, поэтому сумма обновляется
+// раз в секунду и при пересчёте панели защит, а не на каждый проход (0.1 игровой секунды)
+static float g_op22_items_radiation = 0.f;
+
+void op22_refresh_items_radiation()
+{
+    if (!pSettings->line_exist("engine_callbacks", "op22_items_radiation_callback"))
+        return;
+    luabind::functor<float> lua_function;
+    if (ai().script_engine().functor(pSettings->r_string("engine_callbacks", "op22_items_radiation_callback"), lua_function))
+        g_op22_items_radiation = lua_function();
+}
+
 ActorRestoreParams CActor::ActiveArtefactsOnBelt()
 {
     ActorRestoreParams r;
 
     Memory.mem_fill(&r, 0, sizeof(r));
+    r.RadiationRestoreSpeed += g_op22_items_radiation; // OP22
 
     for (TIItemContainer::iterator it = inventory().m_belt.begin(); inventory().m_belt.end() != it; ++it)
     {
@@ -1562,6 +1577,13 @@ void CActor::UpdateArtefactsOnBelt()
     {
         f_update_time = update_time;
         update_time = 0.0f;
+    }
+
+    static u32 op22_rad_next = 0; // OP22
+    if (Device.dwTimeGlobal >= op22_rad_next)
+    {
+        op22_rad_next = Device.dwTimeGlobal + 1000;
+        op22_refresh_items_radiation();
     }
 
     auto effects = ActiveArtefactsOnBelt();
