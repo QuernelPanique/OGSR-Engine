@@ -780,6 +780,8 @@ void CHudItem::UpdateCollision(Fmatrix& trans)
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+float g_op22_hud_inertion = 100.f; // OP22: op22_console.cpp
+
 void CHudItem::UpdateInertion(Fmatrix& trans)
 {
     if (HudInertionEnabled() && HudInertionAllowed())
@@ -821,7 +823,8 @@ void CHudItem::UpdateInertion(Fmatrix& trans)
         // Фактор силы инерции
         const float power_factor = GetInertionPowerFactor();
         _tendto_speed *= power_factor;
-        _origin_offset *= power_factor;
+        // OP22: настройка «Инерция рук», проценты; скорость возврата не трогаем, иначе при 0 направление копилось бы
+        _origin_offset *= power_factor * g_op22_hud_inertion * 0.01f;
 
         inert_st_last_dir.mad(diff_dir, _tendto_speed * Device.fTimeDelta);
         origin.mad(diff_dir, -_origin_offset); // Инвертировал

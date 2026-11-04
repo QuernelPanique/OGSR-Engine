@@ -217,6 +217,10 @@ void op22_register_console()
     flt("ls_text_offset_x", 30.f, -2000.f, 2000.f);
     flt("ls_text_offset_y", 90.f, -2000.f, 2000.f);
     flt("r2_sun_near_border", 1.f, 0.f, 1.f);
+    {
+        extern float g_op22_hud_inertion;
+        add(xr_new<CCC_Float>("op22_hud_inertion", &g_op22_hud_inertion, 0.f, 300.f));
+    }
     str("bolt_visual", "bolt");
     str("hc_unarmed", "");
     skin("g_current_hud", op22_skins::eHud);
