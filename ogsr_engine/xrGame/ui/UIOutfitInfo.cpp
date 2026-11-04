@@ -96,9 +96,6 @@ void CUIOutfitInfo::Update(CCustomOutfit* outfit)
 {
     string128 _buff;
 
-    extern void op22_refresh_items_radiation(); // OP22: панель сразу после смены предметов
-    op22_refresh_items_radiation();
-
     auto artefactEffects = Actor()->ActiveArtefactsOnBelt();
 
     m_listWnd->Clear(false); // clear existing items and do not scroll to top
@@ -144,6 +141,9 @@ void CUIOutfitInfo::Update(CCustomOutfit* outfit)
             _val_af *= 100.0f;
             _sn = "%";
         }
+
+        if (i == _item_radiation_restore_speed) // OP22: в ОП радиация с единицами
+            _sn = *CStringTable().translate("ui_inv_radiation_units");
 
         if (i == _item_bleeding_restore_speed)
             _val_outfit *= -1.0f;

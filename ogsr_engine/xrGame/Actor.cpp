@@ -1438,11 +1438,11 @@ void CActor::ApplyArtefactEffects(ActorRestoreParams& r, CArtefact* artefact)
 }
 
 // OP22: облучение предметов инвентаря (inventory_radiation/item_radiation ОП). В ОП список всех предметов с облучением
-// складывается в обновлении артефактов и зависит от игрового времени. Значения живут в Lua, поэтому сумма обновляется
-// раз в секунду и при пересчёте панели защит, а не на каждый проход (0.1 игровой секунды)
+// применяется в обновлении артефактов, по игровому времени; панель защит его не показывает (только параметры пояса).
+// Значения живут в Lua, поэтому сумма обновляется раз в секунду, а не на каждый проход (0.1 игровой секунды)
 static float g_op22_items_radiation = 0.f;
 
-void op22_refresh_items_radiation()
+static void op22_refresh_items_radiation()
 {
     if (!pSettings->line_exist("engine_callbacks", "op22_items_radiation_callback"))
         return;
@@ -1456,7 +1456,6 @@ ActorRestoreParams CActor::ActiveArtefactsOnBelt()
     ActorRestoreParams r;
 
     Memory.mem_fill(&r, 0, sizeof(r));
-    r.RadiationRestoreSpeed += g_op22_items_radiation; // OP22
 
     for (TIItemContainer::iterator it = inventory().m_belt.begin(); inventory().m_belt.end() != it; ++it)
     {
@@ -1587,6 +1586,7 @@ void CActor::UpdateArtefactsOnBelt()
     }
 
     auto effects = ActiveArtefactsOnBelt();
+    effects.RadiationRestoreSpeed += g_op22_items_radiation; // OP22
 
     if (!fis_zero(effects.BleedingRestoreSpeed))
         conditions().ChangeBleeding(effects.BleedingRestoreSpeed * f_update_time);
