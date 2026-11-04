@@ -7,6 +7,7 @@
 #include "exooutfit.h"
 
 #include "Actor.h"
+#include "ActorCondition.h"
 #include "actor_defs.h"
 #include "Inventory.h"
 #include "ai_space.h"
@@ -46,6 +47,10 @@ void CExoOutfit::op22_update(u32 actor_state)
     const float ms = Device.fTimeDelta * 1000.f;
     if (actor_state & mcAnyMove)
     {
+        // ОП: без заряда ходьба тратит силы, discharge_moving * 400 за такт (60 тактов в секунду)
+        if (!m_op22_powered)
+            Actor()->conditions().ChangePower(-READ_IF_EXISTS(pSettings, r_float, cNameSect().c_str(), "discharge_moving", 0.f) * 400.f * 60.f *
+                                              Device.fTimeDelta);
         if (actor_state & mcSprint)
             m_op22_ms_sprint += ms;
         else
@@ -56,11 +61,20 @@ void CExoOutfit::op22_update(u32 actor_state)
         return;
     m_op22_time = Device.dwTimeGlobal + 1000;
 
-    luabind::functor<bool> f;
+    luabind::functor<float> f;
     if (ai().script_engine().functor("op22_exo.update", f))
-        m_op22_powered = f(lua_game_object(), m_op22_ms_move, m_op22_ms_sprint, m_op22_jumps);
+    {
+        m_op22_charge = f(lua_game_object(), m_op22_ms_move, m_op22_ms_sprint, m_op22_jumps);
+        m_op22_powered = m_op22_charge != 0.f;
+    }
     m_op22_ms_move = m_op22_ms_sprint = 0.f;
     m_op22_jumps = 0;
+}
+
+bool CExoOutfit::op22_has_battery()
+{
+    luabind::functor<bool> f;
+    return ai().script_engine().functor("op22_exo.has_battery", f) && f(lua_game_object());
 }
 
 bool op22_exo_unpowered()

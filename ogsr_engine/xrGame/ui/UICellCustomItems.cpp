@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../ExoOutfit.h" // OP22
 #include "UICellCustomItems.h"
 #include "UIInventoryUtilities.h"
 #include "../Weapon.h"
@@ -148,6 +149,22 @@ CUIDragItem* CUIInventoryCellItem::CreateDragItem()
 void CUIInventoryCellItem::Update()
 {
     inherited::Update();
+    // OP22: значок аккумулятора, узел ci_exo_charge ОП (cell_item.xml): 15x25, отступ 3, левый верхний угол
+    if (auto* exo = smart_cast<CExoOutfit*>(object()))
+    {
+        if (!m_op22_charged)
+        {
+            m_op22_charged = xr_new<CUIStatic>();
+            m_op22_charged->SetAutoDelete(true);
+            AttachChild(m_op22_charged);
+            m_op22_charged->InitTexture("ui_hud_icon_exo_charge"); // в ОП "charged", описания такой текстуры нет ни в одном файле
+            m_op22_charged->SetStretchTexture(true);
+            m_op22_charged->SetWndPos(Fvector2().set(3.f, 3.f));
+            m_op22_charged->SetWidth(15.f);
+            m_op22_charged->SetHeight(25.f);
+        }
+        m_op22_charged->Show(exo->op22_has_battery());
+    }
     if (Core.Features.test(xrCore::Feature::show_inv_item_condition))
         UpdateConditionProgressBar();
 }

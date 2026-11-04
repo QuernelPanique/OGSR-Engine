@@ -20,6 +20,7 @@ private:
     float m_op22_ms_sprint{};
     bool m_op22_in_jump{};
     bool m_op22_powered{true};
+    float m_op22_charge{-1.f}; // 0..1, -1 - костюм без батарей или ещё не обновлялся
 
 public:
     CExoOutfit(void);
@@ -30,6 +31,8 @@ public:
 
     void op22_update(u32 actor_state); // OP22: из CActor::UpdateCL, костюм надет
     bool op22_powered() const { return m_op22_powered; } // OP22
+    float op22_charge() const { return m_op22_charge; } // OP22: для значка на HUD
+    bool op22_has_battery(); // OP22: для значка на иконке
 };
 
 bool op22_exo_unpowered(); // OP22: надет экзоскелет с пустым аккумулятором или без него

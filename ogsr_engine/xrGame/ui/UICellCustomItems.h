@@ -8,6 +8,7 @@ class CUIInventoryCellItem : public CUICellItem
 
 protected:
     bool b_auto_drag_childs;
+    CUIStatic* m_op22_charged{}; // OP22: значок аккумулятора на иконке экзоскелета (ci_exo_charge)
 
 public:
     CUIInventoryCellItem(CInventoryItem* itm);

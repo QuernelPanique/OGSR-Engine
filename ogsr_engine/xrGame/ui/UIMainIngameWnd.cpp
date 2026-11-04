@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../ExoOutfit.h" // OP22
 
 #include "UIMainIngameWnd.h"
 #include "UIMessagesWindow.h"
@@ -206,6 +207,23 @@ void CUIMainIngameWnd::Init()
 
     xml_init.InitStatic(uiXml, "weapon_jammed_static", 0, &UIWeaponJammedIcon);
     UIWeaponJammedIcon.Show(false);
+
+    // OP22: заряд экзоскелета; в HUD порта узла нет - размер от значка оружия, текстура ОП
+    if (uiXml.NavigateToNode("exo_charge_static", 0))
+        xml_init.InitStatic(uiXml, "exo_charge_static", 0, &UIExoChargeIcon);
+    else
+    {
+        xml_init.InitStatic(uiXml, "weapon_jammed_static", 0, &UIExoChargeIcon);
+        UIExoChargeIcon.InitTexture("ui_hud_icon_exo_charge");
+    }
+    UIExoChargeIcon.Show(false);
+    if (pSettings->line_exist("main_ingame_indicators_thresholds", "exo_charge"))
+    {
+        const char* rec = pSettings->r_string("main_ingame_indicators_thresholds", "exo_charge");
+        string32 tmp;
+        m_op22_exo_min = (float)atof(_GetItem(rec, 0, tmp));
+        m_op22_exo_max = (float)atof(_GetItem(rec, _GetItemCount(rec) - 1, tmp));
+    }
 
     xml_init.InitStatic(uiXml, "radiation_static", 0, &UIRadiaitionIcon);
     UIRadiaitionIcon.Show(false);
@@ -440,6 +458,23 @@ void CUIMainIngameWnd::Update()
 
             if (i == ewiInvincible)
                 i = (EWarningIcons)(i + 1);
+        }
+
+        // OP22: заряд экзоскелета, пороги exo_charge как в ОП (значение - разряд)
+        if (!external_icon_ctrl)
+        {
+            auto* exo = smart_cast<CExoOutfit*>(m_pActor->inventory().m_slots[OUTFIT_SLOT].m_pIItem);
+            const float v = exo && exo->op22_charge() >= 0.f ? 1.f - exo->op22_charge() : -1.f;
+            if (v >= m_op22_exo_min)
+            {
+                const float t = std::clamp((v - m_op22_exo_min) / (m_op22_exo_max - m_op22_exo_min), 0.f, 1.f);
+                static const auto min_clr{READ_IF_EXISTS(pSettings, r_fvector4, "warning_icon_color", "min", (Fvector4{255.f, 0.f, 255.f, 0.f}))};
+                static const auto max_clr{READ_IF_EXISTS(pSettings, r_fvector4, "warning_icon_color", "max", (Fvector4{255.f, 255.f, 0.f, 0.f}))};
+                auto to_u = [](const float x) { return static_cast<u32>(std::lround(std::clamp(x, 0.f, 255.f))); };
+                SetWarningIconColor(&UIExoChargeIcon, color_argb(to_u(std::lerp(min_clr.x, max_clr.x, t)), to_u(std::lerp(min_clr.y, max_clr.y, t)), to_u(std::lerp(min_clr.z, max_clr.z, t)), to_u(std::lerp(min_clr.w, max_clr.w, t))));
+            }
+            else
+                SetWarningIconColor(&UIExoChargeIcon, 0x00ffffff);
         }
     }
 

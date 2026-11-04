@@ -70,6 +70,8 @@ protected:
     // - голода
     // - усталости
     CUIStatic UIWeaponJammedIcon;
+    CUIStatic UIExoChargeIcon; // OP22: заряд экзоскелета
+    float m_op22_exo_min{}, m_op22_exo_max{1.f}; // OP22
     CUIStatic UIRadiaitionIcon;
     CUIStatic UIWoundIcon;
     CUIStatic UIStarvationIcon;
