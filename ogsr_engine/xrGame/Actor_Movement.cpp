@@ -170,8 +170,11 @@ static float moving_box_delay = 0;
 static bool crouch_move = false;
 static bool crouch_stop = false;
 
+extern u32 g_op22_move_restrict; // OP22
 void CActor::g_cl_CheckControls(u32 mstate_wf, Fvector& vControlAccel, float& Jump, float dt)
 {
+    if (g_op22_move_restrict & 4) // OP22: голод ОП - только медленный шаг
+        mstate_wf |= mcAccel;
     float cam_eff_factor = 0.0f;
     mstate_old = mstate_real;
     vControlAccel.set(0, 0, 0);

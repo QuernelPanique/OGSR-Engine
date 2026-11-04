@@ -84,7 +84,11 @@ void CUIArtefactParams::InitFromXml(CUIXml& xml_doc)
     }
 }
 
-bool CUIArtefactParams::Check(const shared_str& af_section) { return !!pSettings->line_exist(af_section, "af_actor_properties"); }
+// OP22: в ОП 2.2 ключа af_actor_properties нет, артефакт узнаём по секции поглощения
+bool CUIArtefactParams::Check(const shared_str& af_section)
+{
+    return pSettings->line_exist(af_section, "af_actor_properties") || pSettings->line_exist(af_section, "hit_absorbation_sect");
+}
 #include "../string_table.h"
 void CUIArtefactParams::SetInfo(const shared_str& af_section)
 {

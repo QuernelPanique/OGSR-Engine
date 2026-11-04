@@ -18,7 +18,7 @@
 #include "PDA.h"
 #include "ai/monsters/BaseMonster/base_monster.h"
 
-u32 g_op22_move_restrict = 0; // OP22: EActorMovementRestrictions ОП 2.2 (set_actor_movement_restriction): 1 - прыжок, 2 - бег, 4 - обычный шаг
+u32 g_op22_move_restrict = 0; // OP22: EActorMovementRestrictions ОП 2.2 (set_actor_movement_restriction): 1 - прыжок, 2 - бег, 4 - только медленный шаг (Actor_Movement)
 
 
 #define MAX_SATIETY 1.0f
@@ -449,8 +449,6 @@ void CActorCondition::ConditionStand(float weight)
 
 bool CActorCondition::IsCantWalk()
 {
-    if (g_op22_move_restrict & 4) // OP22
-        return true;
     if (m_fPower < m_fCantWalkPowerBegin)
         m_condition_flags.set(eCantWalk, TRUE);
     else if (m_fPower > m_fCantWalkPowerEnd)

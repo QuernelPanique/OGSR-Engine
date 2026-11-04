@@ -476,7 +476,8 @@ void CUIMainIngameWnd::op22_qs_update()
             xr_sprintf(t, "%u", cnt);
             q.count->SetText(t);
         }
-        q.key->SetText(dik_to_keyname(get_action_dik(EGameActions(kUSE_QUICK_SLOT0 + i))));
+        LPCSTR kn = dik_to_keyname(get_action_dik(EGameActions(kUSE_QUICK_SLOT0 + i)));
+        q.key->SetText(kn && kn[0] == 'k' ? kn + 1 : kn); // kINSERT -> INSERT
     }
 }
 
