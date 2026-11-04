@@ -35,6 +35,8 @@ void CUIListWnd::script_register(lua_State* L)
             .def("ScrollToBegin", &CUIListWnd::ScrollToBegin)
             .def("ScrollToEnd", &CUIListWnd::ScrollToEnd)
             .def("ScrollToPos", &CUIListWnd::ScrollToPos)
+            .def("GetCurrentScrollPos", &CUIListWnd::GetListPosition) // OP22: storage windows
+            .def("GetPageScrollSize", &CUIListWnd::GetPageScrollSize) // OP22
             .def("SetWidth", &CUIListWnd::SetWidth)
             .def("SetTextColor", &CUIListWnd::SetTextColor)
             .def("ActivateList", &CUIListWnd::ActivateList)

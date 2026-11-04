@@ -118,6 +118,7 @@ CUIListBoxItem* CUIComboBox::AddItem_(LPCSTR str, int _data)
 {
     R_ASSERT2(m_bInited, "Can't add item to ComboBox before Initialization");
     CUIListBoxItem* itm = m_list.AddItem(str);
+    itm->SetTextPosX(4.f); // OP22: same indent as the value field
     itm->SetData((void*)(__int64)_data);
     return itm;
 }
@@ -125,6 +126,7 @@ CUIListBoxItem* CUIComboBox::AddItem_(LPCSTR str)
 {
     R_ASSERT2(m_bInited, "Can't add item to ComboBox before Initialization");
     CUIListBoxItem* itm = m_list.AddItem(str);
+    itm->SetTextPosX(4.f); // OP22: same indent as the value field
     return itm;
 }
 

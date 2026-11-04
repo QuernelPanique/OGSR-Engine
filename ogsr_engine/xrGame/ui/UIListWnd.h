@@ -103,6 +103,7 @@ public:
     void ResetFocusCapture() { m_bForceFocusedItem = false; }
 
     int GetListPosition() const { return m_iFirstShownIndex; }
+    int GetPageScrollSize() const { return m_iRowNum; } // OP22
 
 protected:
     void create_active_back();

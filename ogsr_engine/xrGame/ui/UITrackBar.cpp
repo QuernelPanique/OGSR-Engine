@@ -62,6 +62,7 @@ void CUITrackBar::Init(float x, float y, float width, float height)
 
     m_pSlider->Init(0, (height - item_height) / 2, item_width, item_height);
     m_pSlider->InitTexture(SLIDER_TEXTURE);
+    m_pSlider->SetTextAlignment(CGameFont::alCenter); // OP22: value in the middle of the plate
 }
 
 void CUITrackBar::SetCurrentValue()
