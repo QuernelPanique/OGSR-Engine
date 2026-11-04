@@ -774,6 +774,8 @@ void CActor::UpdateCL()
     if (auto* exo = smart_cast<CExoOutfit*>(inventory().m_slots[OUTFIT_SLOT].m_pIItem)) // OP22: заряд аккумулятора экзоскелета
         exo->op22_update(mstate_real);
 
+    op22_addon_update(); // OP22
+
     // OP22: ПНВ и радиация предметов, раз в секунду
     if (static u32 op22_qs_time = 0; Device.dwTimeGlobal >= op22_qs_time)
     {

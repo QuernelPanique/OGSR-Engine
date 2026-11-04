@@ -488,6 +488,10 @@ protected:
 public:
     virtual void IR_OnMouseMove(int x, int y);
     void op22_weapon_addon_ops(int cmd); // OP22
+    void op22_addon_update(); // OP22
+    int m_op22_addon_cmd{}; // OP22: смена обвеса ждёт, пока оружие уберётся
+    u32 m_op22_addon_slot{};
+    u32 m_op22_addon_time{};
     void op22_add_article(LPCSTR id); // OP22
     virtual void IR_OnKeyboardPress(int dik);
     virtual void IR_OnKeyboardRelease(int dik);

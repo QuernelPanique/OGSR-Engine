@@ -41,31 +41,64 @@
 bool g_bAutoClearCrouch = true;
 extern int g_bHudAdjustMode;
 
-// OP22: отделить/прикрепить прицел, ПГ, глушитель клавишей: надет и съёмный - снять в рюкзак, иначе надеть первый подходящий из рюкзака
-void CActor::op22_weapon_addon_ops(int cmd)
+// OP22: отделить/прикрепить прицел, ПГ, глушитель клавишей: оружие убирается, обвес меняется, оружие достаётся обратно
+// (смена на оружии в руках обрывала анимацию). Надет и съёмный - снять в рюкзак, иначе надеть первый подходящий из рюкзака
+static PIItem op22_addon_from_ruck(CInventory& inv, CWeaponMagazined* w, int cmd)
 {
-    auto* w = smart_cast<CWeaponMagazined*>(inventory().ActiveItem());
-    if (!w || w->GetState() != CHudItem::eIdle || w->IsZoomed())
-        return;
-    const bool attached = cmd == kWPN_SCOPE_OPS ? w->IsScopeAttached() : cmd == kWPN_GL_OPS ? w->IsGrenadeLauncherAttached() : w->IsSilencerAttached();
-    const bool can = cmd == kWPN_SCOPE_OPS ? w->ScopeAttachable() : cmd == kWPN_GL_OPS ? w->GrenadeLauncherAttachable() : w->SilencerAttachable();
-    if (!can)
-        return;
-    if (attached)
-    {
-        const shared_str& name = cmd == kWPN_SCOPE_OPS ? w->GetScopeName() : cmd == kWPN_GL_OPS ? w->GetGrenadeLauncherName() : w->GetSilencerName();
-        w->Detach(name.c_str(), true);
-        return;
-    }
-    for (PIItem it : inventory().m_ruck)
+    for (PIItem it : inv.m_ruck)
     {
         const bool kind = cmd == kWPN_SCOPE_OPS ? !!smart_cast<CScope*>(it) : cmd == kWPN_GL_OPS ? !!smart_cast<CGrenadeLauncher*>(it) : !!smart_cast<CSilencer*>(it);
         if (kind && w->CanAttach(it))
-        {
-            w->Attach(it, true);
-            return;
-        }
+            return it;
     }
+    return nullptr;
+}
+
+static bool op22_addon_attached(CWeaponMagazined* w, int cmd)
+{
+    return cmd == kWPN_SCOPE_OPS ? w->IsScopeAttached() : cmd == kWPN_GL_OPS ? w->IsGrenadeLauncherAttached() : w->IsSilencerAttached();
+}
+
+void CActor::op22_weapon_addon_ops(int cmd)
+{
+    if (m_op22_addon_cmd)
+        return;
+    auto* w = smart_cast<CWeaponMagazined*>(inventory().ActiveItem());
+    if (!w || w->GetState() != CHudItem::eIdle || w->IsZoomed())
+        return;
+    const bool can = cmd == kWPN_SCOPE_OPS ? w->ScopeAttachable() : cmd == kWPN_GL_OPS ? w->GrenadeLauncherAttachable() : w->SilencerAttachable();
+    if (!can || (!op22_addon_attached(w, cmd) && !op22_addon_from_ruck(inventory(), w, cmd)))
+        return;
+    m_op22_addon_cmd = cmd;
+    m_op22_addon_slot = inventory().GetActiveSlot();
+    m_op22_addon_time = Device.dwTimeGlobal + 3000;
+    inventory().Activate(NO_ACTIVE_SLOT);
+}
+
+void CActor::op22_addon_update()
+{
+    if (!m_op22_addon_cmd)
+        return;
+    if (Device.dwTimeGlobal > m_op22_addon_time) // оружие не убралось (смерть, скрипт) - отмена
+    {
+        m_op22_addon_cmd = 0;
+        return;
+    }
+    if (inventory().GetActiveSlot() != NO_ACTIVE_SLOT || inventory().GetNextActiveSlot() != NO_ACTIVE_SLOT)
+        return;
+    const int cmd = m_op22_addon_cmd;
+    m_op22_addon_cmd = 0;
+    auto* w = smart_cast<CWeaponMagazined*>(inventory().ItemFromSlot(m_op22_addon_slot));
+    if (!w)
+        return;
+    if (op22_addon_attached(w, cmd))
+    {
+        const shared_str& name = cmd == kWPN_SCOPE_OPS ? w->GetScopeName() : cmd == kWPN_GL_OPS ? w->GetGrenadeLauncherName() : w->GetSilencerName();
+        w->Detach(name.c_str(), true);
+    }
+    else if (PIItem it = op22_addon_from_ruck(inventory(), w, cmd))
+        w->Attach(it, true);
+    inventory().Activate(m_op22_addon_slot);
 }
 
 void CActor::IR_OnKeyboardPress(int cmd)
