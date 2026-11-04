@@ -384,7 +384,8 @@ void CUIMainIngameWnd::op22_qs_init(CUIXml& xml)
     m_op22_qs_wnd = xr_new<CUIWindow>();
     m_op22_qs_wnd->SetAutoDelete(true);
     AttachChild(m_op22_qs_wnd);
-    m_op22_qs_wnd->Init(xml.ReadAttribFlt(P, 0, "x", 0.f), xml.ReadAttribFlt(P, 0, "y", 0.f), (m_op22_qs_cell.x + indent) * 5, m_op22_qs_cell.y);
+    m_op22_qs_wnd->SetWndPos(Fvector2().set(xml.ReadAttribFlt(P, 0, "x", 0.f), xml.ReadAttribFlt(P, 0, "y", 0.f)));
+    m_op22_qs_wnd->SetWndSize(Fvector2().set((m_op22_qs_cell.x + indent) * 5, m_op22_qs_cell.y));
 
     string_path probe;
     xr_sprintf(probe, "%s_lt.dds", tex.size() ? tex.c_str() : "");
