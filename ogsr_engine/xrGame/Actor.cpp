@@ -774,12 +774,10 @@ void CActor::UpdateCL()
     if (auto* exo = smart_cast<CExoOutfit*>(inventory().m_slots[OUTFIT_SLOT].m_pIItem)) // OP22: заряд аккумулятора экзоскелета
         exo->op22_update(mstate_real);
 
-    // OP22: панель быстрых слотов ОП 2.2, раз в секунду
+    // OP22: ПНВ и радиация предметов, раз в секунду
     if (static u32 op22_qs_time = 0; Device.dwTimeGlobal >= op22_qs_time)
     {
         op22_qs_time = Device.dwTimeGlobal + 1000;
-        if (luabind::functor<void> f; ai().script_engine().functor("op22_quick.update", f))
-            f();
         if (luabind::functor<void> f; ai().script_engine().functor("op22_devices.update", f)) // ПНВ, радиация предметов
             f();
     }

@@ -257,6 +257,7 @@ void CUIInventoryWnd::Init()
         AttachChild(l);
         l->SetAutoDelete(true);
         xml_init.InitDragDropListEx(uiXml, node, 0, l);
+        l->SetAdjustCells(true); // предмет любого размера вписывается в ячейку (вылет на ноже 3x1 в сетке 2x2)
         BindDragDropListEnents(l);
         m_op22_quick[i] = l;
     }

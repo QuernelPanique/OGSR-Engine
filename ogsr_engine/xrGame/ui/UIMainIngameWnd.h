@@ -71,6 +71,20 @@ protected:
     // - усталости
     CUIStatic UIWeaponJammedIcon;
     CUIStatic UIExoChargeIcon; // OP22: заряд экзоскелета
+    // OP22: панель быстрых слотов ОП 2.2, разметка - узел quickslots_panel скина HUD
+    struct Op22QuickSlot
+    {
+        CUIWindow* back{};
+        CUIStatic* icon{};
+        CUIStatic* key{};
+        CUIStatic* count{};
+    };
+    Op22QuickSlot m_op22_qs[5]{};
+    CUIWindow* m_op22_qs_wnd{};
+    Fvector2 m_op22_qs_cell{};
+    u32 m_op22_qs_time{};
+    void op22_qs_init(CUIXml& xml);
+    void op22_qs_update();
     float m_op22_exo_min{}, m_op22_exo_max{1.f}; // OP22
     CUIStatic UIRadiaitionIcon;
     CUIStatic UIWoundIcon;

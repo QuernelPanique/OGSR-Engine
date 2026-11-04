@@ -1,5 +1,11 @@
 #include "stdafx.h"
 #include "../ExoOutfit.h" // OP22
+#include "../op22_options.h" // OP22
+#include "../ai_space.h" // OP22
+#include "../script_engine.h" // OP22
+#include "../Inventory.h" // OP22
+#include "../xr_level_controller.h" // OP22
+#include "UIFrameWindow.h" // OP22
 
 #include "UIMainIngameWnd.h"
 #include "UIMessagesWindow.h"
@@ -283,6 +289,8 @@ void CUIMainIngameWnd::Init()
     AttachChild(&UIMotionIcon);
     UIMotionIcon.Init();
 
+    op22_qs_init(uiXml); // OP22
+
     if (uiXml.NavigateToNode("artefact_panel"))
     {
         m_artefactPanel = xr_new<CUIArtefactPanel>();
@@ -352,8 +360,128 @@ void CUIMainIngameWnd::SetAmmoIcon(const shared_str& sect_name)
     UIWeaponIcon.SetHeight(h);
 };
 
+// OP22: панель быстрых слотов: ячейка с рамкой, иконка, клавиша и количество. Секции слотов - op22_quick.script
+void CUIMainIngameWnd::op22_qs_init(CUIXml& xml)
+{
+    constexpr LPCSTR P = "quickslots_panel";
+    if (!xml.NavigateToNode(P, 0))
+        return;
+    m_op22_qs_cell.set(xml.ReadAttribFlt(P, 0, "cell_width", 26.f), xml.ReadAttribFlt(P, 0, "cell_height", 34.f));
+    const float indent = xml.ReadAttribFlt(P, 0, "indent", 2.f);
+    const shared_str tex = xml.Read("quickslots_panel:slot:texture", 0, "");
+
+    auto label = [&](LPCSTR path, CUIWindow* parent, float def_x, float def_y) {
+        CUIStatic* s = xr_new<CUIStatic>();
+        s->SetAutoDelete(true);
+        parent->AttachChild(s);
+        s->Init(xml.ReadAttribFlt(path, 0, "x", def_x), xml.ReadAttribFlt(path, 0, "y", def_y), xml.ReadAttribFlt(path, 0, "width", 20.f),
+                xml.ReadAttribFlt(path, 0, "height", 10.f));
+        s->SetFont(UI()->Font()->pFontSmall);
+        s->SetTextColor(0xffc8c8c8);
+        return s;
+    };
+
+    m_op22_qs_wnd = xr_new<CUIWindow>();
+    m_op22_qs_wnd->SetAutoDelete(true);
+    AttachChild(m_op22_qs_wnd);
+    m_op22_qs_wnd->Init(xml.ReadAttribFlt(P, 0, "x", 0.f), xml.ReadAttribFlt(P, 0, "y", 0.f), (m_op22_qs_cell.x + indent) * 5, m_op22_qs_cell.y);
+
+    string_path probe;
+    xr_sprintf(probe, "%s_lt.dds", tex.size() ? tex.c_str() : "");
+    const bool frame = tex.size() && (strstr(tex.c_str(), "ct_gamma_qs") || FS.exist("$game_textures$", probe)); // рамка из 9 текстур
+    for (int i = 0; i < 5; ++i)
+    {
+        Op22QuickSlot& q = m_op22_qs[i];
+        const float x = (m_op22_qs_cell.x + indent) * i;
+        if (frame)
+        {
+            auto* f = xr_new<CUIFrameWindow>();
+            f->SetAutoDelete(true);
+            m_op22_qs_wnd->AttachChild(f);
+            f->Init(tex.c_str(), x, 0.f, m_op22_qs_cell.x, m_op22_qs_cell.y);
+            q.back = f;
+        }
+        else
+        {
+            auto* s = xr_new<CUIStatic>();
+            s->SetAutoDelete(true);
+            m_op22_qs_wnd->AttachChild(s);
+            s->Init(x, 0.f, m_op22_qs_cell.x, m_op22_qs_cell.y);
+            if (tex.size())
+            {
+                s->InitTexture(tex.c_str());
+                s->SetStretchTexture(true);
+            }
+            q.back = s;
+        }
+        q.icon = xr_new<CUIStatic>();
+        q.icon->SetAutoDelete(true);
+        q.back->AttachChild(q.icon);
+        q.icon->Init(0.f, 0.f, m_op22_qs_cell.x, m_op22_qs_cell.y);
+        q.icon->SetStretchTexture(true);
+        q.key = label("quickslots_panel:slot:label_key", q.back, 2.f, 1.f);
+        q.count = label("quickslots_panel:slot:label_count", q.back, 16.f, 24.f);
+    }
+}
+
+void CUIMainIngameWnd::op22_qs_update()
+{
+    if (!m_op22_qs_wnd || !m_pActor || Device.dwTimeGlobal < m_op22_qs_time)
+        return;
+    m_op22_qs_time = Device.dwTimeGlobal + 200;
+
+    luabind::functor<LPCSTR> f;
+    const bool panel = op22_opt("hud_qs_panel_visible", true) && ai().script_engine().functor("op22_quick.section", f);
+    m_op22_qs_wnd->Show(panel);
+    if (!panel)
+        return;
+    const bool show_empty = op22_opt("hud_qsp_empty_slot_visible", true);
+    CInventory& inv = m_pActor->inventory();
+    for (int i = 0; i < 5; ++i)
+    {
+        Op22QuickSlot& q = m_op22_qs[i];
+        LPCSTR sect = f(i);
+        PIItem first = nullptr;
+        u32 cnt = 0;
+        if (sect && sect[0])
+        {
+            for (const TIItemContainer* list : {&inv.m_ruck, &inv.m_belt})
+                for (PIItem it : *list)
+                    if (it->object().cNameSect() == sect)
+                    {
+                        if (!first)
+                            first = it;
+                        ++cnt;
+                    }
+        }
+        q.back->Show(first || show_empty);
+        q.icon->Show(first != nullptr);
+        q.count->Show(first != nullptr);
+        if (first)
+        {
+            first->m_icon_params.set_shader(q.icon);
+            const Frect r = first->m_icon_params.original_rect();
+            q.icon->TextureOn();
+            q.icon->ClipperOn();
+            Frect v = {0.f, 0.f, r.width(), r.height()};
+            v.x2 *= UI()->get_current_kx();
+            q.icon->GetUIStaticItem().SetRect(v);
+            // иконка вписывается в ячейку с сохранением пропорций
+            const float k = _min(m_op22_qs_cell.x / _max(v.width(), 1.f), m_op22_qs_cell.y / _max(v.height(), 1.f));
+            const Fvector2 sz{v.width() * k, v.height() * k};
+            q.icon->SetWndPos(Fvector2().set((m_op22_qs_cell.x - sz.x) / 2, (m_op22_qs_cell.y - sz.y) / 2));
+            q.icon->SetWndSize(sz);
+            string16 t;
+            xr_sprintf(t, "%u", cnt);
+            q.count->SetText(t);
+        }
+        q.key->SetText(dik_to_keyname(get_action_dik(EGameActions(kUSE_QUICK_SLOT0 + i))));
+    }
+}
+
 void CUIMainIngameWnd::Update()
 {
+    op22_qs_update(); // OP22
     m_pActor = smart_cast<CActor*>(Level().CurrentViewEntity());
     if (!m_pActor)
     {
