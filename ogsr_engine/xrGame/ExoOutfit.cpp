@@ -4,13 +4,11 @@
 ///////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
-#include "pch_script.h"
 #include "exooutfit.h"
 
 #include "Actor.h"
 #include "actor_defs.h"
 #include "Inventory.h"
-#include "Level.h"
 #include "ai_space.h"
 #include "script_engine.h"
 #include "script_game_object.h"
@@ -33,7 +31,7 @@ bool CExoOutfit::Attach(PIItem pIItem, bool b_send_event)
     if (!pIItem || !ai().script_engine().functor("op22_exo.attach", f))
         return inherited::Attach(pIItem, b_send_event);
     f(lua_game_object(), pIItem->object().lua_game_object());
-    if (b_send_event && OnServer())
+    if (b_send_event)
         pIItem->object().DestroyObject();
     return true;
 }

@@ -344,6 +344,12 @@ bool CUIInventoryWnd::DropItem(PIItem itm, CUIDragDropListEx* lst)
 {
     if (lst == m_pUIOutfitList)
     {
+        // OP22: аккумулятор брошен на надетый экзоскелет
+        if (PIItem outfit = lst->ItemsCount() ? (PIItem)lst->GetItemIdx(0)->m_pData : nullptr; outfit && outfit->CanAttach(CurrentIItem()))
+        {
+            AttachAddon(outfit);
+            return true;
+        }
         return TryUseItem(itm);
         /*
                 CCustomOutfit*		pOutfit		= smart_cast<CCustomOutfit*>	(CurrentIItem());
