@@ -221,9 +221,12 @@ void CUICellItem::UpdateConditionProgressBar()
         CWeapon* pWeapon = smart_cast<CWeapon*>(itm);
         CCustomOutfit* pOutfit = smart_cast<CCustomOutfit*>(itm);
 
-        // OP22: ключ ОП ui_show_condition главнее, плюс артефакты (решение пользователя 04.11)
+        // OP22: ключ ОП ui_show_condition главнее, плюс настоящие артефакты (решение пользователя 04.11): класс ARTEFACT
+        // в ОП есть и у биорадара, колб, диктофонов, коконов, поэтому по имени секции
         const int op22_key = itm->op22_ui_show_condition();
-        if (op22_key == 1 || (op22_key != 0 && (pWeapon || pOutfit || itm->GetInvShowCondition() || smart_cast<CArtefact*>(itm))))
+        const char* op22_sect = itm->object().cNameSect().c_str();
+        const bool op22_af = smart_cast<CArtefact*>(itm) && (strstr(op22_sect, "af_") || !xr_strcmp(op22_sect, "art_acumm"));
+        if (op22_key == 1 || (op22_key != 0 && (pWeapon || pOutfit || itm->GetInvShowCondition() || op22_af)))
         {
             Ivector2 itm_grid_size = GetGridSize();
             if (m_pParentList->GetVerticalPlacement())
@@ -235,8 +238,8 @@ void CUICellItem::UpdateConditionProgressBar()
             if (m_condition_auto_width || fis_zero(m_pConditionState->GetWidth()))
             {
                 x = 2.f;
-                // OP22: на всю ширину предмета, а не одну клетку; текстура растягивается вместе с полоской
-                const float w = (float)itm_grid_size.x * (cell_size.x + cell_space.x) - 4.f;
+                // OP22: одна длина у всех предметов, как у артефакта (решение пользователя 04.11), не шире самого предмета
+                const float w = _min(24.f, (float)itm_grid_size.x * (cell_size.x + cell_space.x) - 4.f);
                 m_pConditionState->SetWidth(w);
                 m_pConditionState->m_UIProgressItem.SetWidth(w);
                 m_pConditionState->m_UIBackgroundItem.SetWidth(w);
