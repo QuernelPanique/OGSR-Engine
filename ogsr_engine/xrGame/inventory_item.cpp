@@ -586,6 +586,8 @@ BOOL CInventoryItem::IsInvalid() const { return object().getDestroy() || GetDrop
 
 bool CInventoryItem::GetInvShowCondition() const { return m_icon_params.show_condition; }
 
+int CInventoryItem::op22_ui_show_condition() const { return m_icon_params.op22_ui_show_condition; }
+
 void CInventoryItem::SetLoadedBeltIndex(u8 pos)
 {
     loaded_belt_index = pos;

@@ -221,8 +221,9 @@ void CUICellItem::UpdateConditionProgressBar()
         CWeapon* pWeapon = smart_cast<CWeapon*>(itm);
         CCustomOutfit* pOutfit = smart_cast<CCustomOutfit*>(itm);
 
-        // OP22: и артефакты, и всё с use_condition (решение пользователя 04.11)
-        if (pWeapon || pOutfit || itm->GetInvShowCondition() || itm->op22_uses_condition() || smart_cast<CArtefact*>(itm))
+        // OP22: ключ ОП ui_show_condition главнее, плюс артефакты (решение пользователя 04.11)
+        const int op22_key = itm->op22_ui_show_condition();
+        if (op22_key == 1 || (op22_key != 0 && (pWeapon || pOutfit || itm->GetInvShowCondition() || smart_cast<CArtefact*>(itm))))
         {
             Ivector2 itm_grid_size = GetGridSize();
             if (m_pParentList->GetVerticalPlacement())

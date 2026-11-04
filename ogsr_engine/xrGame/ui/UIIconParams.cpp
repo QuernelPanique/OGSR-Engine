@@ -13,6 +13,8 @@ void CIconParams::Load(const shared_str& item_section)
     grid_x = pSettings->r_float(section, "inv_grid_x");
     grid_y = pSettings->r_float(section, "inv_grid_y");
     show_condition = READ_IF_EXISTS(pSettings, r_bool, section, "inv_show_condition", false);
+    if (pSettings->line_exist(item_section, "ui_show_condition")) // OP22
+        op22_ui_show_condition = pSettings->r_bool(item_section, "ui_show_condition") ? 1 : 0;
     loaded = true;
 }
 
