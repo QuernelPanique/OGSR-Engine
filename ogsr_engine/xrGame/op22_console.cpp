@@ -165,6 +165,8 @@ LPCSTR op22_font_profile_key() { return g_font_profile < g_font_profiles.size() 
 
 void op22_register_console()
 {
+    extern int g_op22_pda_tab; // OP22: read by op22_skills_page.script
+    add(xr_new<CCC_Integer>("op22_pda_tab", &g_op22_pda_tab, 0, 100000));
     // яркость окна опций ОП: гамма, яркость, контраст - через коррекцию изображения OGSR
     alias("rs_c_gamma", 1.f, 0.5f, 1.5f, "ssfx_gamma");
     alias("rs_c_brightness", 1.f, 0.5f, 1.5f, "ssfx_exposure");

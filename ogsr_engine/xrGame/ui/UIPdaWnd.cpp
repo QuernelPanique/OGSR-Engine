@@ -34,6 +34,7 @@
 
 #define PDA_XML "pda.xml"
 u32 g_pda_info_state = 0;
+int g_op22_pda_tab = 0; // OP22: counts tab changes, scripts close their pages on it
 
 void RearrangeTabButtons(CUITabControl* pTab, xr_vector<Fvector2>& vec_sign_places);
 
@@ -380,6 +381,7 @@ void CUIPdaWnd::SetActiveSubdialog(EPdaTabs section)
         UITabControl->SetNewActiveTab(section);
 
     m_pActiveSection = section;
+    g_op22_pda_tab = (g_op22_pda_tab + 1) % 100000; // OP22
 }
 
 void CUIPdaWnd::Draw()
