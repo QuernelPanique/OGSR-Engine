@@ -134,6 +134,11 @@ void CActor::IR_OnKeyboardPress(int cmd)
     if (!g_Alive())
         return;
 
+    // OP22: ПНВ ОП 2.2 в своём слоте (op22_devices.script). Раньше inventory().Action: иначе оружие в руках забирает клавишу
+    if (cmd == kNIGHT_VISION && !m_holder)
+        if (luabind::functor<bool> f; ai().script_engine().functor("op22_devices.nv_switch", f) && f())
+            return;
+
     if (m_holder && kUSE != cmd)
     {
         m_holder->OnKeyboardPress(cmd);
@@ -191,9 +196,6 @@ void CActor::IR_OnKeyboardPress(int cmd)
     case kCAM_3: cam_Set(eacFreeLook); break;
     case kNIGHT_VISION:
     case kTORCH: {
-        if (cmd == kNIGHT_VISION) // OP22: ПНВ ОП 2.2 в своём слоте (op22_devices.script)
-            if (luabind::functor<bool> f; ai().script_engine().functor("op22_devices.nv_switch", f) && f())
-                return;
         auto act_it = inventory().ActiveItem();
         auto active_hud = smart_cast<CHudItem*>(act_it);
         if (active_hud && active_hud->GetState() != CHudItem::eIdle && Core.Features.test(xrCore::Feature::busy_actor_restrictions))
