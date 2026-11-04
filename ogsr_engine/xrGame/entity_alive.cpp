@@ -289,21 +289,6 @@ void CEntityAlive::Hit(SHit* pHDS)
         }
     }
 
-    // OP22: on_object_hit ОП 2.2: binder актора, монстра, сталкера (callback_hit, AMK)
-    {
-        CObject* who_o = HDS.who;
-        CGameObject* who = smart_cast<CGameObject*>(who_o);
-        CGameObject* wpn = HDS.weaponID && HDS.weaponID != u16(-1) ? smart_cast<CGameObject*>(Level().Objects.net_Find(HDS.weaponID)) : who;
-        LPCSTR ammo = "";
-        if (auto* w = smart_cast<CWeapon*>(wpn); w && w->m_ammoType < w->m_ammoTypes.size())
-            ammo = w->m_ammoTypes[w->m_ammoType].c_str();
-        LPCSTR bone = "";
-        IKinematics* k = Visual() ? smart_cast<IKinematics*>(Visual()) : nullptr;
-        if (k && HDS.boneID != BI_NONE && HDS.boneID < k->LL_BoneCount())
-            bone = k->LL_BoneName(HDS.boneID);
-        callback(GameObject::eOnObjectHit)(who ? who->lua_game_object() : nullptr, wpn ? wpn->lua_game_object() : nullptr, ammo, int(HDS.boneID), bone,
-                                           HDS.damage(), int(HDS.hit_type));
-    }
 }
 
 void CEntityAlive::Die(CObject* who)

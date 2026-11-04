@@ -21,6 +21,7 @@
 #include "level.h"
 #include "../xr_3da/NET_Server_Trash/net_utils.h"
 #include "script_callback_ex.h"
+#include "Weapon.h" // OP22
 #include "MathUtils.h"
 #include "game_level_cross_table.h"
 #include "animation_movement_controller.h"
@@ -189,6 +190,22 @@ void CGameObject::OnEvent(NET_Packet& P, u16 type)
         //-------------------------------------------------------
         SetHitInfo(Hitter, Weapon, HDS.bone(), HDS.p_in_bone_space, HDS.dir);
         Hit(&HDS);
+
+        // OP22: on_object_hit ОП 2.2 - как CGameObject::OnEvent ОП: после Hit, сила исходная (до защит и артефактов),
+        // кто и оружие - из пакета, для любого объекта с binder (актор, монстр, сталкер: callback_hit, AMK)
+        {
+            CGameObject* who = smart_cast<CGameObject*>(Hitter);
+            CGameObject* wpn = smart_cast<CGameObject*>(Weapon);
+            LPCSTR ammo = "";
+            if (auto* w = smart_cast<CWeapon*>(wpn); w && w->m_ammoType < w->m_ammoTypes.size())
+                ammo = w->m_ammoTypes[w->m_ammoType].c_str();
+            LPCSTR bone = "";
+            IKinematics* k = Visual() ? smart_cast<IKinematics*>(Visual()) : nullptr;
+            if (k && HDS.boneID < k->LL_BoneCount())
+                bone = k->LL_BoneName(HDS.boneID);
+            callback(GameObject::eOnObjectHit)(who ? who->lua_game_object() : nullptr, wpn ? wpn->lua_game_object() : nullptr, ammo, int(HDS.boneID), bone, HDS.power,
+                                               int(HDS.hit_type));
+        }
     }
     break;
     case GE_DESTROY: {
