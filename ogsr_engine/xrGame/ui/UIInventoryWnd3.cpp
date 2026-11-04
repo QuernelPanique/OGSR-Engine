@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../op22_options.h" // OP22
 #include "UIInventoryWnd.h"
 #include "../actor.h"
 #include "../silencer.h"
@@ -115,7 +116,7 @@ void CUIInventoryWnd::ActivatePropertiesBox()
     auto op22_detach_text = [](LPCSTR st, const shared_str& addon_sect) -> xr_string {
         xr_string t = CStringTable().translate(st).c_str();
         // OP22: ui_show_extdesc - имя обвеса в пункте меню
-        if (Console && Console->GetCommand("ui_show_extdesc") && Console->GetBool("ui_show_extdesc") && addon_sect.size() && pSettings->section_exist(addon_sect))
+        if (op22_opt("ui_show_extdesc", true) && addon_sect.size() && pSettings->section_exist(addon_sect))
         {
             LPCSTR nm = pSettings->line_exist(addon_sect, "inv_name_short") ? pSettings->r_string(addon_sect, "inv_name_short")
                                                                             : READ_IF_EXISTS(pSettings, r_string, addon_sect, "inv_name", "");
