@@ -38,7 +38,8 @@ xr_vector<_action> actions = {
 
                                                                                                     DEF_ACTION("quick_save", kQUICK_SAVE) DEF_ACTION("quick_load", kQUICK_LOAD)
 
-                                                                                                        DEF_ACTION("hide_hud", kHIDEHUD) DEF_ACTION("show_hud", kSHOWHUD)
+                                                                                                        DEF_ACTION("hide_hud", kHIDEHUD) DEF_ACTION("show_hud", kSHOWHUD) // OP22
+DEF_ACTION("use_quick_slot0", kUSE_QUICK_SLOT0) DEF_ACTION("use_quick_slot1", kUSE_QUICK_SLOT1) DEF_ACTION("use_quick_slot2", kUSE_QUICK_SLOT2) DEF_ACTION("use_quick_slot3", kUSE_QUICK_SLOT3) DEF_ACTION("use_quick_slot4", kUSE_QUICK_SLOT4) DEF_ACTION("use_user_action0", kUSE_USER_ACTION0) DEF_ACTION("use_user_action1", kUSE_USER_ACTION1) DEF_ACTION("use_user_action2", kUSE_USER_ACTION2) DEF_ACTION("use_user_action3", kUSE_USER_ACTION3) DEF_ACTION("use_user_action4", kUSE_USER_ACTION4) DEF_ACTION("use_user_action5", kUSE_USER_ACTION5) DEF_ACTION("use_user_action6", kUSE_USER_ACTION6) DEF_ACTION("wpn_scope_ops", kWPN_SCOPE_OPS) DEF_ACTION("wpn_gl_ops", kWPN_GL_OPS) DEF_ACTION("wpn_sl_ops", kWPN_SL_OPS) DEF_ACTION("car_body_take_all", kCAR_BODY_TAKE_ALL) DEF_ACTION("creep", kCREEP)
 };
 
 xr_vector<_binding> g_key_bindings;

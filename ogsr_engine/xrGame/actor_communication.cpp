@@ -103,6 +103,32 @@ void CActor::AddEncyclopediaArticle(const CInfoPortion* info_portion, bool rever
     }
 }
 
+// OP22: статья КПК ОП 2.2 из скрипта (db.actor:add_article), без инфопоршня
+void CActor::op22_add_article(LPCSTR id)
+{
+    auto& article_vector = encyclopedia_registry->registry().objects();
+    const shared_str sid = id;
+    if (std::find_if(article_vector.begin(), article_vector.end(), [&](const auto& a) { return a.article_id == sid; }) != article_vector.end())
+        return;
+
+    CEncyclopediaArticle article;
+    article.Load(sid);
+    auto& Data = article_vector.emplace_back(sid, Level().GetGameTime(), article.data()->articleType);
+    callback(GameObject::eArticleInfo)(lua_game_object(), article.data()->group.c_str(), article.data()->name.c_str(), Data.article_type);
+
+    if (HUD().GetUI())
+    {
+        pda_section::part p = pda_section::encyclopedia;
+        if (Data.article_type == ARTICLE_DATA::eJournalArticle)
+            p = pda_section::journal;
+        else if (Data.article_type == ARTICLE_DATA::eInfoArticle)
+            p = pda_section::info;
+        else if (Data.article_type == ARTICLE_DATA::eTaskArticle)
+            p = pda_section::quests;
+        smart_cast<CUIGameSP*>(HUD().GetUI()->UIGame())->PdaMenu->PdaContentsChanged(p, true, true);
+    }
+}
+
 void CActor::AddGameTask(const CInfoPortion* info_portion) const
 {
     VERIFY(info_portion);

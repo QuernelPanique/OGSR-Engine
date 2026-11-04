@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "op22_options.h" // OP22
 #include "hudmanager.h"
 #include "WeaponMagazined.h"
 #include "weaponBM16.h"
@@ -263,8 +264,8 @@ void CWeaponMagazined::FireEnd()
     if (Core.Features.test(xrCore::Feature::autoreload_wpn))
     {
         auto actor = smart_cast<CActor*>(H_Parent());
-        if (!iAmmoElapsed && actor && GetState() != eReload)
-            Reload();
+        if (!iAmmoElapsed && actor && GetState() != eReload && !op22_opt("gp_demand_reload", false)) // OP22
+            op22_auto_reload([this] { Reload(); });
     }
 }
 
@@ -310,6 +311,16 @@ int CWeaponMagazined::CheckAmmoBeforeReload(u32& v_ammoType)
     return GetAmmoCount(v_ammoType);
 }
 
+// OP22: перезарядка, начатая не клавишей (кончились патроны)
+static bool g_op22_auto_reload = false;
+template <class F>
+static void op22_auto_reload(F f)
+{
+    g_op22_auto_reload = true;
+    f();
+    g_op22_auto_reload = false;
+}
+
 void CWeaponMagazined::Reload()
 {
     inherited::Reload();
@@ -331,7 +342,7 @@ bool CWeaponMagazined::TryReload()
             SwitchState(eReload);
             return true;
         }
-        else
+        else if (!(forActor && g_op22_auto_reload && op22_opt("gp_fixed_reload", true))) // OP22
             for (u32 i = 0; i < m_ammoTypes.size(); ++i)
             {
                 m_pAmmo = smart_cast<CWeaponAmmo*>(m_pCurrentInventory->GetAmmo(*m_ammoTypes[i], forActor));
@@ -949,7 +960,11 @@ void CWeaponMagazined::switch2_Empty(const bool empty_click_anim_play)
 
     OnZoomOut();
 
-    if (!TryReload())
+    // OP22: gp_demand_reload - только вручную; gp_fixed_reload - только тем же типом патрона
+    bool op22_ok = false;
+    if (!(ParentIsActor() && op22_opt("gp_demand_reload", false)))
+        op22_auto_reload([this, &op22_ok] { op22_ok = TryReload(); });
+    if (!op22_ok)
     {
         if (empty_click_anim_play)
             OnEmptyClick();

@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "op22_options.h" // OP22
 #include "map_location.h"
 #include "map_spot.h"
 #include "map_manager.h"
@@ -723,6 +724,8 @@ bool CRelationMapLocation::IsVisible()
 
 void CRelationMapLocation::UpdateMiniMap(CUICustomMap* map)
 {
+    if (m_last_relation == ALife::eRelationTypeEnemy && !op22_opt("gp_show_enemy_minimap_spot", true)) // OP22
+        return;
     if (IsVisible())
         inherited::UpdateMiniMap(map);
 }

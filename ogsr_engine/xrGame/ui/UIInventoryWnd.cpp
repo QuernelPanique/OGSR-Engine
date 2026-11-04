@@ -246,6 +246,21 @@ void CUIInventoryWnd::Init()
         }
     }
 
+    // OP22: быстрые слоты ОП 2.2
+    for (int i = 0; i < 5; ++i)
+    {
+        string32 node;
+        xr_sprintf(node, "dragdrop_quick%d", i);
+        if (!uiXml.NavigateToNode(node, 0))
+            continue;
+        CUIDragDropListEx* l = xr_new<CUIDragDropListEx>();
+        AttachChild(l);
+        l->SetAutoDelete(true);
+        xml_init.InitDragDropListEx(uiXml, node, 0, l);
+        BindDragDropListEnents(l);
+        m_op22_quick[i] = l;
+    }
+
     // pop-up menu
     AttachChild(&UIPropertiesBox);
     UIPropertiesBox.Init(0, 0, 300, 300);

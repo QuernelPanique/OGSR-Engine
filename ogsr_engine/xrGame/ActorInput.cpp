@@ -1,4 +1,8 @@
 #include "stdafx.h"
+#include "script_engine.h" // OP22
+#include "Scope.h" // OP22
+#include "Silencer.h" // OP22
+#include "GrenadeLauncher.h" // OP22
 #include <dinput.h>
 #include "Actor.h"
 #include "Torch.h"
@@ -36,6 +40,33 @@
 
 bool g_bAutoClearCrouch = true;
 extern int g_bHudAdjustMode;
+
+// OP22: отделить/прикрепить прицел, ПГ, глушитель клавишей: надет и съёмный - снять в рюкзак, иначе надеть первый подходящий из рюкзака
+void CActor::op22_weapon_addon_ops(int cmd)
+{
+    auto* w = smart_cast<CWeaponMagazined*>(inventory().ActiveItem());
+    if (!w || w->GetState() != CHudItem::eIdle || w->IsZoomed())
+        return;
+    const bool attached = cmd == kWPN_SCOPE_OPS ? w->IsScopeAttached() : cmd == kWPN_GL_OPS ? w->IsGrenadeLauncherAttached() : w->IsSilencerAttached();
+    const bool can = cmd == kWPN_SCOPE_OPS ? w->ScopeAttachable() : cmd == kWPN_GL_OPS ? w->GrenadeLauncherAttachable() : w->SilencerAttachable();
+    if (!can)
+        return;
+    if (attached)
+    {
+        const shared_str& name = cmd == kWPN_SCOPE_OPS ? w->GetScopeName() : cmd == kWPN_GL_OPS ? w->GetGrenadeLauncherName() : w->GetSilencerName();
+        w->Detach(name.c_str(), true);
+        return;
+    }
+    for (PIItem it : inventory().m_ruck)
+    {
+        const bool kind = cmd == kWPN_SCOPE_OPS ? !!smart_cast<CScope*>(it) : cmd == kWPN_GL_OPS ? !!smart_cast<CGrenadeLauncher*>(it) : !!smart_cast<CSilencer*>(it);
+        if (kind && w->CanAttach(it))
+        {
+            w->Attach(it, true);
+            return;
+        }
+    }
+}
 
 void CActor::IR_OnKeyboardPress(int cmd)
 {
@@ -99,11 +130,37 @@ void CActor::IR_OnKeyboardPress(int cmd)
             mstate_wishful |= mcSprint;
     }
     break;
+    // OP22: действия ОП 2.2
+    case kUSE_QUICK_SLOT0:
+    case kUSE_QUICK_SLOT1:
+    case kUSE_QUICK_SLOT2:
+    case kUSE_QUICK_SLOT3:
+    case kUSE_QUICK_SLOT4: {
+        luabind::functor<void> f;
+        if (ai().script_engine().functor("op22_quick.use", f))
+            f(int(cmd) - int(kUSE_QUICK_SLOT0));
+    }
+    break;
+    case kWPN_SCOPE_OPS:
+    case kWPN_GL_OPS:
+    case kWPN_SL_OPS: op22_weapon_addon_ops(cmd); break;
+    case kCREEP: {
+        // ОП: "всегда в полном присяде" - присяд и замедление вместе
+        g_bAutoClearCrouch = !g_bAutoClearCrouch;
+        if (g_bAutoClearCrouch)
+            mstate_wishful &= ~(mcCrouch | mcAccel);
+        else
+            mstate_wishful |= mcCrouch | mcAccel;
+    }
+    break;
     case kCAM_1: cam_Set(eacFirstEye); break;
     case kCAM_2: cam_Set(eacLookAt); break;
     case kCAM_3: cam_Set(eacFreeLook); break;
     case kNIGHT_VISION:
     case kTORCH: {
+        if (cmd == kNIGHT_VISION) // OP22: ПНВ ОП 2.2 в своём слоте (op22_devices.script)
+            if (luabind::functor<bool> f; ai().script_engine().functor("op22_devices.nv_switch", f) && f())
+                return;
         auto act_it = inventory().ActiveItem();
         auto active_hud = smart_cast<CHudItem*>(act_it);
         if (active_hud && active_hud->GetState() != CHudItem::eIdle && Core.Features.test(xrCore::Feature::busy_actor_restrictions))

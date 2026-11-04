@@ -2,6 +2,7 @@
 //
 //////////////////////////////////////////////////////////////////////
 #include "stdafx.h"
+#include "op22_options.h" // OP22
 
 #include "Weapon.h"
 #include "ParticlesObject.h"
@@ -1159,6 +1160,9 @@ void CWeapon::UpdatePosition(const Fmatrix& trans)
     VERIFY(!fis_zero(DET(renderable.xform)));
 }
 
+// OP22: липкий прицел ОП 2.2 - то же, что wpn_aim_toggle OGSR
+static bool op22_aim_toggle() { return psActorFlags.is(AF_WPN_AIM_TOGGLE) || op22_opt("gp_sticky_scope", false); }
+
 bool CWeapon::Action(s32 cmd, u32 flags)
 {
     if (inherited::Action(cmd, flags))
@@ -1217,7 +1221,7 @@ bool CWeapon::Action(s32 cmd, u32 flags)
         {
             if (flags & CMD_START)
             {
-                if (psActorFlags.is(AF_WPN_AIM_TOGGLE) && IsZoomed())
+                if (op22_aim_toggle() && IsZoomed())
                 {
                     OnZoomOut();
                     if (!bPending)
@@ -1230,7 +1234,7 @@ bool CWeapon::Action(s32 cmd, u32 flags)
                         SwitchState(eIdle);
                 }
             }
-            else if (IsZoomed() && !psActorFlags.is(AF_WPN_AIM_TOGGLE))
+            else if (IsZoomed() && !op22_aim_toggle())
             {
                 OnZoomOut();
                 if (!bPending)

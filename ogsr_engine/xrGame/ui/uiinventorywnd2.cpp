@@ -1,4 +1,8 @@
 #include "stdafx.h"
+#include "../ai_space.h" // OP22
+#include "../script_engine.h" // OP22
+#include "../script_game_object.h" // OP22
+#include "UICellItemFactory.h" // OP22
 #include "UIInventoryWnd.h"
 #include "../level.h"
 #include "../actor.h"
@@ -187,6 +191,7 @@ void CUIInventoryWnd::InitInventory()
 
     m_pUIBagList->SetScrollPos(bag_scroll);
 
+    op22_quick_fill(); // OP22
     UpdateWeight();
 
     m_b_need_reinit = false;
@@ -401,6 +406,25 @@ bool CUIInventoryWnd::OnItemDrop(CUICellItem* itm)
     if (old_owner == new_owner || !old_owner || !new_owner)
         return false;
 
+    // OP22: быстрые слоты: бросок в слот назначает секцию, вынос из слота снимает; сам предмет не перемещается
+    if (const int q_new = op22_quick_index(new_owner), q_old = op22_quick_index(old_owner); q_new >= 0 || q_old >= 0)
+    {
+        if (q_new >= 0)
+        {
+            luabind::functor<void> f;
+            if (ai().script_engine().functor("op22_quick.assign", f))
+                f(q_new, ((PIItem)itm->m_pData)->object().lua_game_object());
+        }
+        else
+        {
+            luabind::functor<void> f;
+            if (ai().script_engine().functor("op22_quick.clear", f))
+                f(q_old);
+        }
+        InitInventory_delayed();
+        return true;
+    }
+
     auto t_new = GetType(new_owner);
     auto t_old = GetType(old_owner);
 
@@ -522,6 +546,14 @@ bool CUIInventoryWnd::OnItemDbClick(CUICellItem* itm)
 
 bool CUIInventoryWnd::OnItemRButtonClick(CUICellItem* itm)
 {
+    if (const int q = op22_quick_index(itm->OwnerList()); q >= 0) // OP22: правый клик по быстрому слоту снимает назначение
+    {
+        luabind::functor<void> f;
+        if (ai().script_engine().functor("op22_quick.clear", f))
+            f(q);
+        InitInventory_delayed();
+        return false;
+    }
     SetCurrentItem(itm);
     ActivatePropertiesBox();
     return false;
@@ -555,6 +587,51 @@ void CUIInventoryWnd::ClearAllLists()
     for (auto l : m_op22_lists) // OP22
         if (l)
             l->ClearAll(true);
+    for (auto l : m_op22_quick) // OP22
+        if (l)
+            l->ClearAll(true);
+}
+
+// OP22: быстрые слоты - показать первый предмет назначенной секции (рюкзак, пояс)
+int CUIInventoryWnd::op22_quick_index(CUIDragDropListEx* l) const
+{
+    for (int i = 0; i < 5; ++i)
+        if (l && m_op22_quick[i] == l)
+            return i;
+    return -1;
+}
+
+void CUIInventoryWnd::op22_quick_fill()
+{
+    luabind::functor<LPCSTR> f;
+    if (!ai().script_engine().functor("op22_quick.section", f))
+        return;
+    for (int i = 0; i < 5; ++i)
+    {
+        CUIDragDropListEx* l = m_op22_quick[i];
+        if (!l)
+            continue;
+        l->ClearAll(true);
+        LPCSTR sect = f(i);
+        if (!sect || !sect[0])
+            continue;
+        PIItem found = nullptr;
+        for (PIItem it : m_pInv->m_ruck)
+            if (it->object().cNameSect() == sect)
+            {
+                found = it;
+                break;
+            }
+        if (!found)
+            for (PIItem it : m_pInv->m_belt)
+                if (it->object().cNameSect() == sect)
+                {
+                    found = it;
+                    break;
+                }
+        if (found)
+            l->SetItem(create_cell_item(found));
+    }
 }
 
 void CUIInventoryWnd::UpdateWeight() { InventoryUtilities::UpdateWeight(UIBagWnd, true); }

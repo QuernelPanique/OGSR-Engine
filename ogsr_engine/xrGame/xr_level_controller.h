@@ -72,6 +72,25 @@ enum EGameActions
     kHIDEHUD,
     kSHOWHUD,
 
+    // OP22: действия ОП 2.2
+    kUSE_QUICK_SLOT0,
+    kUSE_QUICK_SLOT1,
+    kUSE_QUICK_SLOT2,
+    kUSE_QUICK_SLOT3,
+    kUSE_QUICK_SLOT4,
+    kUSE_USER_ACTION0,
+    kUSE_USER_ACTION1,
+    kUSE_USER_ACTION2,
+    kUSE_USER_ACTION3,
+    kUSE_USER_ACTION4,
+    kUSE_USER_ACTION5,
+    kUSE_USER_ACTION6,
+    kWPN_SCOPE_OPS,
+    kWPN_GL_OPS,
+    kWPN_SL_OPS,
+    kCAR_BODY_TAKE_ALL,
+    kCREEP,
+
     kLASTACTION = u32(-3),
     kNOTBINDED = u32(-2),
     kFORCEDWORD = u32(-1)

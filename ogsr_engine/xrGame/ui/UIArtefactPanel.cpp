@@ -1,4 +1,5 @@
 #include "StdAfx.h"
+#include "../op22_options.h" // OP22
 #include "UIArtefactPanel.h"
 #include "UIInventoryUtilities.h"
 #include "UIXmlInit.h"
@@ -29,6 +30,8 @@ void CUIArtefactPanel::InitIcons(const TIItemContainer& artefacts)
 
 void CUIArtefactPanel::Draw()
 {
+    if (!op22_opt("hud_art_panel_visible", true)) // OP22
+        return;
     const float iIndent = 1.0f;
     float x = 0.0f;
     float y = 0.0f;

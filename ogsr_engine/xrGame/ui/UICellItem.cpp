@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../op22_options.h" // OP22
 #include "UICellItem.h"
 #include "../xr_level_controller.h"
 #include "..\..\xr_3da\xr_input.h"
@@ -208,6 +209,11 @@ void CUICellItem::UpdateConditionProgressBar()
     if (!m_pData)
         return;
 
+    if (!op22_opt("ui_show_conditions", true)) // OP22
+    {
+        m_pConditionState->Show(false);
+        return;
+    }
     if (m_pParentList && m_pParentList->GetConditionProgBarVisibility())
     {
         PIItem itm = (PIItem)m_pData;

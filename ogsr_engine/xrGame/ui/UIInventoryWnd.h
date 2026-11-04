@@ -111,6 +111,10 @@ protected:
     CUIDragDropListEx* m_slots_array[SLOTS_TOTAL];
     // OP22: списки слотов ОП 2.2 (нож 0, бинокль 4, детекторы 8/11, фонарь 9, ПНВ 12, второй ствол 13, биорадар 14) - без ogse_new_slots
     CUIDragDropListEx* m_op22_lists[SLOTS_TOTAL]{};
+    // OP22: быстрые слоты ОП 2.2 (dragdrop_quick0..4): показ предмета, назначение - op22_quick.script, предмет остаётся в рюкзаке
+    CUIDragDropListEx* m_op22_quick[5]{};
+    void op22_quick_fill();
+    int op22_quick_index(CUIDragDropListEx* l) const;
 
 public:
     CUIDragDropListEx* op22_bag() { return m_pUIBagList; }   // OP22: подсветка подходящих по типу списка

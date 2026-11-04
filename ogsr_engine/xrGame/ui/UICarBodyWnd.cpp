@@ -655,6 +655,11 @@ void CUICarBodyWnd::DropItemsfromCell(bool b_all)
 
 bool CUICarBodyWnd::OnKeyboard(int dik, EUIMessages keyboard_action)
 {
+    if (keyboard_action == WINDOW_KEY_PRESSED && is_binded(kCAR_BODY_TAKE_ALL, dik)) // OP22
+    {
+        TakeAll();
+        return true;
+    }
     if (m_b_need_update)
         return true;
 

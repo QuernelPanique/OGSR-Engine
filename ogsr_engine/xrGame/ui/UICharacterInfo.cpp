@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../op22_options.h" // OP22
 
 #include "UIInventoryUtilities.h"
 
@@ -248,6 +249,13 @@ void CUICharacterInfo::InitCharacter(u16 id)
 
 void CUICharacterInfo::SetRelation(ALife::ERelationType relation, CHARACTER_GOODWILL goodwill)
 {
+    // OP22: g_show_relation_in_ui
+    const bool op22_show = op22_opt("g_show_relation_in_ui", true);
+    m_icons[eUIRelation]->Show(op22_show);
+    if (m_icons[eUIRelationCaption])
+        m_icons[eUIRelationCaption]->Show(op22_show);
+    if (!op22_show)
+        return;
     shared_str relation_str;
 
     CStringTable stbl;

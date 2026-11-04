@@ -487,6 +487,8 @@ protected:
     //////////////////////////////////////////////////////////////////////////
 public:
     virtual void IR_OnMouseMove(int x, int y);
+    void op22_weapon_addon_ops(int cmd); // OP22
+    void op22_add_article(LPCSTR id); // OP22
     virtual void IR_OnKeyboardPress(int dik);
     virtual void IR_OnKeyboardRelease(int dik);
     virtual void IR_OnKeyboardHold(int dik);

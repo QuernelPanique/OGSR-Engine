@@ -1,4 +1,5 @@
 #include "StdAfx.h"
+#include "op22_options.h" // OP22
 #include "player_hud.h"
 #include "physic_item.h"
 #include "actor.h"
@@ -894,6 +895,9 @@ void player_hud::render_item_ui()
 
 void player_hud::render_hud(u32 context_id, IRenderable* root)
 {
+    if (!op22_opt("hud_weapon", true)) // OP22: скрыть руки и оружие
+        return;
+
     //if (!m_attached_items[0] && !m_attached_items[1])
     //    return;
 
