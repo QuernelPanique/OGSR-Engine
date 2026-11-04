@@ -6,6 +6,7 @@
 #include "../actor.h"
 #include "../CustomOutfit.h"
 #include "../string_table.h"
+#include "../op22_options.h" // OP22
 
 CUIOutfitInfo::CUIOutfitInfo() {}
 
@@ -112,6 +113,10 @@ void CUIOutfitInfo::Update(CCustomOutfit* outfit)
 
         if (i < _max_item_index1)
         {
+            // OP22: как панель ОП: gp_show_modificators, сытость и выносливость она не показывает (FUN_180afca30)
+            if (!op22_opt("gp_show_modificators", true) || i == _item_satiety_restore_speed || i == _item_power_restore_speed)
+                continue;
+
             _val_outfit = GetArtefactParam(artefactEffects, i);
 
             // OP22: в ОП 2.2 нет жажды (thirst_v) - ключа нет, параметр пропускаем

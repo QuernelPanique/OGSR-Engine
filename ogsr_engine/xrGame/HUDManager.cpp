@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "../xr_3da/XR_IOConsole.h"
+#include "op22_options.h" // OP22
 #include "HUDManager.h"
 #include "hudtarget.h"
 
@@ -363,13 +364,14 @@ void CHUDManager::RenderUI()
     if (!b_online)
         return;
 
-    if (HUD().GetUI()->GameIndicatorsShown() /*&& psHUD_Flags.is(HUD_DRAW | HUD_DRAW_RT)*/)
-    {
+    const bool op22_shown = HUD().GetUI()->GameIndicatorsShown();
+    if (op22_shown)
         HitMarker.Render();
 
-        if (psHUD_Flags.is(HUD_CROSSHAIR | HUD_CROSSHAIR_RT | HUD_CROSSHAIR_RT2))
-            m_pHUDTarget->Render();
-    }
+    // OP22: hud_min_crosshair - HUD убран клавишей, перекрестие остаётся
+    const bool op22_keep = !op22_shown && HUD().GetUI()->hud_disabled_by_user && !HUD().GetUI()->MainInputReceiver() && op22_opt("hud_min_crosshair", true);
+    if ((op22_shown || op22_keep) && psHUD_Flags.is(HUD_CROSSHAIR | HUD_CROSSHAIR_RT | HUD_CROSSHAIR_RT2))
+        m_pHUDTarget->Render();
 
     if (pUI)
         pUI->Render();

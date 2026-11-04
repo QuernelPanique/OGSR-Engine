@@ -190,6 +190,8 @@ class_<CScriptGameObject> script_register_game_object2(class_<CScriptGameObject>
         .def("set_task_state", &CScriptGameObject::SetGameTaskState)
         .def("give_task", &CScriptGameObject::GiveTaskToActor, adopt<2>())
         .def("get_article_text", &CScriptGameObject::GetArticleText)
+        .def("op22_silencer_condition", [](CScriptGameObject* o) { extern float op22_silencer_condition(CGameObject*); return op22_silencer_condition(&o->object()); })
+        .def("op22_set_silencer_condition", [](CScriptGameObject* o, float v) { extern void op22_set_silencer_condition(CGameObject*, float); op22_set_silencer_condition(&o->object(), v); })
         .def("op22_set_move_restrict", [](CScriptGameObject*, u32 flags) { extern u32 g_op22_move_restrict; g_op22_move_restrict = flags; }) // OP22
         .def("op22_set_visual", [](CScriptGameObject* self, LPCSTR name) { self->object().cNameVisual_set(name); }) // OP22
         .def("op22_add_article", [](CScriptGameObject* self, LPCSTR id) { // OP22

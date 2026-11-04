@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../op22_options.h" // OP22
 #include "UIDragDropListEx.h"
 #include "UIScrollBar.h"
 #include "../object_broker.h"
@@ -834,6 +835,8 @@ Ivector2 CUICellContainer::PickCell(const Fvector2& abs_pos)
     return res;
 }
 
+static bool op22_show_focused = true, op22_show_selected = false; // OP22: на кадр, get_select_mode зовётся на каждую клетку
+
 CUICellContainer::CellTextureType CUICellContainer::get_select_mode(const int x, const int y)
 {
     Ivector2 cpos{x, y};
@@ -862,8 +865,11 @@ CUICellContainer::CellTextureType CUICellContainer::get_select_mode(const int x,
                 select_mode = CellTextureTypeUntradable;
             else if (ui_cell.m_item->m_select_equipped)
                 select_mode = CellTextureTypeEquipped;
-            else if (ui_cell.m_item->m_selected)
+            else if (ui_cell.m_item->m_selected && op22_show_focused) // OP22: ui_show_focused
                 select_mode = CellTextureTypeCursorHover;
+            // OP22: ui_show_selected - выбранный предмет
+            else if (op22_show_selected && ui_cell.m_item == m_pParentDragDropList->m_selected_item)
+                select_mode = CellTextureTypeEquipped;
         }
     }
 
@@ -920,6 +926,9 @@ void CUICellContainer::Draw()
     Fvector2 hl_len = f_len;
     if (m_pParentDragDropList->GetHighlightCellSp())
         hl_len.add(sp_len);
+
+    op22_show_focused = op22_opt("ui_show_focused", true); // OP22
+    op22_show_selected = op22_opt("ui_show_selected", false);
 
     CellTextureType parent_select_mode = CellTextureTypeNormal;
     if (m_pParentDragDropList->GetHighlightAllCells() && m_pParentDragDropList->ItemsCount())

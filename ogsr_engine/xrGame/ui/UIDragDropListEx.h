@@ -58,6 +58,7 @@ private:
         flHighlightAllCells = (1 << 8),
     };
     Flags16 m_flags;
+    friend class CUICellContainer; // OP22: ui_show_selected
     CUICellItem* m_selected_item;
     Ivector2 m_orig_cell_capacity;
     Ivector2 m_virtual_cells_alignment;

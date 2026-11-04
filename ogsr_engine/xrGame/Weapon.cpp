@@ -1195,7 +1195,9 @@ bool CWeapon::Action(s32 cmd, u32 flags)
 
         if (flags & CMD_START)
         {
-            u32 l_newType = m_ammoType;
+            // OP22: gp_deffered_reload - тип ставится на следующую перезарядку, сейчас без неё; повторное нажатие листает дальше
+            const bool op22_deffered = op22_opt("gp_deffered_reload", false);
+            u32 l_newType = op22_deffered && m_set_next_ammoType_on_reload != u32(-1) ? m_set_next_ammoType_on_reload : m_ammoType;
             bool b1, b2;
             do
             {
@@ -1208,7 +1210,8 @@ bool CWeapon::Action(s32 cmd, u32 flags)
             {
                 m_set_next_ammoType_on_reload = l_newType;
 
-                Reload();
+                if (!op22_deffered)
+                    Reload();
             }
         }
     }

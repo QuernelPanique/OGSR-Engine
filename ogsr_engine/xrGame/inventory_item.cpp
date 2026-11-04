@@ -307,6 +307,11 @@ bool CInventoryItem::Detach(const char* item_section_name, bool b_spawn_item)
 
         l_tpALifeDynamicObject->m_tNodeID = object().ai_location().level_vertex_id();
 
+        // OP22: состояние снятого обвеса
+        if (auto* op22_item = smart_cast<CSE_ALifeInventoryItem*>(D))
+            op22_item->m_fCondition = m_op22_detach_cond;
+        m_op22_detach_cond = 1.f;
+
         // Fill
         D->s_name = item_section_name;
         D->set_name_replace("");

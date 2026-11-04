@@ -182,6 +182,7 @@ public:
     virtual LPCSTR GetCurrentFireModeStr() { return m_sCurFireMode; };
 
     virtual void save(NET_Packet& output_packet);
+    float m_op22_sil_cond{1.f}; // OP22: состояние надетого глушителя
     virtual void load(IReader& input_packet);
 
 protected:

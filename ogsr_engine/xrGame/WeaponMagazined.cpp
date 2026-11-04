@@ -826,6 +826,13 @@ void CWeaponMagazined::SetDefaults() { CWeapon::SetDefaults(); }
 
 void CWeaponMagazined::OnShot()
 {
+    // OP22: износ глушителя, как FUN_1808b6210 ОП: condition_shot_dec секции глушителя за выстрел
+    if (IsSilencerAttached() && SilencerAttachable())
+    {
+        m_op22_sil_cond -= READ_IF_EXISTS(pSettings, r_float, m_sSilencerName, "condition_shot_dec", 0.f);
+        clamp(m_op22_sil_cond, 0.f, 1.f);
+    }
+
     // Если актор бежит - останавливаем его
     if (ParentIsActor())
         Actor()->set_state_wishful(Actor()->get_state_wishful() & (~mcSprint));
@@ -1162,6 +1169,7 @@ bool CWeaponMagazined::Attach(PIItem pIItem, bool b_send_event)
              (m_sSilencerName == pIItem->object().cNameSect()))
     {
         m_flagsAddOnState |= CSE_ALifeItemWeapon::eWeaponAddonSilencer;
+        m_op22_sil_cond = pIItem->GetCondition(); // OP22
         result = true;
     }
     else if (pGrenadeLauncher && m_eGrenadeLauncherStatus == CSE_ALifeItemWeapon::eAddonAttachable && (m_flagsAddOnState & CSE_ALifeItemWeapon::eWeaponAddonGrenadeLauncher) == 0 &&
@@ -1213,6 +1221,7 @@ bool CWeaponMagazined::Detach(const char* item_section_name, bool b_spawn_item)
 
         UpdateAddonsVisibility();
         InitAddons();
+        m_op22_detach_cond = m_op22_sil_cond; // OP22: снятый глушитель хранит износ
         return CInventoryItemObject::Detach(item_section_name, b_spawn_item);
     }
     else if (m_eGrenadeLauncherStatus == CSE_ALifeItemWeapon::eAddonAttachable && 0 != (m_flagsAddOnState & CSE_ALifeItemWeapon::eWeaponAddonGrenadeLauncher) &&
@@ -1266,6 +1275,14 @@ void CWeaponMagazined::InitZoomParams(LPCSTR section, bool useTexture)
     if (useTexture)
     {
         shared_str scope_tex_name = READ_IF_EXISTS(pSettings, r_string, section, "scope_texture", "");
+        // OP22: gp_open_scope - сетка без чёрного фона (<текстура>_open), если файл есть
+        if (scope_tex_name.size() > 0 && op22_opt("gp_open_scope", false))
+        {
+            string_path op22_fn;
+            const xr_string op22_open = xr_string(scope_tex_name.c_str()) + "_open";
+            if (FS.exist(op22_fn, "$game_textures$", op22_open.c_str(), ".dds"))
+                scope_tex_name = op22_open.c_str();
+        }
         const bool scope_tex_autoresize = READ_IF_EXISTS(pSettings, r_bool, section, "scope_texture_autoresize", true);
 
         if (scope_tex_name.size() > 0 && !scope_tex_name.equal("none"))
@@ -1752,12 +1769,28 @@ float CWeaponMagazined::GetWeaponDeterioration()
     return m_iShotNum * conditionDecreasePerShot;
 }
 
+float op22_silencer_condition(CGameObject* o) // OP22: obj:silencer_condition() ОП
+{
+    auto* w = smart_cast<CWeaponMagazined*>(o);
+    return w ? w->m_op22_sil_cond : 1.f;
+}
+
+void op22_set_silencer_condition(CGameObject* o, float v)
+{
+    if (auto* w = smart_cast<CWeaponMagazined*>(o))
+        w->m_op22_sil_cond = v;
+}
+
+static constexpr u32 OP22_SIL_MAGIC = 0x4C495350; // "PSIL"
+
 void CWeaponMagazined::save(NET_Packet& output_packet)
 {
     inherited::save(output_packet);
     save_data(m_iQueueSize, output_packet);
     save_data(m_iShotNum, output_packet);
     save_data(m_iCurFireMode, output_packet);
+    output_packet.w_u32(OP22_SIL_MAGIC); // OP22: метка, старые сейвы поля не содержат
+    output_packet.w_float(m_op22_sil_cond);
 }
 
 void CWeaponMagazined::load(IReader& input_packet)
@@ -1767,6 +1800,15 @@ void CWeaponMagazined::load(IReader& input_packet)
     SetQueueSize(m_iQueueSize);
     load_data(m_iShotNum, input_packet);
     load_data(m_iCurFireMode, input_packet);
+    // OP22: износ глушителя; без метки позиция возвращается (за полем могут идти данные наследника)
+    if (input_packet.elapsed() >= static_cast<long>(sizeof(u32) + sizeof(float)))
+    {
+        const size_t pos = input_packet.tell();
+        if (input_packet.r_u32() == OP22_SIL_MAGIC)
+            m_op22_sil_cond = input_packet.r_float();
+        else
+            input_packet.seek(pos);
+    }
 }
 
 void CWeaponMagazined::net_Export(CSE_Abstract* E)

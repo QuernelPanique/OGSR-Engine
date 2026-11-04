@@ -114,7 +114,8 @@ void CUIInventoryWnd::ActivatePropertiesBox()
     // OP22: как в ОП 2.2 (Ghidra) - «отсоединить» + краткое имя аддона («отсоединить ГП-25»)
     auto op22_detach_text = [](LPCSTR st, const shared_str& addon_sect) -> xr_string {
         xr_string t = CStringTable().translate(st).c_str();
-        if (addon_sect.size() && pSettings->section_exist(addon_sect))
+        // OP22: ui_show_extdesc - имя обвеса в пункте меню
+        if (Console && Console->GetCommand("ui_show_extdesc") && Console->GetBool("ui_show_extdesc") && addon_sect.size() && pSettings->section_exist(addon_sect))
         {
             LPCSTR nm = pSettings->line_exist(addon_sect, "inv_name_short") ? pSettings->r_string(addon_sect, "inv_name_short")
                                                                             : READ_IF_EXISTS(pSettings, r_string, addon_sect, "inv_name", "");
