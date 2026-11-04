@@ -10,6 +10,9 @@
 #include "../hudmanager.h"
 
 #include "../CustomOutfit.h"
+#include "../ai_space.h" // OP22
+#include "../script_engine.h"
+#include "UIIconParams.h"
 
 #include "../weapon.h"
 
@@ -142,6 +145,22 @@ void CUIInventoryWnd::Init()
 
     m_pUIOutfitList = xr_new<CUIOutfitDragDropList>();
     AttachChild(m_pUIOutfitList);
+    if (uiXml.NavigateToNode("dragdrop_outfit:battery_icon", 0)) // OP22: панель аккумулятора
+    {
+        m_op22_bat_icon = xr_new<CUIStatic>();
+        m_op22_bat_icon->SetAutoDelete(true);
+        m_pUIOutfitList->AttachChild(m_op22_bat_icon);
+        xml_init.InitWindow(uiXml, "dragdrop_outfit:battery_icon", 0, m_op22_bat_icon);
+        m_op22_bat_icon->SetStretchTexture(true);
+        m_op22_bat_text = xr_new<CUIStatic>();
+        m_op22_bat_text->SetAutoDelete(true);
+        m_pUIOutfitList->AttachChild(m_op22_bat_text);
+        xml_init.InitStatic(uiXml, "dragdrop_outfit:battery_charge_text", 0, m_op22_bat_text);
+        m_op22_bat_bar = xr_new<CUIProgressBar>();
+        m_op22_bat_bar->SetAutoDelete(true);
+        m_pUIOutfitList->AttachChild(m_op22_bat_bar);
+        xml_init.InitProgressBar(uiXml, "dragdrop_outfit:battery_charge_progress", 0, m_op22_bat_bar);
+    }
     m_pUIOutfitList->SetAutoDelete(true);
     xml_init.InitDragDropListEx(uiXml, "dragdrop_outfit", 0, m_pUIOutfitList);
     BindDragDropListEnents(m_pUIOutfitList);
@@ -466,6 +485,12 @@ void CUIInventoryWnd::Update()
 
             m_b_need_update_stats = false;
         }
+
+        if (m_op22_bat_icon && Device.dwTimeGlobal >= m_op22_bat_next)
+        {
+            m_op22_bat_next = Device.dwTimeGlobal + 500;
+            op22_update_battery();
+        }
     }
 
     UIStaticTimeString.SetText(*InventoryUtilities::GetGameTimeAsString(InventoryUtilities::etpTimeToMinutes));
@@ -492,6 +517,39 @@ void CUIInventoryWnd::Show()
     if (Core.Features.test(xrCore::Feature::engine_ammo_repacker) && !Core.Features.test(xrCore::Feature::hard_ammo_reload))
         if (auto pActor = Actor())
             pActor->RepackAmmo();
+}
+
+// OP22: секция и заряд - из op22_exo.script; у костюма без аккумуляторов панели нет
+void CUIInventoryWnd::op22_update_battery()
+{
+    auto* outfit = Actor() ? smart_cast<CCustomOutfit*>(Actor()->inventory().m_slots[OUTFIT_SLOT].m_pIItem) : nullptr;
+    LPCSTR sect = "-";
+    float charge = 0.f;
+    if (outfit)
+    {
+        luabind::functor<LPCSTR> f_sect;
+        luabind::functor<float> f_charge;
+        if (ai().script_engine().functor("op22_exo.panel_section", f_sect) && ai().script_engine().functor("op22_exo.panel_charge", f_charge))
+        {
+            sect = f_sect(outfit->lua_game_object());
+            charge = f_charge(outfit->lua_game_object());
+        }
+    }
+    const bool exo = sect && xr_strcmp(sect, "-") != 0;
+    const bool has_battery = exo && sect[0];
+    m_op22_bat_icon->Show(has_battery);
+    m_op22_bat_text->Show(exo);
+    m_op22_bat_bar->Show(exo);
+    if (!exo)
+        return;
+    m_op22_bat_bar->SetProgressPos(charge * 100.f);
+    const shared_str battery(sect);
+    if (has_battery && m_op22_bat_sect != battery)
+    {
+        m_op22_bat_sect = battery;
+        CIconParams icon(battery);
+        icon.set_shader(m_op22_bat_icon);
+    }
 }
 
 void CUIInventoryWnd::Hide()

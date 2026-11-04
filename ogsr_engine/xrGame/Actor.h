@@ -223,6 +223,7 @@ public:
     virtual void UpdateArtefactsOnBelt();
 
     virtual ActorRestoreParams ActiveArtefactsOnBelt();
+    float op22_belt_jump(); // OP22: сумма jump_speed_delta артефактов пояса
     virtual float HitArtefactsOnBelt(float, ALife::EHitType, bool = false);
 
     virtual void UpdateArtefactPanel();
@@ -470,6 +471,7 @@ protected:
 
     float m_fWalkAccel;
     float m_fJumpSpeed;
+    float m_op22_jump_applied{}; // OP22: часть m_fJumpSpeed от артефактов пояса
     float m_fRunFactor;
     float m_fRunBackFactor;
     float m_fWalkBackFactor;

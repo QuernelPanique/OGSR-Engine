@@ -147,6 +147,13 @@ protected:
 
     //информация о персонаже
     CUIOutfitInfo UIOutfitInfo;
+    // OP22: панель аккумулятора экзоскелета, узлы battery_* в dragdrop_outfit скина
+    CUIStatic* m_op22_bat_icon{};
+    CUIStatic* m_op22_bat_text{};
+    CUIProgressBar* m_op22_bat_bar{};
+    u32 m_op22_bat_next{};
+    shared_str m_op22_bat_sect;
+    void op22_update_battery();
     CUIItemInfo UIItemInfo;
 
     CInventory* m_pInv;

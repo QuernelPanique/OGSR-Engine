@@ -1518,7 +1518,8 @@ ActorRestoreParams CActor::ActiveArtefactsOnBelt()
             CCustomOutfit* outfit = smart_cast<CCustomOutfit*>(outfit_item);
             if (outfit)
             {
-                float k = (Core.Features.test(xrCore::Feature::af_zero_condition) && fis_zero(outfit->GetCondition())) ? 0.f : 1.f;
+                // OP22: как в ОП: восстановление от костюма умножается на его состояние (FUN_1807fb790)
+                float k = outfit->GetCondition();
 
                 r.BleedingRestoreSpeed += outfit->m_fBleedingRestoreSpeed * k;
                 r.HealthRestoreSpeed += outfit->m_fHealthRestoreSpeed * k;
@@ -1561,6 +1562,15 @@ ActorRestoreParams CActor::ActiveArtefactsOnBelt()
 
 #define ARTEFACTS_UPDATE_TIME 0.100f
 
+float CActor::op22_belt_jump()
+{
+    float sum = 0.f;
+    for (PIItem it : inventory().m_belt)
+        if (smart_cast<CArtefact*>(it))
+            sum += READ_IF_EXISTS(pSettings, r_float, it->object().cNameSect(), "jump_speed_delta", 0.f);
+    return sum;
+}
+
 void CActor::UpdateArtefactsOnBelt()
 {
     static float update_time = 0;
@@ -1583,6 +1593,14 @@ void CActor::UpdateArtefactsOnBelt()
     {
         op22_rad_next = Device.dwTimeGlobal + 1000;
         op22_refresh_items_radiation();
+    }
+
+    // OP22: высота прыжка от артефактов пояса (jump_speed_delta): в ОП при смене места артефакта, здесь по разнице суммы
+    if (const float op22_jump = op22_belt_jump(); !fsimilar(op22_jump, m_op22_jump_applied))
+    {
+        m_fJumpSpeed += op22_jump - m_op22_jump_applied;
+        m_op22_jump_applied = op22_jump;
+        character_physics_support()->movement()->SetJumpUpVelocity(m_fJumpSpeed);
     }
 
     auto effects = ActiveArtefactsOnBelt();

@@ -44,8 +44,10 @@ protected:
         _item_chemical_burn_immunity,
         _item_explosion_immunit,
         _item_fire_wound_immunity,
+        _item_jump_speed_delta, // OP22: высота прыжка от артефактов
 
         _max_item_index,
     };
     CUIStatic* m_items[_max_item_index]{};
+    CUIStatic* m_op22_vals[_max_item_index][2]{}; // OP22: колонки значений: костюм, пояс
 };
