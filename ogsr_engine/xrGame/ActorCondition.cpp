@@ -18,6 +18,9 @@
 #include "PDA.h"
 #include "ai/monsters/BaseMonster/base_monster.h"
 
+u32 g_op22_move_restrict = 0; // OP22: EActorMovementRestrictions ОП 2.2 (set_actor_movement_restriction): 1 - прыжок, 2 - бег, 4 - обычный шаг
+
+
 #define MAX_SATIETY 1.0f
 #define START_SATIETY 0.5f
 
@@ -472,8 +475,6 @@ bool CActorCondition::IsCantWalkWeight()
     }
     return false;
 }
-
-u32 g_op22_move_restrict = 0; // OP22: EActorMovementRestrictions ОП 2.2 (set_actor_movement_restriction): 1 - прыжок, 2 - бег, 4 - обычный шаг
 
 bool CActorCondition::IsCantSprint()
 {

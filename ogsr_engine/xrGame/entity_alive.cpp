@@ -300,7 +300,7 @@ void CEntityAlive::Hit(SHit* pHDS)
         LPCSTR bone = "";
         IKinematics* k = Visual() ? smart_cast<IKinematics*>(Visual()) : nullptr;
         if (k && HDS.boneID != BI_NONE && HDS.boneID < k->LL_BoneCount())
-            bone = k->LL_BoneName_dbg(HDS.boneID);
+            bone = k->LL_BoneName(HDS.boneID);
         callback(GameObject::eOnObjectHit)(who ? who->lua_game_object() : nullptr, wpn ? wpn->lua_game_object() : nullptr, ammo, int(HDS.boneID), bone,
                                            HDS.damage(), int(HDS.hit_type));
     }
