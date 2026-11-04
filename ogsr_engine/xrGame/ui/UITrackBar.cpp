@@ -58,11 +58,11 @@ void CUITrackBar::Init(float x, float y, float width, float height)
     item_width = CUITextureMaster::GetTextureWidth(buf);
     item_height = CUITextureMaster::GetTextureHeight(buf);
 
-    item_width *= UI()->get_current_kx();
+    // OP22: window keeps the texture width, else the value is centered on 3/4 of the plate on 16:9
+    // item_width *= UI()->get_current_kx();
 
     m_pSlider->Init(0, (height - item_height) / 2, item_width, item_height);
     m_pSlider->InitTexture(SLIDER_TEXTURE);
-    m_pSlider->SetTextAlignment(CGameFont::alCenter); // OP22: value in the middle of the plate
 }
 
 void CUITrackBar::SetCurrentValue()
