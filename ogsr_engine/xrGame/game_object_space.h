@@ -108,6 +108,7 @@ enum ECallbackType
     eOnActorJump,
     eOnActorBoltThrow,
 
+    eOnObjectHit, // OP22: on_object_hit ОП 2.2 (кто, оружие, патрон, кость, имя кости, сила, тип)
     eDummy = u32(-1),
 };
 };

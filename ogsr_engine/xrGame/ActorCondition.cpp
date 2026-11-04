@@ -446,6 +446,8 @@ void CActorCondition::ConditionStand(float weight)
 
 bool CActorCondition::IsCantWalk()
 {
+    if (g_op22_move_restrict & 4) // OP22
+        return true;
     if (m_fPower < m_fCantWalkPowerBegin)
         m_condition_flags.set(eCantWalk, TRUE);
     else if (m_fPower > m_fCantWalkPowerEnd)
@@ -471,8 +473,12 @@ bool CActorCondition::IsCantWalkWeight()
     return false;
 }
 
+u32 g_op22_move_restrict = 0; // OP22: EActorMovementRestrictions ОП 2.2 (set_actor_movement_restriction): 1 - прыжок, 2 - бег, 4 - обычный шаг
+
 bool CActorCondition::IsCantSprint()
 {
+    if (g_op22_move_restrict & 2) // OP22
+        return true;
     if (op22_exo_unpowered()) // OP22: экзоскелет без заряда
         return true;
     if (m_fPower < m_fCantSprintPowerBegin)
@@ -484,6 +490,8 @@ bool CActorCondition::IsCantSprint()
 
 bool CActorCondition::IsCantJump(float weight)
 {
+    if (g_op22_move_restrict & 1) // OP22
+        return true;
     if (op22_exo_unpowered()) // OP22: экзоскелет без заряда
         return true;
     if (!m_bJumpRequirePower || GodMode())

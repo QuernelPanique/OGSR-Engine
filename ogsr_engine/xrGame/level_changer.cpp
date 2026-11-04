@@ -7,6 +7,8 @@
 ////////////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
+#include "ai_space.h" // OP22
+#include "script_engine.h" // OP22
 #include "level_changer.h"
 #include "hit.h"
 #include "actor.h"
@@ -26,6 +28,13 @@
 xr_vector<CLevelChanger*> g_lchangers;
 
 CLevelChanger::~CLevelChanger() {}
+
+// OP22: on_before_actor_change_level ОП 2.2 (actor_binder): false - перехода нет (враги рядом, сюжетные условия)
+static bool op22_can_change_level(GameGraph::_GRAPH_ID gv, u32 lv, const Fvector& pos, const Fvector& ang)
+{
+    luabind::functor<bool> f;
+    return !ai().script_engine().functor("op22_devices.can_change_level", f) || f(int(gv), int(lv), pos, ang);
+}
 
 void CLevelChanger::Center(Fvector& C) const { XFORM().transform_tiny(C, CFORM()->getSphere().P); }
 
@@ -111,6 +120,8 @@ void CLevelChanger::feel_touch_new(CObject* tpObject)
     CActor* l_tpActor = smart_cast<CActor*>(tpObject);
     VERIFY(l_tpActor);
     if (!l_tpActor->g_Alive())
+        return;
+    if (!op22_can_change_level(m_game_vertex_id, m_level_vertex_id, m_position, m_angles)) // OP22
         return;
 
     if (m_SilentMode || g_block_all_except_movement)
@@ -198,6 +209,8 @@ void CLevelChanger::update_actor_invitation()
 
 void CLevelChanger::ChangeLevel()
 {
+    if (!op22_can_change_level(m_game_vertex_id, m_level_vertex_id, m_position, m_angles)) // OP22
+        return;
     Fvector p, r;
     bool b = get_reject_pos(p, r);
     CUIGameSP* pGameSP = smart_cast<CUIGameSP*>(HUD().GetUI()->UIGame());

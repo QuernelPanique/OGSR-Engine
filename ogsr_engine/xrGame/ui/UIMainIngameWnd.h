@@ -98,6 +98,7 @@ protected:
     CUIScrollView* m_UIIcons{};
 
 public:
+    CUIScrollView* op22_icons_view() const { return m_UIIcons; } // OP22: бустеры, болезнь, бессонница
     CUIArtefactPanel* m_artefactPanel{};
 
 public:
