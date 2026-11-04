@@ -78,8 +78,8 @@ void CUIOutfitInfo::InitFromXml(CUIXml& xml_doc)
             {
                 CUIStatic* v = xr_new<CUIStatic>();
                 v->SetAutoDelete(true);
-                const float w = _s->GetWidth() * (c ? 0.24f : 0.2f);
-                v->SetWndRect(Frect().set(_s->GetWidth() * (c ? 0.66f : 0.48f), 0.f, w, _s->GetHeight()));
+                const float left = _s->GetWidth() * (c ? 0.66f : 0.48f);
+                v->SetWndRect(Frect().set(left, 0.f, left + _s->GetWidth() * (c ? 0.24f : 0.2f), _s->GetHeight())); // lt + rb
                 v->SetFont(_s->GetFont());
                 v->SetTextComplexMode(true);
                 v->SetTextAlignment(CGameFont::alRight);
