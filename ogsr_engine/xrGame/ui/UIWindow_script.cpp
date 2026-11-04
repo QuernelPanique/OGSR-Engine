@@ -174,6 +174,7 @@ void CUIWindow::script_register(lua_State* L)
               class_<CUIScrollView, CUIWindow>("CUIScrollView")
                   .def(constructor<>())
                   .def("AddWindow", &CUIScrollView::AddWindow)
+                  .def("op22_add_owned", &CUIScrollView::op22_add_owned, adopt<2>()) // OP22: без adopt сборщик Lua удаляет окно
                   .def("RemoveWindow", &CUIScrollView::RemoveWindow)
                   .def("Clear", &CUIScrollView::Clear)
                   .def("ScrollToBegin", &CUIScrollView::ScrollToBegin)

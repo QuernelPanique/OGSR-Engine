@@ -52,6 +52,7 @@ public:
     virtual void Draw();
     virtual void Update();
     void AddWindow(CUIWindow* pWnd, bool auto_delete, bool top = false);
+    void op22_add_owned(CUIWindow* pWnd) { AddWindow(pWnd, true); } // OP22: окно создано в Lua, владелец - список (adopt)
     void RemoveWindow(CUIWindow* pWnd);
     void Clear(bool scrollToTop = true);
     void ScrollToBegin();
