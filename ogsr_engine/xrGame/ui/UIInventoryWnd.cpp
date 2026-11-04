@@ -12,6 +12,7 @@
 #include "../CustomOutfit.h"
 #include "../ai_space.h" // OP22
 #include "../script_engine.h"
+#include "../script_game_object.h"
 #include "UIIconParams.h"
 
 #include "../weapon.h"
