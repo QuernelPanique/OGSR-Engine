@@ -27,7 +27,8 @@ void CWeaponBinoculars::Load(LPCSTR section)
 
 bool CWeaponBinoculars::Action(s32 cmd, u32 flags)
 {
-    if (!Core.Features.test(xrCore::Feature::binoc_firing))
+    // OP22: как в ОП: без магазина (ammo_mag_size = 0) выстрел - это приближение
+    if (!Core.Features.test(xrCore::Feature::binoc_firing) || iMagazineSize == 0)
     {
         switch (cmd)
         {
