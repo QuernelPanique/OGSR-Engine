@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "ExoOutfit.h" // OP22
 #include "Actor_Flags.h"
 #include "hudmanager.h"
 #ifdef DEBUG
@@ -770,6 +771,9 @@ bool Is3dssZoomed{};
 
 void CActor::UpdateCL()
 {
+    if (auto* exo = smart_cast<CExoOutfit*>(inventory().m_slots[OUTFIT_SLOT].m_pIItem)) // OP22: заряд аккумулятора экзоскелета
+        exo->op22_update(mstate_real);
+
     if (m_feel_touch_characters > 0)
     {
         for (xr_vector<CObject*>::iterator it = feel_touch.begin(); it != feel_touch.end(); it++)

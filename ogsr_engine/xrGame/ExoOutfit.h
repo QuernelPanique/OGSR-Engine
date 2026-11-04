@@ -12,7 +12,24 @@ class CExoOutfit : public CCustomOutfit
 private:
     typedef CCustomOutfit inherited;
 
+    // OP22: аккумулятор экзоскелета ОП 2.2. Состояние и расчёт заряда - в скрипте op22_exo.script,
+    // здесь только меню, бросок на костюм, вызовы из обновления актора и запрет бега/прыжка без заряда
+    u32 m_op22_time{};
+    u32 m_op22_jumps{};
+    float m_op22_ms_move{};
+    float m_op22_ms_sprint{};
+    bool m_op22_in_jump{};
+    bool m_op22_powered{true};
+
 public:
     CExoOutfit(void);
     virtual ~CExoOutfit(void);
+
+    virtual bool CanAttach(PIItem pIItem) override; // OP22
+    virtual bool Attach(PIItem pIItem, bool b_send_event) override; // OP22
+
+    void op22_update(u32 actor_state); // OP22: из CActor::UpdateCL, костюм надет
+    bool op22_powered() const { return m_op22_powered; } // OP22
 };
+
+bool op22_exo_unpowered(); // OP22: надет экзоскелет с пустым аккумулятором или без него

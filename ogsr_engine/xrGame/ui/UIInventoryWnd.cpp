@@ -31,6 +31,7 @@ using namespace InventoryUtilities;
 #include "UI3tButton.h"
 #include <format>
 #include "../UICursor.h" // OP22: плавающее описание
+extern void op22_prop_funcs_clear(); // OP22
 #include "UIScrollView.h"
 #include "UICellItem.h"
 #include "../ui_base.h"
@@ -481,6 +482,7 @@ void CUIInventoryWnd::Hide()
 {
     PlaySnd(eInvSndClose);
     inherited::Hide();
+    op22_prop_funcs_clear(); // OP22: функции меню предмета держат ссылки на Lua
     m_op22_fly_on = false; // OP22: ячейки удаляются ниже (ClearAllLists)
     m_op22_fly_cell = nullptr;
 

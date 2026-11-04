@@ -605,7 +605,8 @@ static void op22_register_windows(lua_State* L)
 // добавляет свои (InsertItem(позиция, текст, функция)); клик по своему пункту зовёт функция(окно, предмет)
 ////////////////////////////////////////////////////////////////////////////
 constexpr u32 OP22_PROP_TAG_BASE = 0x4F500000;
-static xr_vector<luabind::functor<void>> g_prop_funcs;
+// OP22: не статический объект: его деструктор шёл после закрытия Lua (вылет при выходе в lua_rawgeti)
+static xr_vector<luabind::functor<void>>& g_prop_funcs = *xr_new<xr_vector<luabind::functor<void>>>();
 static CUIInventoryWnd* g_prop_wnd = nullptr;
 
 static void pb_InsertItem(CUIPropertiesBox* box, int pos, LPCSTR str, const luabind::functor<void>& f)
@@ -631,8 +632,12 @@ bool op22_show_prop_box(CUIInventoryWnd* wnd, CUIPropertiesBox* box, PIItem item
         return false;
     const u32 before = box->GetItemsCount();
     f(wnd, box, item->object().lua_game_object());
+    if (luabind::functor<void> exo; ai().script_engine().functor("op22_exo.show_prop_box", exo)) // OP22: снятие аккумулятора
+        exo(wnd, box, item->object().lua_game_object());
     return !g_prop_funcs.empty() || box->GetItemsCount() != before;
 }
+
+void op22_prop_funcs_clear() { g_prop_funcs.clear(); }
 
 bool op22_prop_box_clicked(CUIInventoryWnd* wnd, u32 tag, PIItem item)
 {

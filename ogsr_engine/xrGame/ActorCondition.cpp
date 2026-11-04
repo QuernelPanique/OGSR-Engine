@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "ExoOutfit.h" // OP22
 #include "actorcondition.h"
 #include "actor.h"
 #include "actorEffector.h"
@@ -472,6 +473,8 @@ bool CActorCondition::IsCantWalkWeight()
 
 bool CActorCondition::IsCantSprint()
 {
+    if (op22_exo_unpowered()) // OP22: экзоскелет без заряда
+        return true;
     if (m_fPower < m_fCantSprintPowerBegin)
         m_condition_flags.set(eCantSprint, TRUE);
     else if (m_fPower > m_fCantSprintPowerEnd)
@@ -481,6 +484,8 @@ bool CActorCondition::IsCantSprint()
 
 bool CActorCondition::IsCantJump(float weight)
 {
+    if (op22_exo_unpowered()) // OP22: экзоскелет без заряда
+        return true;
     if (!m_bJumpRequirePower || GodMode())
     {
         return false;
