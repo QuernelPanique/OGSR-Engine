@@ -311,16 +311,6 @@ int CWeaponMagazined::CheckAmmoBeforeReload(u32& v_ammoType)
     return GetAmmoCount(v_ammoType);
 }
 
-// OP22: перезарядка, начатая не клавишей (кончились патроны)
-static bool g_op22_auto_reload = false;
-template <class F>
-static void op22_auto_reload(F f)
-{
-    g_op22_auto_reload = true;
-    f();
-    g_op22_auto_reload = false;
-}
-
 void CWeaponMagazined::Reload()
 {
     inherited::Reload();
@@ -902,6 +892,17 @@ void CWeaponMagazined::switch2_Idle()
 #include "object_handler_planner.h"
 #endif
 #include <ui/UIXmlInit.h>
+
+// OP22: перезарядка, начатая не клавишей (кончились патроны)
+static bool g_op22_auto_reload = false;
+template <class F>
+static void op22_auto_reload(F f)
+{
+    g_op22_auto_reload = true;
+    f();
+    g_op22_auto_reload = false;
+}
+
 
 void CWeaponMagazined::switch2_Fire()
 {
