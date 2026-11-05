@@ -575,6 +575,18 @@ void hud_item_measures::load(const shared_str& sect_name, IKinematics* K)
         m_hands_offset[m_hands_offset_rot][m_hands_offset_type_gl_normal_scope] = m_hands_offset[m_hands_offset_rot][m_hands_offset_type_aim_scope];
     //
 
+    // OP22: alt sight of NLC weapons; no keys - usual aim position
+    xr_strconcat(val_name, "aim_hud_offset_alt_pos", _prefix);
+    if (is_16x9 && !pSettings->line_exist(sect_name, val_name))
+        xr_strcpy(val_name, "aim_hud_offset_alt_pos");
+    m_hands_offset[m_hands_offset_pos][m_hands_offset_type_alt_aim] =
+        pSettings->line_exist(sect_name, val_name) ? pSettings->r_fvector3(sect_name, val_name) : m_hands_offset[m_hands_offset_pos][m_hands_offset_type_aim];
+    xr_strconcat(val_name, "aim_hud_offset_alt_rot", _prefix);
+    if (is_16x9 && !pSettings->line_exist(sect_name, val_name))
+        xr_strcpy(val_name, "aim_hud_offset_alt_rot");
+    m_hands_offset[m_hands_offset_rot][m_hands_offset_type_alt_aim] =
+        pSettings->line_exist(sect_name, val_name) ? pSettings->r_fvector3(sect_name, val_name) : m_hands_offset[m_hands_offset_rot][m_hands_offset_type_aim];
+
     if (useCopFirePoint) // cop configs
     {
         R_ASSERT2(pSettings->line_exist(sect_name, "fire_point") == pSettings->line_exist(sect_name, "fire_bone"), sect_name.c_str());

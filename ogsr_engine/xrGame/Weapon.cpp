@@ -1249,6 +1249,14 @@ bool CWeapon::Action(s32 cmd, u32 flags)
             return false;
     }
 
+    case kWPN_FUNC: // OP22: alt sight of NLC weapons; launcher switch works only outside aiming
+        if (AimAlt && IsZoomed() && !IsGrenadeMode())
+        {
+            if (flags & CMD_START)
+                is_second_zoom_offset_enabled = !is_second_zoom_offset_enabled;
+            return true;
+        }
+        break;
     case kWPN_ZOOM_INC:
     case kWPN_ZOOM_DEC: {
         if (IsZoomEnabled() && IsZoomed() && m_bScopeDynamicZoom && IsScopeAttached() && (flags & CMD_START))
@@ -1701,6 +1709,7 @@ void CWeapon::OnZoomIn()
 
 void CWeapon::OnZoomOut()
 {
+    is_second_zoom_offset_enabled = false; // OP22: every aim starts from the main sight
     m_fZoomFactor = Core.Features.test(xrCore::Feature::ogse_wpn_zoom_system) ? 1.f : g_fov;
 
     if (m_bZoomMode)
@@ -1885,7 +1894,7 @@ u8 CWeapon::GetCurrentHudOffsetIdx() const
     {
         const bool has_gl = GrenadeLauncherAttachable() && IsGrenadeLauncherAttached();
         const bool has_scope = ScopeAttachable() && IsScopeAttached();
-        //const bool has_aim_alt = AimAlt && is_second_zoom_offset_enabled;
+        const bool has_aim_alt = AimAlt && is_second_zoom_offset_enabled; // OP22
 
         if (IsGrenadeMode())
         {
@@ -1894,6 +1903,8 @@ u8 CWeapon::GetCurrentHudOffsetIdx() const
             else
                 return hud_item_measures::m_hands_offset_type_gl;
         }
+        else if (has_aim_alt) // OP22: alt sight, V while aiming
+            return hud_item_measures::m_hands_offset_type_alt_aim;
         else if (has_gl)
         {
             if ((m_bUseScopeZoom || !m_UIScope) && has_scope) // OP22: scope without texture (collimator) - aim through it, as OP engine
