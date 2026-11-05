@@ -1896,14 +1896,14 @@ u8 CWeapon::GetCurrentHudOffsetIdx() const
         }
         else if (has_gl)
         {
-            if (m_bUseScopeZoom && has_scope)
+            if ((m_bUseScopeZoom || !m_UIScope) && has_scope) // OP22: scope without texture (collimator) - aim through it, as OP engine
                 return hud_item_measures::m_hands_offset_type_gl_normal_scope;
             else
                 return hud_item_measures::m_hands_offset_type_aim_gl_normal;
         }
         else
         {
-            if (m_bUseScopeZoom && has_scope)
+            if ((m_bUseScopeZoom || !m_UIScope) && has_scope) // OP22: scope without texture (collimator) - aim through it, as OP engine
                 return hud_item_measures::m_hands_offset_type_aim_scope;
             //else if (has_aim_alt)
             //    return hud_item_measures::m_hands_offset_type_alt_aim;
