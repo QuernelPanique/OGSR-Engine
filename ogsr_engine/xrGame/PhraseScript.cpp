@@ -122,13 +122,23 @@ bool CPhraseScript::Precondition(const CGameObject* pSpeakerGO, LPCSTR dialog_id
             ai().script_engine().functor("loadstring", loadstring_functor);
             ConditionString = "return " + ConditionString;
             luabind::object ret_obj = loadstring_functor(ConditionString.c_str()); // Создаём функцию из строки через loadstring
-            auto ret_func = luabind::object_cast<luabind::functor<bool>>(ret_obj); // Первое возвращённое loadstring значение должно быть функцией
+            auto ret_func = luabind::object_cast<luabind::functor<luabind::object>>(ret_obj); // OP22: nil-safe, see below // Первое возвращённое loadstring значение должно быть функцией
             ASSERT_FMT_DBG(ret_func, "Loadstring returns nil for code: %s", ConditionString.c_str()); // Если это не функция, значит loadstring вернул nil и что-то пошло не так
             // Вызываем созданную функцию и передаём ей дефолтные аргументы. Они прилетят после аргументов, прописанных явно, если например сделать так:
             // <precondition>my_script.test_func(123, true, nil, ...)</precondition>
             // А если не указать '...' - дефолтные аргументы не будут переданы в функцию.
             if (ret_func)
-                predicate_result = ret_func(pSpeakerGO->lua_game_object());
+            {
+                // OP22: missing script function gives nil (dead references of OP dialogs): phrase is hidden, no cast error
+                luabind::object res = ret_func(pSpeakerGO->lua_game_object());
+                if (!res.is_valid() || res.type() != LUA_TBOOLEAN)
+                {
+                    Msg("! [OP22] dialog [%s] phrase [%s]: precondition [%s] returned no boolean - phrase hidden", dialog_id, phrase_id, Cond.c_str());
+                    predicate_result = false;
+                }
+                else
+                    predicate_result = luabind::object_cast<bool>(res);
+            }
         }
 
         if (!predicate_result)
@@ -193,13 +203,23 @@ bool CPhraseScript::Precondition(const CGameObject* pSpeakerGO1, const CGameObje
             ai().script_engine().functor("loadstring", loadstring_functor);
             ConditionString = "return " + ConditionString;
             luabind::object ret_obj = loadstring_functor(ConditionString.c_str()); // Создаём функцию из строки через loadstring
-            auto ret_func = luabind::object_cast<luabind::functor<bool>>(ret_obj); // Первое возвращённое loadstring значение должно быть функцией
+            auto ret_func = luabind::object_cast<luabind::functor<luabind::object>>(ret_obj); // OP22: nil-safe, see below // Первое возвращённое loadstring значение должно быть функцией
             ASSERT_FMT_DBG(ret_func, "Loadstring returns nil for code: %s", ConditionString.c_str()); // Если это не функция, значит loadstring вернул nil и что-то пошло не так
             // Вызываем созданную функцию и передаём ей дефолтные аргументы. Они прилетят после аргументов, прописанных явно, если например сделать так:
             // <precondition>my_script.test_func(123, true, nil, ...)</precondition>
             // А если не указать '...' - дефолтные аргументы не будут переданы в функцию.
             if (ret_func)
-                predicate_result = ret_func(pSpeakerGO1->lua_game_object(), pSpeakerGO2->lua_game_object(), dialog_id, phrase_id, next_phrase_id);
+            {
+                // OP22: missing script function gives nil (dead references of OP dialogs): phrase is hidden, no cast error
+                luabind::object res = ret_func(pSpeakerGO1->lua_game_object(), pSpeakerGO2->lua_game_object(), dialog_id, phrase_id, next_phrase_id);
+                if (!res.is_valid() || res.type() != LUA_TBOOLEAN)
+                {
+                    Msg("! [OP22] dialog [%s] phrase [%s]: precondition [%s] returned no boolean - phrase hidden", dialog_id, phrase_id, Cond.c_str());
+                    predicate_result = false;
+                }
+                else
+                    predicate_result = luabind::object_cast<bool>(res);
+            }
         }
 
         if (!predicate_result)
