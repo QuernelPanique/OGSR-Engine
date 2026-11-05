@@ -1144,8 +1144,7 @@ void CStalkerActionSuddenAttack::execute()
     }
 
     CVisualMemoryManager* visual_memory_manager = object().memory().enemy().selected()->visual_memory();
-    VERIFY(visual_memory_manager);
-    if (!visual_memory_manager->visible_now(&object()))
+    if (!visual_memory_manager || !visual_memory_manager->visible_now(&object())) // OP22: trader has no visual memory
         return;
 
     m_storage->set_property(eWorldPropertyUseSuddenness, false);

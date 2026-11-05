@@ -121,8 +121,8 @@ void CStalkerCombatPlanner::initialize()
     if (!m_loaded && object().memory().enemy().selected())
     {
         CVisualMemoryManager* visual_memory_manager = object().memory().enemy().selected()->visual_memory();
-        VERIFY(visual_memory_manager);
-        CScriptActionPlanner::m_storage.set_property(eWorldPropertyUseSuddenness, !visual_memory_manager->visible_now(&object()));
+        if (visual_memory_manager) // OP22: CEntityAlive without visual memory (trader) as enemy
+            CScriptActionPlanner::m_storage.set_property(eWorldPropertyUseSuddenness, !visual_memory_manager->visible_now(&object()));
     }
 
     m_loaded = false;
