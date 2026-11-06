@@ -112,9 +112,18 @@ void CWeaponMagazined::net_Destroy()
         xr_delete(m_binoc_vision);
 }
 
+// OP22: износ глушителя живёт в сохранении, а не в состоянии сервера: ScopeRespawn передаёт его новому стволу здесь
+static string128 op22_resp_sect{};
+static float op22_resp_sil_cond{1.f};
+
 BOOL CWeaponMagazined::net_Spawn(CSE_Abstract* DC)
 {
     BOOL bRes = inherited::net_Spawn(DC);
+    if (op22_resp_sect[0] && !xr_strcmp(cNameSect().c_str(), op22_resp_sect))
+    {
+        m_op22_sil_cond = op22_resp_sil_cond;
+        op22_resp_sect[0] = 0;
+    }
     const auto wpn = smart_cast<CSE_ALifeItemWeaponMagazined*>(DC);
     m_iCurFireMode = wpn->m_u8CurFireMode;
     if (HasFireModes() && m_iCurFireMode >= m_aFireModes.size())
@@ -1899,6 +1908,9 @@ bool CWeaponMagazined::ScopeRespawn(PIItem pIItem)
                 else
                     io->SetNextItemSlot(0);
             }
+
+            xr_strcpy(op22_resp_sect, S); // OP22: см. net_Spawn
+            op22_resp_sil_cond = m_op22_sil_cond;
 
             DestroyObject();
             sobj2->Spawn_Write(P, TRUE);
