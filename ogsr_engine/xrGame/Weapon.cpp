@@ -1952,6 +1952,17 @@ void CWeapon::SetAmmoElapsed(int ammo_count)
     };
 }
 
+// OP22: obj:set_current_ammo_type ОП (ct_scope.swap_weapon, рюкзак): SetAmmoElapsed заряжает текущим типом
+void CWeapon::op22_SetAmmoType(u8 ammo_type)
+{
+    if (ammo_type >= m_ammoTypes.size())
+        return;
+    const int n = GetAmmoElapsed();
+    SetAmmoElapsed(0);
+    m_ammoType = ammo_type;
+    SetAmmoElapsed(n);
+}
+
 u32 CWeapon::ef_main_weapon_type() const
 {
     VERIFY(m_ef_main_weapon_type != u32(-1));

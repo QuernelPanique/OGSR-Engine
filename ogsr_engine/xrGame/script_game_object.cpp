@@ -353,6 +353,15 @@ u32 CScriptGameObject::GetAmmoElapsed()
     return (weapon->GetAmmoElapsed());
 }
 
+// OP22: obj:set_current_ammo_type ОП - магазин перезаряжается тем же числом патронов нового типа
+void CScriptGameObject::op22_SetAmmoType(u8 ammo_type)
+{
+    CWeapon* weapon = smart_cast<CWeapon*>(&object());
+    if (!weapon)
+        return;
+    weapon->op22_SetAmmoType(ammo_type);
+}
+
 void CScriptGameObject::SetAmmoElapsed(int ammo_elapsed)
 {
     CWeapon* weapon = smart_cast<CWeapon*>(&object());

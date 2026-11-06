@@ -395,6 +395,7 @@ public:
     LPCSTR GetPatrolPathName();
     u32 GetAmmoElapsed();
     void SetAmmoElapsed(int ammo_elapsed);
+    void op22_SetAmmoType(u8 ammo_type); // OP22
     u32 GetAmmoCurrent() const;
     void SetQueueSize(u32 queue_size);
     CScriptGameObject* GetBestEnemy();

@@ -1405,7 +1405,7 @@ void CWeaponMagazined::InitAddons()
         m_pSndShotCurrent = &sndSilencerShot;
 
         //сила выстрела
-        LoadFireParams(*cNameSect(), "");
+        LoadFireParams(*cNameSect(), "silencer_"); // OP22: ключи silencer_*, как в ОП (в OGSR был пустой префикс)
 
         //подсветка от выстрела
         LoadLights(*cNameSect(), "silencer_");

@@ -92,6 +92,13 @@ void CShootingObject::Light_Create()
 
 void CShootingObject::Light_Destroy() { light_render.destroy(); }
 
+// OP22: ключ с префиксом, если он есть, иначе без префикса - как в xrGame.dll ОП (FUN_18088e8b0)
+static LPCSTR op22_fire_key(LPCSTR section, LPCSTR prefix, LPCSTR name, string256& buf)
+{
+    strconcat(sizeof(buf), buf, prefix, name);
+    return pSettings->line_exist(section, buf) ? buf : name;
+}
+
 void CShootingObject::LoadFireParams(LPCSTR section, LPCSTR prefix)
 {
     string256 full_name;
@@ -106,7 +113,7 @@ void CShootingObject::LoadFireParams(LPCSTR section, LPCSTR prefix)
     LPCSTR hit_type = READ_IF_EXISTS(pSettings, r_string, section, "hit_type", "fire_wound");
     m_eHitType = ALife::g_tfString2HitType(hit_type); // поддержка произвольного хита оружия
     //сила выстрела и его мощьность
-    s_sHitPower = pSettings->r_string_wb(section, strconcat(sizeof(full_name), full_name, prefix, "hit_power")); //читаем строку силы хита пули оружия
+    s_sHitPower = pSettings->r_string_wb(section, op22_fire_key(section, prefix, "hit_power", full_name)); //читаем строку силы хита пули оружия
     fvHitPower[egdMaster] = (float)atof(_GetItem(*s_sHitPower, 0, buffer)); //первый параметр - это хит для уровня игры мастер
 
     fvHitPower[egdVeteran] = fvHitPower[egdMaster]; //изначально параметры для других уровней
@@ -128,15 +135,15 @@ void CShootingObject::LoadFireParams(LPCSTR section, LPCSTR prefix)
     }
 
     // fHitPower			= pSettings->r_float	(section,strconcat(full_name, prefix, "hit_power"));
-    fHitImpulse = pSettings->r_float(section, strconcat(sizeof(full_name), full_name, prefix, "hit_impulse"));
+    fHitImpulse = pSettings->r_float(section, op22_fire_key(section, prefix, "hit_impulse", full_name));
     //максимальное расстояние полета пули
-    fireDistance = pSettings->r_float(section, strconcat(sizeof(full_name), full_name, prefix, "fire_distance"));
+    fireDistance = pSettings->r_float(section, op22_fire_key(section, prefix, "fire_distance", full_name));
     //начальная скорость пули
-    m_fStartBulletSpeed = pSettings->r_float(section, strconcat(sizeof(full_name), full_name, prefix, "bullet_speed"));
-    m_bUseAimBullet = pSettings->r_bool(section, strconcat(sizeof(full_name), full_name, prefix, "use_aim_bullet"));
+    m_fStartBulletSpeed = pSettings->r_float(section, op22_fire_key(section, prefix, "bullet_speed", full_name));
+    m_bUseAimBullet = pSettings->r_bool(section, op22_fire_key(section, prefix, "use_aim_bullet", full_name));
     if (m_bUseAimBullet)
     {
-        m_fTimeToAim = pSettings->r_float(section, strconcat(sizeof(full_name), full_name, prefix, "time_to_aim"));
+        m_fTimeToAim = pSettings->r_float(section, op22_fire_key(section, prefix, "time_to_aim", full_name));
     }
 }
 

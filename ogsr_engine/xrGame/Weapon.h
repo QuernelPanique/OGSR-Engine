@@ -484,6 +484,7 @@ public:
     IC void SetAmmoMagSize(int _size) { iMagazineSize = _size; }
 
     void SetAmmoElapsed(int ammo_count);
+    void op22_SetAmmoType(u8 ammo_type); // OP22: магазин тем же числом патронов нового типа
 
     virtual void OnMagazineEmpty();
     void SpawnAmmo(u32 boxCurr = 0xffffffff, LPCSTR ammoSect = NULL, u32 ParentID = 0xffffffff);

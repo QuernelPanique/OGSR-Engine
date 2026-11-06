@@ -446,6 +446,7 @@ class_<CScriptGameObject> script_register_game_object2(class_<CScriptGameObject>
         .def("set_magazine_size", &CScriptGameObject::SetMagazineSize)
         .def("get_grenade_launcher_status", &CScriptGameObject::GrenadeLauncherAttachable)
         .def("get_ammo_type", &CScriptGameObject::GetAmmoType)
+        .def("op22_set_ammo_type", &CScriptGameObject::op22_SetAmmoType) // OP22
         .def("get_underbarrel_ammo_type", &CScriptGameObject::GetUnderbarrelAmmoType)
         .def("get_ammo_in_magazine2", &CScriptGameObject::GetAmmoElapsed2)
         .def("get_gl_mode", &CScriptGameObject::GetGLMode)
