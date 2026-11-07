@@ -207,10 +207,31 @@ BOOL CObject::net_Spawn(CSE_Abstract* data)
     return TRUE;
 }
 
+int g_op22_box_sleep{1}; // консоль op22_box_sleep: 0 - предметы в ящиках обновляются как раньше, для сравнения
+extern int g_op22_sleeping;
+
+void CObject::op22_shedule_sleep(bool sleep)
+{
+    if (!register_schedule() || op22_shedule_asleep == sleep || (sleep && !g_op22_box_sleep))
+        return;
+
+    op22_shedule_asleep = sleep;
+    g_op22_sleeping += sleep ? 1 : -1;
+    if (sleep)
+        shedule_unregister();
+    else
+        shedule_register();
+}
+
 void CObject::net_Destroy()
 {
     VERIFY(getDestroy());
     xr_delete(collidable.model);
+    if (op22_shedule_asleep) // OP22: Unregister объекта вне очереди безвреден, флаг и счётчик надо вернуть
+    {
+        op22_shedule_asleep = false;
+        --g_op22_sleeping;
+    }
     if (register_schedule())
         shedule_unregister();
 

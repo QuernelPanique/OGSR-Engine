@@ -626,6 +626,11 @@ void CCC_Register()
 
     CMD3(CCC_Token, "lua_gc_method", &ps_lua_gc_method, lua_gc_method_token);
     CMD4(CCC_Integer, "lua_gcstep", &psLUA_GCSTEP, 10, 1000);
+    // OP22: замер рывков кадра в лог и сравнение со спящими предметами в ящиках
+    extern int g_op22_frame_stats;
+    extern int g_op22_box_sleep;
+    CMD4(CCC_Integer, "op22_frame_stats", &g_op22_frame_stats, 0, 1);
+    CMD4(CCC_Integer, "op22_box_sleep", &g_op22_box_sleep, 0, 1);
     CMD4(CCC_Integer, "lua_gctimeout", &psLUA_GCTIMEOUT_MIN, 1000, 16000);
 
     extern BOOL bLevelEnvModExport;

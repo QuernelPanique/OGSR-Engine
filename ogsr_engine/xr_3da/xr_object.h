@@ -223,6 +223,12 @@ public:
 public:
     virtual bool register_schedule() const { return true; }
 
+    // OP22: предмет в ящике вне очереди обновления: объект остаётся для скриптов и сейвов, но не тратит кадр
+    void op22_shedule_sleep(bool sleep);
+
+private:
+    bool op22_shedule_asleep{};
+
 public:
     virtual Fvector get_new_local_point_on_mesh(u16& bone_id) const;
     virtual Fvector get_last_local_point_on_mesh(Fvector const& last_point, u16 bone_id) const;

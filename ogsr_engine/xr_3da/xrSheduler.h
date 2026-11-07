@@ -11,6 +11,7 @@ private:
         u32 dwTimeOfLastExecute;
         shared_str scheduled_name;
         ISheduled* Object;
+        bool op22_done{}; // OP22: выполнен в этом проходе, уходит в конец очереди
     };
     struct ItemReg
     {
@@ -22,9 +23,8 @@ private:
 private:
     xr_vector<Item> ItemsRT;
     xr_vector<Item> Items;
+    xr_vector<Item> ItemsDone; // OP22: буфер прохода, чтобы не выделять память в каждом кадре
     xr_vector<ItemReg> Registration;
-
-    ISheduled* m_current_step_obj{};
 
     bool m_processing_now;
 

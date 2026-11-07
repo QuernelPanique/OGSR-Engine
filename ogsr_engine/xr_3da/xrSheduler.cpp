@@ -2,10 +2,59 @@
 #include "xrSheduler.h"
 #include "xr_object.h"
 
+#include <chrono>
+
 float psShedulerCurrent = 10.f;
 float psShedulerTarget = 10.f;
 float psShedulerMax = 10.f;
 constexpr float psShedulerReaction = 1.f; // 0.1f;
+
+// OP22: op22_frame_stats 1 - раз в 10 с строка [op22_frames] в логе: рывки кадра и цена очереди
+int g_op22_frame_stats{};
+int g_op22_sleeping{}; // объектов вне очереди: предметы в ящиках (CObject::op22_shedule_sleep)
+
+static void op22_frame_stats(float sched_ms, size_t queue)
+{
+    using clock = std::chrono::steady_clock;
+    constexpr float window_ms = 10000.f, late_ms = 3.f, skip_ms = 1000.f; // кадр дольше секунды - загрузка, не рывок
+    static xr_vector<float> frames;
+    static clock::time_point last{};
+    static float window{}, sched_sum{}, sched_max{};
+
+    const auto now = clock::now();
+    const float frame_ms = last == clock::time_point{} ? 0.f : std::chrono::duration<float, std::milli>(now - last).count();
+    last = now;
+
+    if (!g_op22_frame_stats || frame_ms <= 0.f || frame_ms > skip_ms)
+    {
+        frames.clear();
+        window = sched_sum = sched_max = 0.f;
+        return;
+    }
+
+    frames.push_back(frame_ms);
+    window += frame_ms;
+    sched_sum += sched_ms;
+    sched_max = std::max(sched_max, sched_ms);
+    if (window < window_ms)
+        return;
+
+    std::sort(frames.begin(), frames.end());
+    const size_t worst = std::max<size_t>(1, frames.size() / 100);
+    float low{};
+    for (size_t i = frames.size() - worst; i < frames.size(); ++i)
+        low += frames[i];
+    low /= float(worst);
+
+    const float budget = g_dwFPSlimit ? 1000.f / float(g_dwFPSlimit) : 1000.f / 144.f;
+    const size_t late = size_t(frames.end() - std::upper_bound(frames.begin(), frames.end(), budget + late_ms));
+    Msg("[op22_frames] %u fr, avg %.2f ms, 1%% low %.2f ms (%.0f fps), max %.2f ms, late %u; sched avg %.3f max %.2f ms; queue %u, asleep %d",
+        u32(frames.size()), window / float(frames.size()), low, 1000.f / low, frames.back(), u32(late), sched_sum / float(frames.size()), sched_max,
+        u32(queue), g_op22_sleeping);
+
+    frames.clear();
+    window = sched_sum = sched_max = 0.f;
+}
 
 void CSheduler::Initialize() { m_processing_now = false; }
 
@@ -108,12 +157,6 @@ bool CSheduler::internal_Unregister(const ISheduled* object, BOOL RT)
                 return true;
             }
         }
-    }
-
-    if (m_current_step_obj == object)
-    {
-        m_current_step_obj = nullptr;
-        return true;
     }
 
     return false;
@@ -226,39 +269,39 @@ void CSheduler::ProcessStep()
     u32 dwTime = Device.dwTimeGlobal;
 
     const bool prefetch = Device.dwPrecacheFrame > 0;
-    decltype(Items) ItemsProcessed;
     bool stopped{};
-    //size_t cnt{};
+    size_t processed{};
+    shared_str first_processed;
     CTimer t_total;
     t_total.Start();
 
-    for (size_t it{}; it < Items.size();)
+    // OP22: раньше каждый выполненный объект стирался из середины вектора, цена кадра росла быстрее числа объектов (рывки у
+    // ящика на 1338 предметов). Теперь внутри прохода вектор не меняет размер, выполненные уходят в конец одним проходом
+    // ниже. Порядок вызовов прежний. Объект, снятый во время прохода, в том числе сам собой, получает Object = nullptr
+    // (internal_Unregister), поэтому после shedule_Update проверяется curr.Object.
+    const size_t count = Items.size();
+    for (size_t it{}; it < count; ++it)
     {
-        Item curr = Items.at(it++);
-        bool skip{curr.Object == nullptr}, shed_need{true};
+        Item& curr = Items[it];
 
-        if (curr.dwTimeForExecute >= dwTime)
+        if (curr.Object == nullptr || curr.dwTimeForExecute >= dwTime)
         {
             continue;
         }
 
-        if (!skip)
+        bool shed_need{};
+        __try
         {
-            __try
-            {
-                shed_need = curr.Object->shedule_Needed();
-            }
-            __except (ExceptStackTrace("[CSheduler::ProcessStep] stack trace:\n"))
-            {
-                Msg("Scheduler tried to update object %s", *curr.scheduled_name);
-                skip = true;
-            }
+            shed_need = curr.Object->shedule_Needed();
+        }
+        __except (ExceptStackTrace("[CSheduler::ProcessStep] stack trace:\n"))
+        {
+            Msg("Scheduler tried to update object %s", *curr.scheduled_name);
         }
 
-        Items.erase(Items.begin() + (--it));
-
-        if (skip || !shed_need)
+        if (!shed_need)
         {
+            curr.Object = nullptr;
             continue;
         }
 
@@ -275,26 +318,24 @@ void CSheduler::ProcessStep()
 
             const u32 elapsed = dwTime - curr.dwTimeOfLastExecute;
 
-            m_current_step_obj = curr.Object;
-
             // if (!Core.DebugFlags.test(xrCore::dbg_DisableObjectsScheduler))
             curr.Object->shedule_Update(std::clamp(elapsed, 1u, std::max(curr.Object->shedule.t_max, 1000u)));
 
-            if (!m_current_step_obj)
+            if (!curr.Object)
             {
                 continue;
             }
 
-            m_current_step_obj = nullptr;
-
             // Fill item structure
-            auto& next = ItemsProcessed.emplace_back();
-            next.dwTimeForExecute = dwTime + dwUpdate;
-            next.dwTimeOfLastExecute = dwTime;
-            next.Object = curr.Object;
-            next.scheduled_name = curr.Object->shedule_Name();
+            curr.dwTimeForExecute = dwTime + dwUpdate;
+            curr.dwTimeOfLastExecute = dwTime;
+            curr.scheduled_name = curr.Object->shedule_Name();
+            curr.op22_done = true;
 
-            //cnt++;
+            if (!processed++)
+            {
+                first_processed = curr.scheduled_name;
+            }
         }
         __except (ExceptStackTrace("[CSheduler::ProcessStep2] stack trace:\n"))
         {
@@ -311,8 +352,8 @@ void CSheduler::ProcessStep()
             // if (Core.DebugFlags.test(xrCore::dbg_TraceScheduler))
             {
                 // Msg("Break ProcessStep. Processed: [%u], left in queue: [%u]", ItemsProcessed.size(), Items.size());
-                if (ItemsProcessed.size() == 1) // кто то жрет все время на кадре
-                    Msg("! Single item [%s] took whole update frame!!!", ItemsProcessed.front().scheduled_name.c_str());
+                if (processed == 1) // кто то жрет все время на кадре
+                    Msg("! Single item [%s] took whole update frame!!!", first_processed.c_str());
             }
 
             stopped = true;
@@ -327,7 +368,29 @@ void CSheduler::ProcessStep()
     //    Msg("Prefetch frame, updated: [%u] objects!", cnt);
 
     // Push "processed" back
-    Items.insert(Items.end(), std::make_move_iterator(ItemsProcessed.begin()), std::make_move_iterator(ItemsProcessed.end()));
+    size_t kept{};
+    for (size_t it{}; it < count; ++it)
+    {
+        Item& item = Items[it];
+        if (item.Object == nullptr)
+        {
+            continue;
+        }
+        if (item.op22_done)
+        {
+            item.op22_done = false;
+            ItemsDone.emplace_back(std::move(item));
+            continue;
+        }
+        if (kept != it)
+        {
+            Items[kept] = std::move(item);
+        }
+        ++kept;
+    }
+    Items.resize(kept);
+    Items.insert(Items.end(), std::make_move_iterator(ItemsDone.begin()), std::make_move_iterator(ItemsDone.end()));
+    ItemsDone.clear();
 
     if (!stopped)
     {
@@ -342,6 +405,8 @@ void CSheduler::Update()
 
     // Initialize
     Device.Statistic->Sheduler.Begin();
+
+    const auto op22_begin = std::chrono::steady_clock::now();
 
     internal_Registration();
 
@@ -380,6 +445,8 @@ void CSheduler::Update()
     m_processing_now = false;
 
     internal_Registration();
+
+    op22_frame_stats(std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - op22_begin).count(), Items.size());
 
     Device.Statistic->Sheduler.End();
 }

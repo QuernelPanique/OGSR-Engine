@@ -31,6 +31,11 @@ void IInventoryBox::ProcessEvent(CGameObject* O, NET_Packet& P, u16 type)
         // Real Wolf: Коллбек для ящика на получение предмета. 02.08.2014.
         if (auto obj = smart_cast<CGameObject*>(itm))
         {
+            // OP22: предмет в ящике скрыт и вне очереди обновления. Со скриптом привязки остаётся в очереди: его update может
+            // быть нужен сюжету
+            if (!obj->CScriptBinder::object())
+                obj->op22_shedule_sleep(true);
+
             O->callback(GameObject::eOnInvBoxItemTake)(obj->lua_game_object());
 
             if (m_in_use)
@@ -58,6 +63,7 @@ void IInventoryBox::ProcessEvent(CGameObject* O, NET_Packet& P, u16 type)
         if (!itm)
             return;
 
+        itm->op22_shedule_sleep(false); // OP22
         itm->H_SetParent(NULL, dont_create_shell);
 
         if (auto obj = smart_cast<CGameObject*>(itm))
