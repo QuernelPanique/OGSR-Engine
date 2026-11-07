@@ -21,6 +21,11 @@ class CUIZoneMap
     bool m_rounded{};
     u32 m_alpha{};
 
+    // OP22: видимость и прозрачность из скрипта (HUD Следопыт)
+    bool m_op22_visible{true};
+    float m_op22_alpha{1.f};
+    void op22_apply_alpha() const;
+
 public:
     CUIZoneMap();
     virtual ~CUIZoneMap();
@@ -33,6 +38,7 @@ public:
 
     void SetScale(float s) { m_fScale = s; }
     float GetScale() const { return m_fScale; }
+    void op22_set_look(bool visible, float alpha); // OP22
 
     bool ZoomIn();
     bool ZoomOut();

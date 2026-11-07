@@ -9,6 +9,7 @@
 #include "stdafx.h"
 #include "UIGameCustom.h" // OP22
 #include "ui/UIMainIngameWnd.h" // OP22
+#include "UIZoneMap.h" // OP22
 #include "ui/UIScrollView.h" // OP22
 #include "UI.h" // OP22
 #include "level.h"
@@ -153,6 +154,19 @@ void set_time_factor(float time_factor)
 
 float get_time_factor() { return (Level().GetGameTimeFactor()); }
 // OP22: панель иконок HUD для скриптов ОП (бустеры, болезнь, бессонница)
+// OP22: миникарта для HUD Следопыт: масштаб нужен биорадару, вид - режимам Выкл/Авто/Всегда
+static CUIZoneMap* op22_zone_map() { return HUD().GetUI() && HUD().GetUI()->UIMainIngameWnd ? HUD().GetUI()->UIMainIngameWnd->GetUIZoneMap() : nullptr; }
+static float op22_minimap_scale()
+{
+    CUIZoneMap* z = op22_zone_map();
+    return z ? z->GetScale() : 1.f;
+}
+static void op22_minimap_look(bool visible, float alpha)
+{
+    if (CUIZoneMap* z = op22_zone_map())
+        z->op22_set_look(visible, alpha);
+}
+
 static CUIScrollView* op22_icons_view()
 {
     return HUD().GetUI() && HUD().GetUI()->UIMainIngameWnd ? HUD().GetUI()->UIMainIngameWnd->op22_icons_view() : nullptr;
@@ -1060,7 +1074,7 @@ void CLevel::script_register(lua_State* L)
             def("set_weather_next", &set_weather_next), def("set_weather_fx", &set_weather_fx), def("start_weather_fx_from_time", &start_weather_fx_from_time),
             def("is_wfx_playing", &is_wfx_playing), def("get_wfx_time", &get_wfx_time), def("stop_weather_fx", &stop_weather_fx), def("environment", &environment),
 
-            def("op22_icons_view", &op22_icons_view), def("set_time_factor", &set_time_factor), def("get_time_factor", &get_time_factor),
+            def("op22_icons_view", &op22_icons_view), def("op22_minimap_scale", &op22_minimap_scale), def("op22_minimap_look", &op22_minimap_look), def("set_time_factor", &set_time_factor), def("get_time_factor", &get_time_factor),
 
             def("set_game_difficulty", &set_game_difficulty), def("get_game_difficulty", &get_game_difficulty),
 

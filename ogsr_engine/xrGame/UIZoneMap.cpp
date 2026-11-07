@@ -88,8 +88,30 @@ void CUIZoneMap::Init()
     m_fScale = 1.f;
 }
 
+// OP22: скрипт скрывает карту и задаёт прозрачность (HUD Следопыт: режимы Выкл/Авто/Всегда)
+void CUIZoneMap::op22_apply_alpha() const
+{
+    const u32 a = iFloor(255.f * m_op22_alpha);
+    m_activeMap->SetTextureColor(color_argb(iFloor(float(m_alpha) * m_op22_alpha), 255, 255, 255));
+    m_background->SetTextureColor(color_argb(a, 255, 255, 255));
+    m_compass->SetTextureColor(color_argb(a, 255, 255, 255));
+    m_center->SetTextureColor(color_argb(a, 255, 255, 255));
+}
+
+void CUIZoneMap::op22_set_look(bool visible, float alpha)
+{
+    m_op22_visible = visible;
+    clamp(alpha, 0.f, 1.f);
+    if (fsimilar(alpha, m_op22_alpha))
+        return;
+    m_op22_alpha = alpha;
+    op22_apply_alpha();
+}
+
 void CUIZoneMap::Render()
 {
+    if (!m_op22_visible) // OP22
+        return;
     m_clipFrame->Draw();
     m_background->Draw();
     m_compass->Draw();
@@ -174,6 +196,7 @@ void CUIZoneMap::SetupCurrentMap()
     m_activeMap->SetClipRect(r);
     m_activeMap->WorkingArea().set(r);
 
+    op22_apply_alpha(); // OP22: новая карта берёт прозрачность от скрипта
     ApplyZoom();
 }
 
