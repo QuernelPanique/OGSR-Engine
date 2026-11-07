@@ -95,14 +95,17 @@ void CUIInventoryWnd::Init()
     // OP22: описание предмета ОП 2.2 - плавающее окно у курсора (Ghidra: CUIInventoryWnd::Init создаёт CUIItemInfo из
     // inventory_item_fly.xml, Draw/Update рисуют его поверх окна, колесо мыши - в его описание); панель descr_static
     // ОП не заполняет. Окно со своей панелью описания (скин op22_port) помечено узлом op22_panel_info
-    if (!uiXml.NavigateToNode("op22_panel_info", 0))
+    // OP22: панель описания (op22_panel_info) и плавающее окно вместе - атрибут fly="1" у op22_panel_info (окно по макету)
+    const bool op22_panel = !!uiXml.NavigateToNode("op22_panel_info", 0);
+    if (!op22_panel || uiXml.ReadAttribInt("op22_panel_info", 0, "fly", 0))
     {
         CUIXml fly_xml;
         if (fly_xml.Init(CONFIG_PATH, UI_PATH, "inventory_item_fly.xml"))
         {
             m_op22_fly = xr_new<CUIItemInfo>();
             m_op22_fly->Init("inventory_item_fly.xml");
-            UIItemInfo.Show(false);
+            if (!op22_panel)
+                UIItemInfo.Show(false);
         }
     }
 

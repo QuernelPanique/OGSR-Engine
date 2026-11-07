@@ -135,6 +135,8 @@ void CUIItemInfo::Init(LPCSTR xml_name)
         UIItemImage->TextureOff();
         UIItemImage->ClipperOn();
         UIItemImageSize.set(UIItemImage->GetWidth(), UIItemImage->GetHeight());
+        m_op22_fit = !!uiXml.ReadAttribInt("image_static", 0, "op22_fit", 0); // OP22
+        m_op22_img_pos = UIItemImage->GetWndPos();
     }
 
     xml_init.InitAutoStaticGroup(uiXml, "auto", 0, this);
@@ -206,9 +208,22 @@ void CUIItemInfo::InitItem(CInventoryItem* pInvItem)
         Frect v_r = {0.0f, 0.0f, rect.width(), rect.height()};
         v_r.x2 *= UI()->get_current_kx();
 
+        if (m_op22_fit && v_r.width() > 0 && v_r.height() > 0) // OP22: вписать в поле и поставить по центру
+        {
+            const float k = _min(UIItemImageSize.x / v_r.width(), UIItemImageSize.y / v_r.height());
+            v_r.x2 *= k;
+            v_r.y2 *= k;
+            UIItemImage->GetUIStaticItem().SetRect(v_r);
+            UIItemImage->SetWidth(v_r.width());
+            UIItemImage->SetHeight(v_r.height());
+            UIItemImage->SetWndPos(Fvector2().set(m_op22_img_pos.x + (UIItemImageSize.x - v_r.width()) / 2.f, m_op22_img_pos.y + (UIItemImageSize.y - v_r.height()) / 2.f));
+        }
+        else
+        {
         UIItemImage->GetUIStaticItem().SetRect(v_r);
         UIItemImage->SetWidth(_min(v_r.width(), UIItemImageSize.x));
         UIItemImage->SetHeight(_min(v_r.height(), UIItemImageSize.y));
+        }
     }
 }
 

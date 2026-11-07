@@ -45,6 +45,17 @@ void CUIMessagesWindow::AddIconedPdaMessage(LPCSTR textureName, Frect originalRe
     pItem->SetTextComplexMode(true);
     pItem->UIIcon.InitTexture(textureName);
     pItem->UIIcon.SetOriginalRect(originalRect.left, originalRect.top, originalRect.right, originalRect.bottom);
+    if (pItem->m_op22) // OP22: портрет и текст внутри подложки с отступами
+    {
+        const float tx = pItem->UIIcon.GetWndPos().x + pItem->UIIcon.GetWidth() + pItem->m_op22_gap;
+        pItem->UIMsgText.SetWndPos(tx, pItem->UIMsgText.GetWndPos().y);
+        pItem->UIMsgText.SetWidth(pItem->GetWidth() - tx - pItem->m_op22_pad);
+        pItem->UIMsgText.AdjustHeightToText();
+        const float h = _max(pItem->UIIcon.GetWndPos().y + pItem->UIIcon.GetHeight(), pItem->UIMsgText.GetWndPos().y + pItem->UIMsgText.GetHeight());
+        pItem->SetHeight(h + pItem->m_op22_pad);
+    }
+    else
+    {
     pItem->UIMsgText.SetWndPos(pItem->UIIcon.GetWidth(), pItem->UIMsgText.GetWndPos().y);
     pItem->UIMsgText.AdjustHeightToText();
 
@@ -52,6 +63,7 @@ void CUIMessagesWindow::AddIconedPdaMessage(LPCSTR textureName, Frect originalRe
         pItem->SetHeight(pItem->UIIcon.GetHeight());
     else
         pItem->SetHeight(pItem->UIMsgText.GetHeight());
+    }
     m_pGameLog->SendMessage(pItem, CHILD_CHANGED_SIZE);
 }
 

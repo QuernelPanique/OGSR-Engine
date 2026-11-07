@@ -16,6 +16,10 @@ public:
     virtual void SetFont(CGameFont* pFont);
     virtual void SetColor(u32 color);
 
+    // OP22: подложка всего сообщения (узел op22_back: текстура, pad - отступ снизу и справа, gap - от портрета до текста)
+    bool m_op22{};
+    float m_op22_pad{}, m_op22_gap{};
+
     //информация о персонаже
     CUIStatic UIIcon;
     CUIStatic UIName;

@@ -47,5 +47,8 @@ public:
     CUIArtefactParams* UIArtefactParams;
 
     Fvector2 UIItemImageSize;
+    // OP22: картинка вписана в поле image_static (op22_fit="1") и стоит по его центру
+    bool m_op22_fit{};
+    Fvector2 m_op22_img_pos{};
     CUIStatic* UIItemImage;
 };

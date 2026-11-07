@@ -28,6 +28,14 @@ void CUIPdaMsgListItem::Init(float x, float y, float width, float height)
     R_ASSERT2(xml_result, "xml file not found");
 
     CUIXmlInit xml_init;
+    if (uiXml.NavigateToNode("op22_back", 0)) // OP22: подложка сообщения по макету
+    {
+        CUIXmlInit::InitTexture(uiXml, "op22_back", 0, this);
+        SetStretchTexture(true);
+        m_op22_pad = uiXml.ReadAttribFlt("op22_back", 0, "pad", 0.f);
+        m_op22_gap = uiXml.ReadAttribFlt("op22_back", 0, "gap", 0.f);
+        m_op22 = true;
+    }
     AttachChild(&UIIcon);
     xml_init.InitStatic(uiXml, "icon_static", 0, &UIIcon);
 
