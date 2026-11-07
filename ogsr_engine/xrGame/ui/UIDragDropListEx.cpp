@@ -4,6 +4,7 @@
 #include "UIScrollBar.h"
 #include "../object_broker.h"
 #include "UICellItem.h"
+#include "UIStatic.h" // OP22
 
 #include "UIInventoryWnd.h"
 #include "UITradeWnd.h"
@@ -252,8 +253,33 @@ void CUIDragDropListEx::Compact()
 }
 
 #include "../HUDManager.h"
+void CUIDragDropListEx::op22_grid(LPCSTR tex) { m_container->hShader->create("hud\\fog_of_war", tex); }
+
+void CUIDragDropListEx::op22_frames(LPCSTR on, LPCSTR off)
+{
+    for (auto [st, tex] : {std::pair<CUIStatic**, LPCSTR>{&m_op22_frame_on, on}, {&m_op22_frame_off, off}})
+    {
+        if (!tex || !*tex)
+            continue;
+        *st = xr_new<CUIStatic>();
+        (*st)->SetAutoDelete(true);
+        (*st)->Init(0, 0, GetWidth(), GetHeight());
+        (*st)->InitTexture(tex);
+        (*st)->SetStretchTexture(true);
+        AttachChild(*st);
+    }
+}
+
 void CUIDragDropListEx::Draw()
 {
+    if (m_op22_frame_on || m_op22_frame_off) // OP22: рамка слота поверх предмета
+    {
+        const bool has = ItemsCount() > 0;
+        if (m_op22_frame_on)
+            m_op22_frame_on->Show(has);
+        if (m_op22_frame_off)
+            m_op22_frame_off->Show(!has);
+    }
     inherited::Draw();
 
     if (0 && bDebug)

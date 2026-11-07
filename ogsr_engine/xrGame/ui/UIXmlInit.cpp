@@ -557,6 +557,10 @@ bool CUIXmlInit::InitDragDropListEx(CUIXml& xml_doc, const char* path, int index
     tmp = xml_doc.ReadAttribInt(path, index, "condition_progress_bar", 0);
     pWnd->SetConditionProgBarVisibility(tmp != 0);
 
+    if (LPCSTR g = xml_doc.ReadAttrib(path, index, "op22_grid", nullptr); g && *g) // OP22: своя сетка списка
+        pWnd->op22_grid(g);
+    pWnd->op22_frames(xml_doc.ReadAttrib(path, index, "op22_frame_on", ""), xml_doc.ReadAttrib(path, index, "op22_frame_off", ""));
+
     tmp = xml_doc.ReadAttribInt(path, index, "adjust_cells", 0); // OP22: как в ОП 2.2 - предмет растягивается на весь список
     pWnd->SetAdjustCells(tmp != 0);
 

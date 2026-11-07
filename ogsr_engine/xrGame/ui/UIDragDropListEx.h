@@ -66,6 +66,11 @@ private:
 
 public:
     CUICellContainer* m_container;
+    // OP22: окно по макету - своя текстура сетки (op22_grid) и рамка слота: занят/пуст (op22_frame_on/op22_frame_off)
+    class CUIStatic* m_op22_frame_on{};
+    class CUIStatic* m_op22_frame_off{};
+    void op22_grid(LPCSTR tex);
+    void op22_frames(LPCSTR on, LPCSTR off);
 
 protected:
     CUIScrollBar* m_vScrollBar;
