@@ -47,6 +47,8 @@ public:
     CUIStatic UIStaticBottom;
 
     CUI3tButton UIToTradeButton;
+    CUI3tButton* m_op22_exit{}; // OP22: «Закончить разговор» (узел op22_exit_btn), закрывает как F
+    void op22_OnExitClicked(CUIWindow* w, void*);
 
     //информация о персонажах
     CUIStatic UIOurIcon;

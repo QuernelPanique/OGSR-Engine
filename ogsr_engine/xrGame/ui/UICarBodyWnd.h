@@ -68,6 +68,12 @@ protected:
     CUIPropertiesBox* m_pUIPropertiesBox;
     CUI3tButton* m_pUITakeAll;
     CUI3tButton* m_op22_exit{}; // OP22: окно по макету
+    // OP22: заголовок «Обыск»/«Ящик» и строка под ним (имя убитого, название уровня у ящика)
+    CUIStatic* m_op22_title{};
+    CUIStatic* m_op22_sub{};
+    CUIStatic* m_op22_right{}; // подпись правого списка: «В ящике»/«Вещи на теле»
+    shared_str m_op22_t_box, m_op22_t_body, m_op22_t_monster, m_op22_r_box, m_op22_r_body;
+    void op22_titles(bool box, CInventoryOwner* others);
     CUIStatic* m_op22_weight{};
     CUIProgressBar* m_op22_weight_bar{};
 

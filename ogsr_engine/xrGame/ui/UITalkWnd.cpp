@@ -176,6 +176,12 @@ void CUITalkWnd::SendMessage(CUIWindow* pWnd, s16 msg, void* pData)
     {
         AskQuestion();
     }
+    else if (pWnd == UITalkDialogWnd && msg == TALK_DIALOG_OP22_EXIT) // OP22: как клавиша F
+    {
+        if (!((Core.Features.test(xrCore::Feature::disable_dialog_break) && m_pCurrentDialog) || (m_pOthersInvOwner && m_pOthersInvOwner->NeedOsoznanieMode())))
+            GetHolder()->StartStopMenu(this, true);
+        return;
+    }
     else if (pWnd == UITradeWnd && msg == TRADE_WND_CLOSED)
     {
         UITalkDialogWnd->Show();

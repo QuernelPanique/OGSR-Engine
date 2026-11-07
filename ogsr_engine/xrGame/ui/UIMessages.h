@@ -128,4 +128,6 @@ enum EUIMessages : s16
     MAP_SELECT_SPOT2,
     MAP_REMOVE_SPOT_ACT,
     MAP_CHANGE_SPOT_HINT_ACT,
+
+    TALK_DIALOG_OP22_EXIT, // OP22: кнопка «Закончить разговор» (в конце: номера прочих сообщений не меняются)
 };

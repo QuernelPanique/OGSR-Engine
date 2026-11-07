@@ -21,6 +21,7 @@
 #include "../alife_registry_wrappers.h"
 #include "UI3tButton.h"
 #include "UIProgressBar.h" // OP22
+#include "../string_table.h" // OP22
 #include "UIListBoxItem.h"
 #include "../InventoryBox.h"
 #include "../game_object_space.h"
@@ -149,6 +150,32 @@ void CUICarBodyWnd::Init()
         AttachChild(m_op22_exit);
         xml_init.Init3tButton(uiXml, "op22_exit_btn", 0, m_op22_exit);
     }
+    if (uiXml.NavigateToNode("op22_title", 0))
+    {
+        m_op22_title = xr_new<CUIStatic>();
+        m_op22_title->SetAutoDelete(true);
+        AttachChild(m_op22_title);
+        xml_init.InitStatic(uiXml, "op22_title", 0, m_op22_title);
+        m_op22_t_box = uiXml.ReadAttrib("op22_title", 0, "box", "");
+        m_op22_t_body = uiXml.ReadAttrib("op22_title", 0, "body", "");
+        m_op22_t_monster = uiXml.ReadAttrib("op22_title", 0, "monster", "");
+    }
+    if (uiXml.NavigateToNode("op22_right", 0))
+    {
+        m_op22_right = xr_new<CUIStatic>();
+        m_op22_right->SetAutoDelete(true);
+        AttachChild(m_op22_right);
+        xml_init.InitStatic(uiXml, "op22_right", 0, m_op22_right);
+        m_op22_r_box = uiXml.ReadAttrib("op22_right", 0, "box", "");
+        m_op22_r_body = uiXml.ReadAttrib("op22_right", 0, "body", "");
+    }
+    if (uiXml.NavigateToNode("op22_sub", 0))
+    {
+        m_op22_sub = xr_new<CUIStatic>();
+        m_op22_sub->SetAutoDelete(true);
+        AttachChild(m_op22_sub);
+        xml_init.InitStatic(uiXml, "op22_sub", 0, m_op22_sub);
+    }
     if (uiXml.NavigateToNode("op22_weight", 0))
     {
         m_op22_weight = xr_new<CUIStatic>();
@@ -185,8 +212,25 @@ void CUICarBodyWnd::Init()
     }
 }
 
+void CUICarBodyWnd::op22_titles(bool box, CInventoryOwner* others)
+{
+    if (m_op22_title)
+        m_op22_title->SetText(CStringTable().translate(box ? m_op22_t_box : m_op22_t_body).c_str());
+    if (m_op22_right)
+        m_op22_right->SetText(CStringTable().translate(box ? m_op22_r_box : m_op22_r_body).c_str());
+    if (!m_op22_sub)
+        return;
+    if (box)
+        m_op22_sub->SetText(CStringTable().translate(Level().name()).c_str());
+    else if (others && !smart_cast<CBaseMonster*>(others))
+        m_op22_sub->SetText(others->Name());
+    else
+        m_op22_sub->SetText(CStringTable().translate(m_op22_t_monster).c_str());
+}
+
 void CUICarBodyWnd::InitCarBody(CInventoryOwner* pOur, IInventoryBox* pInvBox)
 {
+    op22_titles(true, nullptr); // OP22
     m_pOurObject = pOur;
     m_pOthersObject = NULL;
     m_pInventoryBox = pInvBox;
@@ -208,6 +252,7 @@ void CUICarBodyWnd::InitCarBody(CInventoryOwner* pOur, IInventoryBox* pInvBox)
 
 void CUICarBodyWnd::InitCarBody(CInventoryOwner* pOur, CInventoryOwner* pOthers)
 {
+    op22_titles(false, pOthers); // OP22
     m_pOurObject = pOur;
     m_pOthersObject = pOthers;
     m_pInventoryBox = NULL;

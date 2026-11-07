@@ -59,9 +59,12 @@ void CUITalkDialogWnd::Init(float x, float y, float width, float height)
     AttachChild(&UIOthersIcon);
     CUIXmlInit::InitStatic(*m_uiXml, "right_character_icon", 0, &UIOthersIcon);
     UIOurIcon.AttachChild(&UICharacterInfoLeft);
-    UICharacterInfoLeft.Init(0.0f, 0.0f, UIOurIcon.GetWidth(), UIOurIcon.GetHeight(), TRADE_CHARACTER_XML);
+    // OP22: своя карточка персонажа диалога, если есть (у торговли другой вид)
+    string_path op22_tmp;
+    LPCSTR op22_char_xml = FS.exist(op22_tmp, "$game_config$", "ui\\talk_character.xml") ? "talk_character.xml" : TRADE_CHARACTER_XML;
+    UICharacterInfoLeft.Init(0.0f, 0.0f, UIOurIcon.GetWidth(), UIOurIcon.GetHeight(), op22_char_xml);
     UIOthersIcon.AttachChild(&UICharacterInfoRight);
-    UICharacterInfoRight.Init(0.0f, 0.0f, UIOthersIcon.GetWidth(), UIOthersIcon.GetHeight(), TRADE_CHARACTER_XML);
+    UICharacterInfoRight.Init(0.0f, 0.0f, UIOthersIcon.GetWidth(), UIOthersIcon.GetHeight(), op22_char_xml);
 
     //основной фрейм диалога
     AttachChild(&UIDialogFrame);
@@ -90,6 +93,15 @@ void CUITalkDialogWnd::Init(float x, float y, float width, float height)
     AttachChild(&UIToTradeButton);
     CUIXmlInit::Init3tButton(*m_uiXml, "button", 0, &UIToTradeButton);
     UIToTradeButton.SetWindowName("trade_btn");
+    if (m_uiXml->NavigateToNode("op22_exit_btn", 0)) // OP22
+    {
+        m_op22_exit = xr_new<CUI3tButton>();
+        m_op22_exit->SetAutoDelete(true);
+        AttachChild(m_op22_exit);
+        CUIXmlInit::Init3tButton(*m_uiXml, "op22_exit_btn", 0, m_op22_exit);
+        m_op22_exit->SetWindowName("op22_exit_btn");
+        AddCallback("op22_exit_btn", BUTTON_CLICKED, fastdelegate::MakeDelegate(this, &CUITalkDialogWnd::op22_OnExitClicked));
+    }
 
     //Элементы автоматического добавления
     CUIXmlInit::InitAutoStatic(*m_uiXml, "auto_static", this);
@@ -154,6 +166,7 @@ void CUITalkDialogWnd::OnQuestionClicked(CUIWindow* w, void*)
 }
 
 void CUITalkDialogWnd::OnTradeClicked(CUIWindow* w, void*) { GetTop()->SendMessage(this, TALK_DIALOG_TRADE_BUTTON_CLICKED); }
+void CUITalkDialogWnd::op22_OnExitClicked(CUIWindow* w, void*) { GetTop()->SendMessage(this, TALK_DIALOG_OP22_EXIT); } // OP22
 
 //пересылаем сообщение родительскому окну для обработки
 //и фильтруем если оно пришло от нашего дочернего окна

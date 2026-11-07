@@ -140,7 +140,8 @@ void CUITradeWnd::Init()
     xml_init.InitMultiTextStatic(uiXml, "price_mt_static", 0, &m_uidata->UIOurPriceCaption);
 
     m_uidata->UIOthersTradeWnd.AttachChild(&m_uidata->UIOthersPriceCaption);
-    xml_init.InitMultiTextStatic(uiXml, "price_mt_static", 0, &m_uidata->UIOthersPriceCaption);
+    // OP22: у списка торговца своя подпись (второй узел), если есть - у суммы свой цвет
+    xml_init.InitMultiTextStatic(uiXml, "price_mt_static", uiXml.GetNodesNum(uiXml.GetRoot(), "price_mt_static") > 1 ? 1 : 0, &m_uidata->UIOthersPriceCaption);
 
     //Списки Drag&Drop
     m_uidata->UIOurBagWnd.AttachChild(&m_uidata->UIOurBagList);
@@ -608,6 +609,18 @@ void CUITradeWnd::UpdatePrices()
     {
         m_uidata->UIOurPriceCaption.GetPhraseByIndex(2)->str = std::format("{} {}", m_iOurTradePrice, StMoneyDescr).c_str();
         m_uidata->UIOthersPriceCaption.GetPhraseByIndex(2)->str = std::format("{} {}", m_iOthersTradePrice, StMoneyDescr).c_str();
+    }
+    if (m_op22_total) // OP22: деньги с разрядами, как на макете («18 420 р.»)
+    {
+        auto money = [](u32 v) {
+            std::string d = std::to_string(v);
+            for (int i = int(d.size()) - 3; i > 0; i -= 3)
+                d.insert(size_t(i), " ");
+            return d + " " + StMoneyDescr;
+        };
+        m_uidata->UIOurMoneyStatic.SetText(money(m_pInvOwner->get_money()).c_str());
+        m_uidata->UIOtherMoneyStatic.SetText(m_pOthersInvOwner->InfinitiveMoney() ? "---" : money(m_pOthersInvOwner->get_money()).c_str());
+        return;
     }
     m_uidata->UIOurMoneyStatic.SetText(std::format("{} {}", m_pInvOwner->get_money(), StMoneyDescr).c_str());
     m_uidata->UIOtherMoneyStatic.SetText(m_pOthersInvOwner->InfinitiveMoney() ? "---" : std::format("{} {}", m_pOthersInvOwner->get_money(), StMoneyDescr).c_str());
