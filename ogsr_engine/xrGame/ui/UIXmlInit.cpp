@@ -264,6 +264,7 @@ bool CUIXmlInit::InitCheck(CUIXml& xml_doc, LPCSTR path, int index, CUICheckButt
 
 bool CUIXmlInit::InitSpin(CUIXml& xml_doc, const char* path, int index, CUICustomSpin* pWnd)
 {
+    pWnd->m_op22_tex = xml_doc.ReadAttrib(path, index, "op22_tex", ""); // OP22: вид по макету
     InitWindow(xml_doc, path, index, pWnd);
     InitOptionsItem(xml_doc, path, index, pWnd);
 

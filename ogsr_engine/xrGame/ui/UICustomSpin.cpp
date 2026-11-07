@@ -8,6 +8,7 @@
 
 #include "StdAfx.h"
 #include "UI3tButton.h"
+#include "UIStatic.h" // OP22
 #include "UIFrameLineWnd.h"
 #include "UILines.h"
 #include "UICustomSpin.h"
@@ -42,10 +43,33 @@ CUICustomSpin::CUICustomSpin()
     m_textColor[1] = color_argb(255, 100, 100, 100);
 }
 
-CUICustomSpin::~CUICustomSpin() { xr_delete(m_pLines); }
+CUICustomSpin::~CUICustomSpin()
+{
+    xr_delete(m_pLines);
+    xr_delete(m_op22_bg); // OP22
+}
 
 void CUICustomSpin::Init(float x, float y, float width, float height)
 {
+    if (m_op22_tex.size()) // OP22: вид по макету
+    {
+        CUIWindow::Init(x, y, width, height);
+        m_pFrameLine->Init(0, 0, width, height);
+        m_pFrameLine->InitTexture("ui_spiner");
+        m_pFrameLine->Show(false);
+        if (!m_op22_bg)
+            m_op22_bg = xr_new<CUIStatic>();
+        m_op22_bg->InitTexture(m_op22_tex.c_str());
+        m_op22_bg->SetStretchTexture(true);
+        const float bw = height * 0.75f;
+        m_pBtnUp->Init(width - bw, 0, bw, height / 2);
+        m_pBtnUp->InitTexture("ui\\ct_tr_none");
+        m_pBtnDown->Init(width - bw, height / 2, bw, height / 2);
+        m_pBtnDown->InitTexture("ui\\ct_tr_none");
+        m_pLines->Init(0, 0, width - bw - 6, height);
+        m_pLines->SetVTextAlignment(valCenter);
+        return;
+    }
     CUIWindow::Init(x, y, width, SPIN_HEIGHT);
     m_pFrameLine->Init(0, 0, width, SPIN_HEIGHT);
     m_pFrameLine->InitTexture("ui_spiner");
@@ -90,10 +114,15 @@ void CUICustomSpin::OnBtnDownClick() { GetMessageTarget()->SendMessage(this, BUT
 
 void CUICustomSpin::Draw()
 {
-    CUIWindow::Draw();
     Fvector2 pos;
     GetAbsolutePos(pos);
-    m_pLines->Draw(pos.x + 3, pos.y);
+    if (m_op22_bg) // OP22: фон под текстом и стрелками
+    {
+        m_op22_bg->SetWndRect(pos.x, pos.y, GetWidth(), GetHeight());
+        m_op22_bg->Draw();
+    }
+    CUIWindow::Draw();
+    m_pLines->Draw(pos.x + (m_op22_bg ? 8.f : 3.f), pos.y);
 }
 
 void CUICustomSpin::Update()

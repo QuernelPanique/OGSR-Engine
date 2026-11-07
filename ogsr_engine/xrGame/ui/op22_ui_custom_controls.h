@@ -28,7 +28,13 @@ public:
             else
                 sprintf_s(buf, "%4.2f", m_f_val);
         }
-        m_pSlider->SetText(buf);
+        if (m_op22 && m_op22_val) // OP22: значение справа, не на ползунке
+        {
+            m_op22_val->SetText(buf);
+            m_pSlider->SetText("");
+        }
+        else
+            m_pSlider->SetText(buf);
         if (GetMessageTarget())
             GetMessageTarget()->SendMessage(this, TRACKBAR_CHANGED);
     }

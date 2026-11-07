@@ -42,6 +42,13 @@ protected:
     virtual void DecVal() = 0;
 
     CUIFrameLineWnd* m_pFrameLine;
+
+public:
+    // OP22: вид по макету - фон одной текстурой (op22_tex), высота из разметки, стрелки справа
+    shared_str m_op22_tex;
+    class CUIStatic* m_op22_bg{};
+
+protected:
     CUI3tButton* m_pBtnUp;
     CUI3tButton* m_pBtnDown;
     CUILines* m_pLines;
