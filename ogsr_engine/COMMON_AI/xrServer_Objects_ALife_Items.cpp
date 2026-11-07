@@ -374,6 +374,9 @@ CSE_ALifeItemWeapon::CSE_ALifeItemWeapon(LPCSTR caSection) : CSE_ALifeItem(caSec
         set_visual(pSettings->r_string(caSection, "visual"));
 
     m_addon_flags.zero();
+    // OP22: stalker gets such a weapon with its stock scope on, the section is that state: see build_ogsr_native.py
+    if (READ_IF_EXISTS(pSettings, r_bool, caSection, "op22_scope_attached", false))
+        m_addon_flags.set(eWeaponAddonScope, TRUE);
 
     m_scope_status = (EWeaponAddonStatus)pSettings->r_s32(s_name, "scope_status");
     m_silencer_status = (EWeaponAddonStatus)pSettings->r_s32(s_name, "silencer_status");
@@ -435,6 +438,10 @@ void CSE_ALifeItemWeapon::STATE_Read(NET_Packet& tNetPacket, u16 size)
 
     if (m_wVersion > 46)
         tNetPacket.r_u8(ammo_type);
+
+    // OP22: all.spawn and old saves keep the flags off for a section that always has the scope on
+    if (READ_IF_EXISTS(pSettings, r_bool, s_name, "op22_scope_attached", false))
+        m_addon_flags.set(eWeaponAddonScope, TRUE);
 }
 
 void CSE_ALifeItemWeapon::STATE_Write(NET_Packet& tNetPacket)

@@ -1360,6 +1360,11 @@ void CWeaponMagazined::InitAddons()
 
             InitZoomParams(*m_sScopeName, !m_bIgnoreScopeTexture);
 
+            // OP22: the stock scope keeps the zoom set for this weapon, not the zoom of the scope item
+            const xr_string op22_zoom_key = xr_string("op22_zoom_") + m_sScopeName.c_str();
+            if (pSettings->line_exist(cNameSect(), op22_zoom_key.c_str()))
+                m_fScopeZoomFactor = pSettings->r_float(cNameSect(), op22_zoom_key.c_str());
+
             m_fZoomHudFov = READ_IF_EXISTS(pSettings, r_float, cNameSect().c_str(), "scope_zoom_hud_fov", m_fZoomHudFov);
             m_f3dssHudFov = READ_IF_EXISTS(pSettings, r_float, cNameSect().c_str(), "scope_lense_hud_fov", m_f3dssHudFov);
         }
