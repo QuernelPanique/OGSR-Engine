@@ -614,7 +614,7 @@ void CUIMiniMap::Draw()
         return;
     }
 
-    const u32 segments_count = 64; // OP22: было 20, на малом круге виден многоугольник
+    const u32 segments_count = 40; // OP22: было 20, на малом круге виден многоугольник; больше 48 нельзя (sPoly2D, UI_FRUSTUM_SAFE)
 
     UIRender->SetShader(*m_UIStaticItem.GetShader());
     UIRender->StartPrimitive(segments_count * 3, IUIRender::ptTriList, UI()->m_currentPointType);
