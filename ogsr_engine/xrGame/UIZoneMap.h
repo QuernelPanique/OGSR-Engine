@@ -39,6 +39,7 @@ public:
     void SetScale(float s) { m_fScale = s; }
     float GetScale() const { return m_fScale; }
     void op22_set_look(bool visible, float alpha); // OP22
+    void op22_set_rect(float x, float y, float size, float bx, float by, float bw, float bh); // OP22: размер HUD
 
     bool ZoomIn();
     bool ZoomOut();

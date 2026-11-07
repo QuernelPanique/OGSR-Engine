@@ -108,6 +108,19 @@ void CUIZoneMap::op22_set_look(bool visible, float alpha)
     op22_apply_alpha();
 }
 
+// OP22: круг карты и подложка из скрипта: настройка размера HUD. Масштаб карты привязан к ширине круга (ApplyZoom)
+void CUIZoneMap::op22_set_rect(float x, float y, float size, float bx, float by, float bw, float bh)
+{
+    m_clipFrame->SetWndRect(x, y, size, size);
+    m_center->SetWndPos(size / 2, size / 2);
+    m_background->SetWndRect(bx, by, bw, bh);
+    Frect r;
+    m_clipFrame->GetAbsoluteRect(r);
+    m_activeMap->SetClipRect(r);
+    m_activeMap->WorkingArea().set(r);
+    ApplyZoom();
+}
+
 void CUIZoneMap::Render()
 {
     if (!m_op22_visible) // OP22
