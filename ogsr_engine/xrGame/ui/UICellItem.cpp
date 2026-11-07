@@ -205,6 +205,18 @@ void CUICellItem::init()
     m_pConditionState->Show(true);
 }
 
+// OP22: у предмета есть состояние: ключ ОП ui_show_condition главнее, плюс оружие, броня и настоящие артефакты (решение
+// пользователя 04.11): класс ARTEFACT в ОП есть и у биорадара, колб, диктофонов, коконов, поэтому по имени секции
+bool op22_item_shows_condition(CInventoryItem* itm)
+{
+    if (!itm)
+        return false;
+    const int op22_key = itm->op22_ui_show_condition();
+    const char* op22_sect = itm->object().cNameSect().c_str();
+    const bool op22_af = smart_cast<CArtefact*>(itm) && (strstr(op22_sect, "af_") || !xr_strcmp(op22_sect, "art_acumm"));
+    return op22_key == 1 || (op22_key != 0 && (smart_cast<CWeapon*>(itm) || smart_cast<CCustomOutfit*>(itm) || itm->GetInvShowCondition() || op22_af));
+}
+
 void CUICellItem::UpdateConditionProgressBar()
 {
     if (!m_pData)
@@ -218,15 +230,7 @@ void CUICellItem::UpdateConditionProgressBar()
     if (m_pParentList && m_pParentList->GetConditionProgBarVisibility())
     {
         PIItem itm = (PIItem)m_pData;
-        CWeapon* pWeapon = smart_cast<CWeapon*>(itm);
-        CCustomOutfit* pOutfit = smart_cast<CCustomOutfit*>(itm);
-
-        // OP22: ключ ОП ui_show_condition главнее, плюс настоящие артефакты (решение пользователя 04.11): класс ARTEFACT
-        // в ОП есть и у биорадара, колб, диктофонов, коконов, поэтому по имени секции
-        const int op22_key = itm->op22_ui_show_condition();
-        const char* op22_sect = itm->object().cNameSect().c_str();
-        const bool op22_af = smart_cast<CArtefact*>(itm) && (strstr(op22_sect, "af_") || !xr_strcmp(op22_sect, "art_acumm"));
-        if (op22_key == 1 || (op22_key != 0 && (pWeapon || pOutfit || itm->GetInvShowCondition() || op22_af)))
+        if (op22_item_shows_condition(itm)) // OP22: правило - в op22_item_shows_condition (им же пользуется описание предмета)
         {
             Ivector2 itm_grid_size = GetGridSize();
             if (m_pParentList->GetVerticalPlacement())

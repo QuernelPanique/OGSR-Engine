@@ -17,6 +17,8 @@
 #include "ui_af_params.h"
 #include <format>
 
+bool op22_item_shows_condition(CInventoryItem* itm); // OP22: UICellItem.cpp
+
 CUIItemInfo::CUIItemInfo()
 {
     UIItemImageSize.set(0.0f, 0.0f);
@@ -57,6 +59,9 @@ void CUIItemInfo::Init(LPCSTR xml_name)
         wnd_rect.y2 = uiXml.ReadAttribFlt("main_frame", 0, "height", 0);
 
         inherited::Init(wnd_rect.x1, wnd_rect.y1, wnd_rect.x2, wnd_rect.y2);
+        m_op22_autoh = !!uiXml.ReadAttribInt("main_frame", 0, "op22_autoh", 0); // OP22
+        m_op22_max_h = wnd_rect.y2;
+        m_op22_pad_b = uiXml.ReadAttribFlt("main_frame", 0, "op22_pad_b", 0.f);
     }
 
     // OP22: фон плавающего окна описания ОП 2.2 (inventory_item_fly.xml), первым ребёнком - под остальными
@@ -66,6 +71,7 @@ void CUIItemInfo::Init(LPCSTR xml_name)
         back->SetAutoDelete(true);
         AttachChild(back);
         xml_init.InitFrameWindow(uiXml, "background_frame", 0, back);
+        m_op22_back = back; // OP22
     }
 
     if (uiXml.NavigateToNode("static_name", 0))
@@ -105,6 +111,17 @@ void CUIItemInfo::Init(LPCSTR xml_name)
         AttachChild(UICondProgresBar);
         UICondProgresBar->SetAutoDelete(true);
         xml_init.InitProgressBar(uiXml, "condition_progress", 0, UICondProgresBar);
+        // OP22: op22_cond_auto="1" - шкала и подпись (узел op22_cond_lbl) только у предметов с состоянием, без них описание
+        // поднимается на op22_cond_h (как на макете: у аптечки строки «Состояние» нет)
+        m_op22_cond_auto = !!uiXml.ReadAttribInt("condition_progress", 0, "op22_cond_auto", 0);
+        m_op22_cond_h = uiXml.ReadAttribFlt("condition_progress", 0, "op22_cond_h", 0.f);
+    }
+    if (uiXml.NavigateToNode("op22_cond_lbl", 0))
+    {
+        m_op22_cond_lbl = xr_new<CUIStatic>();
+        AttachChild(m_op22_cond_lbl);
+        m_op22_cond_lbl->SetAutoDelete(true);
+        xml_init.InitStatic(uiXml, "op22_cond_lbl", 0, m_op22_cond_lbl);
     }
 
     if (uiXml.NavigateToNode("descr_list", 0))
@@ -119,6 +136,8 @@ void CUIItemInfo::Init(LPCSTR xml_name)
         AttachChild(UIDesc);
         UIDesc->SetAutoDelete(true);
         xml_init.InitScrollView(uiXml, "descr_list", 0, UIDesc);
+        m_op22_desc_y = UIDesc->GetWndPos().y; // OP22
+        m_op22_desc_h = UIDesc->GetHeight();
 
         m_desc_info.bShowDescrText = !!uiXml.ReadAttribInt("descr_list", 0, "only_text_info", 1);
         xml_init.InitFont(uiXml, "descr_list:font", 0, m_desc_info.uDescClr, m_desc_info.pDescFont);
@@ -173,8 +192,16 @@ void CUIItemInfo::InitItem(CInventoryItem* pInvItem)
     if (UICondProgresBar)
     {
         float cond = pInvItem->GetConditionToShow();
-        UICondProgresBar->Show(true);
+        const bool op22_show = !m_op22_cond_auto || op22_item_shows_condition(pInvItem); // OP22
+        UICondProgresBar->Show(op22_show);
         UICondProgresBar->SetProgressPos(cond * 100.0f + 1.0f - EPS);
+        if (m_op22_cond_lbl)
+            m_op22_cond_lbl->Show(op22_show);
+        if (m_op22_cond_auto && UIDesc)
+        {
+            UIDesc->SetWndPos(Fvector2().set(UIDesc->GetWndPos().x, m_op22_desc_y - (op22_show ? 0.f : m_op22_cond_h)));
+            UIDesc->SetHeight(m_op22_desc_h + (op22_show ? 0.f : m_op22_cond_h));
+        }
     }
 
     if (UIDesc)
@@ -196,6 +223,18 @@ void CUIItemInfo::InitItem(CInventoryItem* pInvItem)
             UIDesc->AddWindow(pItem, true);
         }
         UIDesc->ScrollToBegin();
+        if (m_op22_autoh) // OP22: высота окна - по содержимому описания
+        {
+            float h = 0.f;
+            for (u32 i = 0; i < UIDesc->GetSize(); ++i)
+                h += UIDesc->GetItem(i)->GetHeight() + UIDesc->m_op22_vi();
+            const float full = _min(m_op22_max_h, UIDesc->GetWndPos().y + h + m_op22_pad_b);
+            const float list_h = _max(0.f, full - UIDesc->GetWndPos().y - m_op22_pad_b);
+            UIDesc->SetHeight(list_h);
+            SetHeight(full);
+            if (m_op22_back)
+                m_op22_back->SetHeight(full);
+        }
     }
     if (UIItemImage)
     {

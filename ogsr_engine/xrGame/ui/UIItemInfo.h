@@ -49,6 +49,14 @@ public:
     Fvector2 UIItemImageSize;
     // OP22: картинка вписана в поле image_static (op22_fit="1") и стоит по его центру
     bool m_op22_fit{};
+    // OP22: плавающее окно по высоте содержимого (main_frame op22_autoh="1"): низ - конец описания + отступ, не выше максимума
+    bool m_op22_autoh{};
+    float m_op22_max_h{}, m_op22_pad_b{};
+    class CUIFrameWindow* m_op22_back{};
+    // OP22: шкала состояния только у предметов с состоянием (condition_progress op22_cond_auto="1")
+    bool m_op22_cond_auto{};
+    float m_op22_cond_h{}, m_op22_desc_y{}, m_op22_desc_h{};
+    CUIStatic* m_op22_cond_lbl{};
     Fvector2 m_op22_img_pos{};
     CUIStatic* UIItemImage;
 };

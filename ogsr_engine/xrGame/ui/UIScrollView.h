@@ -11,6 +11,7 @@ class CUIScrollView : public CUIWindow, public CUIWndCallback
     friend class CUIXmlInit; // for init
 public:
     bool m_op22_horz{}; // OP22: элементы в строку слева направо (значки состояния HUD), атрибут op22_horz
+    float m_op22_vi() const { return m_vertInterval; }
 protected:
     enum
     {
