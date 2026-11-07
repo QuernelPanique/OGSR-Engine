@@ -442,6 +442,8 @@ void CHUDManager::net_Relcase(CObject* object)
 {
     VERIFY(m_pHUDTarget);
     m_pHUDTarget->net_Relcase(object);
+    if (pUI && pUI->UIMainIngameWnd) // OP22
+        pUI->UIMainIngameWnd->op22_net_relcase(object);
 }
 
 #include "player_hud.h"

@@ -820,6 +820,14 @@ void CUIMainIngameWnd::AnimateContacts(bool b_snd)
         HUD_SOUND::PlaySound(m_contactSnd, Fvector().set(0, 0, 0), 0, true);
 }
 
+// OP22: the item under the crosshair is set in CActor::UpdateCL and destroyed at the end of the same Objects.Update, then the
+// HUD reads it in this frame (autotest 07.11: call through a freed vtable, rip = 1)
+void CUIMainIngameWnd::op22_net_relcase(CObject* object)
+{
+    if (m_pPickUpItem && smart_cast<CInventoryItem*>(object) == m_pPickUpItem)
+        SetPickUpItem(nullptr);
+}
+
 void CUIMainIngameWnd::SetPickUpItem(CInventoryItem* PickUpItem)
 {
     //	m_pPickUpItem = PickUpItem;

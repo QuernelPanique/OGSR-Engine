@@ -274,6 +274,12 @@ void CActor::net_Relcase(CObject* O)
     if (GO && m_pObjectWeLookingAt == GO)
     {
         m_pObjectWeLookingAt = NULL;
+        // OP22: set from the same object in shedule_Update, read every frame (PickupModeUpdate_COD). The OP engine reads the
+        // destroyed object and goes on, here its memory is reused at once and a virtual call jumps to nowhere
+        m_pUsableObject = NULL;
+        m_pInvBoxWeLookingAt = NULL;
+        m_pPersonWeLookingAt = NULL;
+        inventory().m_pTarget = NULL;
     }
     CHolderCustom* HC = smart_cast<CHolderCustom*>(GO);
     if (HC && HC == m_pVehicleWeLookingAt)

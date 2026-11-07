@@ -25,6 +25,7 @@ class CActor;
 class CWeapon;
 class CMissile;
 class CInventoryItem;
+class CObject;
 
 class CUIMainIngameWnd : public CUIWindow
 {
@@ -181,6 +182,7 @@ protected:
 
 public:
     void SetPickUpItem(CInventoryItem* PickUpItem);
+    void op22_net_relcase(CObject* object); // OP22
 
     DECLARE_SCRIPT_REGISTER_FUNCTION
 };
