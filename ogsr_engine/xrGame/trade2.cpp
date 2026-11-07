@@ -13,6 +13,10 @@
 #include "script_game_object.h"
 #include "game_object_space.h"
 #include "trade_parameters.h"
+#include "Weapon.h"
+#include "WeaponAmmo.h"
+#include "WeaponMagazinedWGrenade.h"
+#include "CustomOutfit.h"
 
 bool CTrade::CanTrade()
 {
@@ -135,13 +139,6 @@ CInventoryOwner* CTrade::GetPartner() { return pPartner.inv_owner; }
 
 u32 CTrade::GetItemPrice(PIItem pItem, bool b_buying) const
 {
-    // computing base_cost
-    float base_cost = (float)pItem->Cost();
-
-    // computing condition factor
-    // for "dead" weapon we use 10% from base cost, for "good" weapon we use full base cost
-    const float condition_factor = 0.1f + pItem->GetCondition() * 0.9f; // powf(pItem->GetCondition() * 0.9f + .1f, 0.75f);
-
     // computing relation factor
     float relation_factor;
 
@@ -161,30 +158,76 @@ u32 CTrade::GetItemPrice(PIItem pItem, bool b_buying) const
         buying = b_buying;
     }
 
-    // computing action factor
-    const CTradeFactors* p_trade_factors;
+    // OP22: the price is built as in xrGame.dll of OP (CTrade::GetItemPrice, 0x180919210): the item and every part of it
+    // go by their own line in the list of the trader. Decisions 07.11 in DECISIONS.md.
+    auto& trade_params = pThis.inv_owner->trade_parameters();
+    const auto is_enabled = [&](const shared_str& section) {
+        return buying ? trade_params.enabled(CTradeParameters::action_buy(0), section) : trade_params.enabled(CTradeParameters::action_sell(0), section);
+    };
+    const auto action_factor = [&](const shared_str& section) -> float {
+        if (!is_enabled(section))
+            return 0.f;
+        const CTradeFactors& trade_factors =
+            buying ? trade_params.factors(CTradeParameters::action_buy(0), section) : trade_params.factors(CTradeParameters::action_sell(0), section);
 
-    if (buying)
+        float factor;
+        if (trade_factors.friend_factor() <= trade_factors.enemy_factor())
+            factor = trade_factors.friend_factor() + (trade_factors.enemy_factor() - trade_factors.friend_factor()) * (1.f - relation_factor);
+        else
+            factor = trade_factors.enemy_factor() + (trade_factors.friend_factor() - trade_factors.enemy_factor()) * relation_factor;
+
+        clamp(factor, _min(trade_factors.enemy_factor(), trade_factors.friend_factor()), _max(trade_factors.enemy_factor(), trade_factors.friend_factor()));
+        return factor;
+    };
+
+    // OP22: a forbidden item is worth nothing as a whole. OP zeroes only its own part and pays for the addons (decision 07.11)
+    const shared_str& item_section = pItem->object().cNameSect();
+    if (!is_enabled(item_section))
+        return 0;
+
+    // own cost without addons, ammo by the share of the box
+    float base_cost = (float)pItem->CInventoryItem::Cost();
+    if (const auto* ammo = smart_cast<CWeaponAmmo*>(pItem))
+        base_cost = base_cost / (float)ammo->m_boxSize * (float)ammo->m_boxCurr;
+
+    const auto section_cost = [](const shared_str& section) { return READ_IF_EXISTS(pSettings, r_float, section.c_str(), "cost", 0.f); };
+    const auto addon_part = [&](const shared_str& addon) { return addon.size() ? section_cost(addon) * action_factor(addon) : 0.f; };
+    const auto ammo_part = [&](const xr_vector<CCartridge>& magazine, int count) -> float {
+        if (magazine.empty() || count <= 0)
+            return 0.f;
+        const shared_str& ammo = magazine.back().m_ammoSect;
+        return section_cost(ammo) / READ_IF_EXISTS(pSettings, r_float, ammo.c_str(), "box_size", 1.f) * (float)count * action_factor(ammo);
+    };
+    const auto condition_factor = [](float condition) { return powf(condition * 0.9f + 0.1f, 0.75f); };
+
+    float parts_cost = 0.f;
+    if (auto* wpn = smart_cast<CWeapon*>(pItem))
     {
-        if (!pThis.inv_owner->trade_parameters().enabled(CTradeParameters::action_buy(0), pItem->object().cNameSect()))
-            return 0;
-        p_trade_factors = &pThis.inv_owner->trade_parameters().factors(CTradeParameters::action_buy(0), pItem->object().cNameSect());
+        if (wpn->IsScopeAttached() && wpn->ScopeAttachable())
+            parts_cost += addon_part(wpn->GetScopeName());
+        if (wpn->IsSilencerAttached() && wpn->SilencerAttachable())
+            parts_cost += addon_part(wpn->GetSilencerName());
+        if (wpn->IsGrenadeLauncherAttached() && wpn->GrenadeLauncherAttachable())
+            parts_cost += addon_part(wpn->GetGrenadeLauncherName());
+        parts_cost += ammo_part(wpn->m_magazine, wpn->GetAmmoElapsed());
+        if (auto* wgl = smart_cast<CWeaponMagazinedWGrenade*>(wpn))
+            parts_cost += ammo_part(wgl->m_magazine2, (int)wgl->m_magazine2.size());
     }
-    else
+    else if (auto* outfit = smart_cast<CCustomOutfit*>(pItem))
     {
-        if (!pThis.inv_owner->trade_parameters().enabled(CTradeParameters::action_sell(0), pItem->object().cNameSect()))
-            return 0;
-        p_trade_factors = &pThis.inv_owner->trade_parameters().factors(CTradeParameters::action_sell(0), pItem->object().cNameSect());
+        // the battery of the exoskeleton lives in op22_exo.script, OP keeps it in CExoOutfit
+        luabind::functor<LPCSTR> f_sect;
+        luabind::functor<float> f_charge;
+        if (ai().script_engine().functor("op22_exo.panel_section", f_sect) && ai().script_engine().functor("op22_exo.panel_charge", f_charge))
+        {
+            LPCSTR battery = f_sect(outfit->lua_game_object());
+            if (battery && battery[0] && xr_strcmp(battery, "-") != 0)
+            {
+                const shared_str section(battery);
+                parts_cost += section_cost(section) * action_factor(section) * condition_factor(f_charge(outfit->lua_game_object()));
+            }
+        }
     }
-    const CTradeFactors& trade_factors = *p_trade_factors;
-
-    float action_factor;
-    if (trade_factors.friend_factor() <= trade_factors.enemy_factor())
-        action_factor = trade_factors.friend_factor() + (trade_factors.enemy_factor() - trade_factors.friend_factor()) * (1.f - relation_factor);
-    else
-        action_factor = trade_factors.enemy_factor() + (trade_factors.friend_factor() - trade_factors.enemy_factor()) * relation_factor;
-
-    clamp(action_factor, _min(trade_factors.enemy_factor(), trade_factors.friend_factor()), _max(trade_factors.enemy_factor(), trade_factors.friend_factor()));
 
     // computing deficit_factor
     float deficit_factor = 1.f;
@@ -195,7 +238,7 @@ u32 CTrade::GetItemPrice(PIItem pItem, bool b_buying) const
         clamp(deficit_factor, READ_IF_EXISTS(pSettings, r_float, "trade", "min_deficit_factor", 1), READ_IF_EXISTS(pSettings, r_float, "trade", "max_deficit_factor", 1));
     }
 
-    const float original_result = base_cost * condition_factor * action_factor;
+    const float original_result = base_cost * condition_factor(pItem->GetCondition()) * action_factor(item_section) + parts_cost;
 
     // total price calculation
     float result = original_result * deficit_factor;
