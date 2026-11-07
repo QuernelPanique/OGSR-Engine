@@ -233,6 +233,7 @@ void CUIInventoryWnd::ActivatePropertiesBox()
     {
         UIPropertiesBox.AutoUpdateSize();
         UIPropertiesBox.BringAllToTop();
+        UIPropertiesBox.op22_SetTitle(CurrentIItem() ? CurrentIItem()->Name() : ""); // OP22
 
         Fvector2 cursor_pos;
         Frect vis_rect;

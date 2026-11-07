@@ -43,6 +43,7 @@ public:
     // OP22: вид по макету - тонкая полоса с заливкой до ползунка, значение справа (атрибут op22 в разметке)
     bool m_op22{};
     float m_op22_val_w{};
+    shared_str m_op22_fmt; // OP22: вид значения: pct - доля диапазона в %, int, f1, f2; пусто - как в движке
     class CUIStatic* m_op22_back{};
     class CUIStatic* m_op22_fill{};
     class CUIStatic* m_op22_val{};

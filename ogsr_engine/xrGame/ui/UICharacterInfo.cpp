@@ -133,6 +133,7 @@ void CUICharacterInfo::Init(float x, float y, float width, float height, CUIXml*
     {
         pItem = m_icons[eUIRelation] = xr_new<CUIStatic>();
         xml_init.InitStatic(*xml_doc, "relation_static", 0, pItem);
+        m_op22_rel_over_rep = !!xml_doc->ReadAttribInt("relation_static", 0, "op22_over_reputation", 0); // OP22
         pItem->SetElipsis(CUIStatic::eepEnd, 1);
         AttachChild(pItem);
         pItem->SetAutoDelete(true);
@@ -251,6 +252,8 @@ void CUICharacterInfo::SetRelation(ALife::ERelationType relation, CHARACTER_GOOD
 {
     // OP22: g_show_relation_in_ui
     const bool op22_show = op22_opt("g_show_relation_in_ui", true);
+    if (m_op22_rel_over_rep && m_icons[eUIReputation]) // OP22: отношение есть - репутацию на этом месте не показываем
+        m_icons[eUIReputation]->Show(false);
     m_icons[eUIRelation]->Show(op22_show);
     if (m_icons[eUIRelationCaption])
         m_icons[eUIRelationCaption]->Show(op22_show);

@@ -886,6 +886,7 @@ void CUICarBodyWnd::ActivatePropertiesBox()
     {
         m_pUIPropertiesBox->AutoUpdateSize();
         m_pUIPropertiesBox->BringAllToTop();
+        m_pUIPropertiesBox->op22_SetTitle(CurrentIItem() ? CurrentIItem()->Name() : ""); // OP22
 
         Fvector2 cursor_pos;
         Frect vis_rect;

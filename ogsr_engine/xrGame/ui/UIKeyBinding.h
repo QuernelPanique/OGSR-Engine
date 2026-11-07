@@ -23,4 +23,6 @@ protected:
     CUILabel m_header[3];
     CUIFrameWindow m_frame;
     CUIScrollView* m_scroll_wnd{};
+    // OP22: таблица по макету - op22_cols="2" (пары действий в строке, вторая колонка со сдвигом op22_col2_x), без групп
+    void op22_fill(CUIXml& xml_doc_ui, LPCSTR path_ui);
 };

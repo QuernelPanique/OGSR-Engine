@@ -24,6 +24,7 @@ protected:
     // Biography
     CUIScrollView* pUIBio;
     bool m_bForceUpdate;
+    bool m_op22_rel_over_rep{}; // OP22: у собеседника отношение на месте репутации (карточка диалога по макету)
     u16 m_ownerID;
 
     enum

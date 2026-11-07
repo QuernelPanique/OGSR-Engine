@@ -90,6 +90,8 @@ protected:
     CUIPropertiesBox* m_pUIPropertiesBox;
     CUIStatic* m_op22_total{}; // OP22: окно по макету - итог сделки и вес
     CUIStatic* m_op22_weight{};
+    CUIStatic* m_op22_other_sub{}; // OP22: «Торговец, Кордон» - подпись узла (атрибут prefix) и уровень
+    shared_str m_op22_sub_prefix;
 
     u32 m_iOurTradePrice;
     u32 m_iOthersTradePrice;

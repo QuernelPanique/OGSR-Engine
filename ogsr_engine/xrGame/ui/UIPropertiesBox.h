@@ -48,7 +48,14 @@ public:
 
     void AutoUpdateSize();
 
+public:
+    // OP22: меню по макету - заголовок над рамкой (название предмета), линия между пунктами, своя подсветка, ширина не меньше
+    void op22_SetTitle(LPCSTR t);
 protected:
+    class CUIStatic* m_op22_title{};
+    class CUIStatic* m_op22_line{};
+    shared_str m_op22_sel;
+    float m_op22_min_w{};
     CUIListBox m_UIListWnd;
 
     DECLARE_SCRIPT_REGISTER_FUNCTION

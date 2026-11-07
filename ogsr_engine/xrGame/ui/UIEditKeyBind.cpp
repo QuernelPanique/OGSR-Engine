@@ -7,6 +7,7 @@
 #include "UIColorAnimatorWrapper.h"
 #include "../xr_level_controller.h"
 #include "../object_broker.h"
+#include "UIStatic.h" // OP22
 
 CUIEditKeyBind::CUIEditKeyBind(bool bPrim)
 {
@@ -20,7 +21,11 @@ CUIEditKeyBind::CUIEditKeyBind(bool bPrim)
     m_keyboard = NULL;
     m_action = NULL;
 }
-CUIEditKeyBind::~CUIEditKeyBind() { delete_data(m_pAnimation); }
+CUIEditKeyBind::~CUIEditKeyBind()
+{
+    delete_data(m_pAnimation);
+    xr_delete(m_op22_box); // OP22
+}
 
 u32 cut_string_by_length(CGameFont* pFont, LPCSTR src, LPSTR dst, u32 dst_size, float length)
 {
@@ -51,10 +56,45 @@ u32 cut_string_by_length(CGameFont* pFont, LPCSTR src, LPSTR dst, u32 dst_size, 
     }
 }
 
+void CUIEditKeyBind::op22_setup(LPCSTR box_tex, float pad, LPCSTR empty, u32 empty_clr) // OP22
+{
+    m_op22_pad = pad;
+    m_op22_empty = empty;
+    m_op22_empty_clr = empty_clr;
+    m_op22_clr = m_lines.GetTextColor();
+    InitTexture("ui\\ct_tr_none");
+    if (box_tex && *box_tex && !m_op22_box)
+    {
+        m_op22_box = xr_new<CUIStatic>();
+        m_op22_box->InitTexture(box_tex);
+        m_op22_box->SetStretchTexture(true);
+    }
+    m_textPos.x = pad;
+    SetText(m_lines.GetText());
+}
+
+void CUIEditKeyBind::Draw() // OP22: рамка по ширине клавиши под текстом
+{
+    if (m_op22_box && !m_op22_is_empty)
+    {
+        float w = GetFont()->SizeOf_(m_lines.GetText());
+        UI()->ClientToScreenScaledWidth(w);
+        Fvector2 p;
+        GetAbsolutePos(p);
+        m_op22_box->SetWndPos(p);
+        m_op22_box->SetWndSize(Fvector2().set(w + 2.f * m_op22_pad, GetHeight()));
+        m_op22_box->Draw();
+    }
+    CUILabel::Draw();
+}
+
 void CUIEditKeyBind::SetText(const char* text)
 {
+    m_op22_is_empty = !text || 0 == xr_strlen(text) || (m_op22_empty.size() && !xr_strcmp(text, m_op22_empty.c_str()));
+    if (m_op22_empty.size()) // OP22
+        m_lines.SetTextColor(m_op22_is_empty ? m_op22_empty_clr : m_op22_clr);
     if (!text || 0 == xr_strlen(text))
-        CUILabel::SetText("---");
+        CUILabel::SetText(m_op22_empty.size() ? m_op22_empty.c_str() : "---");
     else
     {
         string256 buff;

@@ -1520,6 +1520,7 @@ bool CUIXmlInit::InitTrackBar(CUIXml& xml_doc, const char* path, int index, CUIT
         InitFont(xml_doc, fp, index, clr, fnt);
         pWnd->op22_setup(xml_doc.ReadAttribFlt(path, index, "val_w", 40.f), xml_doc.ReadAttribFlt(path, index, "knob_w", 11.f),
                          xml_doc.ReadAttribFlt(path, index, "knob_h", 19.f), xml_doc.ReadAttribFlt(path, index, "line_h", 4.f), fnt, clr);
+        pWnd->m_op22_fmt = xml_doc.ReadAttrib(path, index, "op22_fmt", ""); // OP22: вид значения
     }
 
     return true;

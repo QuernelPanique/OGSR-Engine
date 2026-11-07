@@ -71,7 +71,7 @@ void UILoadingScreen::Update(const int stagesCompleted, const int stagesTotal)
     if (loadingProgressPercent)
     {
         char buf[5];
-        xr_sprintf(buf, "%.0f%%", loadingProgress->GetProgressPos());
+        xr_sprintf(buf, "%.0f %%", loadingProgress->GetProgressPos()); // OP22: «67 %», как на макете
         loadingProgressPercent->SetText(buf);
     }
 

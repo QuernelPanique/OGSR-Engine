@@ -173,6 +173,19 @@ void CUITrackBar::SaveValue()
         sprintf_s(buf, "%d", m_i_val);
     }
 
+    if (m_op22 && m_op22_fmt.size()) // OP22: вид значения по макету
+    {
+        const float v = m_b_is_float ? m_f_val : float(m_i_val);
+        const float mn = m_b_is_float ? m_f_min : float(m_i_min), mx = m_b_is_float ? m_f_max : float(m_i_max);
+        if (m_op22_fmt == "pct")
+            sprintf_s(buf, "%d", iFloor((mx > mn ? (v - mn) / (mx - mn) : 0.f) * 100.f + 0.5f));
+        else if (m_op22_fmt == "int")
+            sprintf_s(buf, "%d", iFloor(v + 0.5f));
+        else if (m_op22_fmt == "f1")
+            sprintf_s(buf, "%.1f", v);
+        else if (m_op22_fmt == "f2")
+            sprintf_s(buf, "%.2f", v);
+    }
     if (m_op22) // OP22: значение справа, не на ползунке
     {
         m_op22_val->SetText(buf);
