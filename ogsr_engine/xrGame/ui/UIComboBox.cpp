@@ -12,6 +12,7 @@
 #include "UITextureMaster.h"
 #include "UIScrollBar.h"
 #include <dinput.h>
+#include "UIStatic.h" // OP22
 
 #define CB_HEIGHT 23.0f
 #define BTN_SIZE 23.0f
@@ -37,6 +38,7 @@ CUIComboBox* CUIComboBox::s_op22_top = nullptr; // OP22
 
 CUIComboBox::~CUIComboBox()
 {
+    xr_delete(m_op22_bg); // OP22
     if (s_op22_top == this) // OP22
         s_op22_top = nullptr;
 }
@@ -44,6 +46,13 @@ CUIComboBox::~CUIComboBox()
 // OP22: раскрытый список - без него, сам список позже (op22_draw_top)
 void CUIComboBox::Draw()
 {
+    if (m_op22_bg) // OP22: фон под текстом
+    {
+        Frect r;
+        GetAbsoluteRect(r);
+        m_op22_bg->SetWndRect(r.x1, r.y1, r.width(), m_op22_h);
+        m_op22_bg->Draw();
+    }
     if (m_eState == LIST_EXPANDED && m_list.IsShown())
     {
         m_list.Show(false);
@@ -82,36 +91,50 @@ void CUIComboBox::Init(float x, float y, float width)
 
     //.	width								-= BTN_SIZE;
 
-    CUIWindow::Init(x, y, width, CB_HEIGHT);
+    const float CBH = m_op22_tex.size() ? m_op22_h : CB_HEIGHT; // OP22
+    CUIWindow::Init(x, y, width, CBH);
     // Frame Line
-    m_frameLine.Init(0, 0, width, CB_HEIGHT);
+    m_frameLine.Init(0, 0, width, CBH);
     m_frameLine.InitEnabledState("ui_cb_linetext_e"); // horizontal by default
     m_frameLine.InitHighlightedState("ui_cb_linetext_h");
 
     // Edit Box on left side of frame line
-    m_text.Init(0, 0, width, CB_HEIGHT);
-    m_text.SetTextPosX(4.f); // OP22: value text was clipped at the left edge of the field
+    m_text.Init(0, 0, width, CBH);
+    m_text.SetTextPosX(m_op22_tex.size() ? 8.f : 4.f); // OP22: value text was clipped at the left edge of the field
+    if (m_op22_tex.size()) // OP22: вид по макету
+    {
+        m_frameLine.Show(false);
+        if (!m_op22_bg)
+            m_op22_bg = xr_new<CUIStatic>();
+        m_op22_bg->InitTexture(m_op22_tex.c_str());
+        m_op22_bg->SetStretchTexture(true);
+    }
     m_text.SetTextColor(m_textColor[0]);
     m_text.Enable(false);
     // Button on right side of frame line
     //.	m_btn.Init							("ui_cb_button", width, 0, BTN_SIZE, BTN_SIZE);
 
     // height of list equal to height of ONE element
-    float item_height = CUITextureMaster::GetTextureHeight("ui_cb_listline_b");
-    m_list.Init(0, CB_HEIGHT, width, item_height * m_iListHeight + 1); // to fix issue with 1px scroll - add 1 px to height
+    float item_height = m_op22_tex.size() ? CBH * 0.85f : CUITextureMaster::GetTextureHeight("ui_cb_listline_b");
+    m_list.Init(0, CBH, width, item_height * m_iListHeight + 1); // to fix issue with 1px scroll - add 1 px to height
     m_list.Init();
     m_list.SetTextColor(m_textColor[0]);
-    m_list.SetSelectionTexture("ui_cb_listline");
+    m_list.SetSelectionTexture(m_op22_tex.size() ? "ui\\ct_tr_listsel" : "ui_cb_listline");
     m_list.SetItemHeight(item_height);
     // frame(texture) for list
-    m_frameWnd.Init(0, CB_HEIGHT, width, m_list.GetItemHeight() * m_iListHeight);
-    m_frameWnd.InitTexture("ui_cb_listbox");
+    m_frameWnd.Init(0, CBH, width, m_list.GetItemHeight() * m_iListHeight);
+    m_frameWnd.InitTexture(m_op22_tex.size() ? "ui\\ct_tr_ddframe" : "ui_cb_listbox");
 
     m_list.Show(false);
     m_frameWnd.Show(false);
 }
 
-void CUIComboBox::Init(float x, float y, float width, float height) { this->Init(x, y, width); }
+void CUIComboBox::Init(float x, float y, float width, float height)
+{
+    if (m_op22_tex.size()) // OP22: высота из разметки
+        m_op22_h = height;
+    this->Init(x, y, width);
+}
 
 #include "uilistboxitem.h"
 CUIListBoxItem* CUIComboBox::AddItem_(LPCSTR str, int _data)

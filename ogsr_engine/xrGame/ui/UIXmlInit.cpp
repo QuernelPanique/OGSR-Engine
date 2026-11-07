@@ -250,6 +250,15 @@ bool CUIXmlInit::InitCheck(CUIXml& xml_doc, LPCSTR path, int index, CUICheckButt
     InitStatic(xml_doc, path, index, pWnd);
     InitOptionsItem(xml_doc, path, index, pWnd);
 
+    shared_str op22_tex = xml_doc.ReadAttrib(path, index, "op22_tex", ""); // OP22: квадрат по макету
+    if (op22_tex.size())
+    {
+        const Frect r = pWnd->GetWndRect();
+        pWnd->m_op22 = true;
+        pWnd->InitTexture(op22_tex.c_str());
+        pWnd->SetWndRect(r);
+    }
+
     return true;
 }
 
@@ -1487,6 +1496,17 @@ bool CUIXmlInit::InitTrackBar(CUIXml& xml_doc, const char* path, int index, CUIT
     float max_xml = xml_doc.ReadAttribFlt(path, index, "max", 0.0f);
     pWnd->SetMax(max_xml);
 
+    if (xml_doc.ReadAttribInt(path, index, "op22", 0) == 1) // OP22: вид по макету
+    {
+        string512 fp;
+        u32 clr;
+        CGameFont* fnt = nullptr;
+        strconcat(sizeof(fp), fp, path, ":value");
+        InitFont(xml_doc, fp, index, clr, fnt);
+        pWnd->op22_setup(xml_doc.ReadAttribFlt(path, index, "val_w", 40.f), xml_doc.ReadAttribFlt(path, index, "knob_w", 11.f),
+                         xml_doc.ReadAttribFlt(path, index, "knob_h", 19.f), xml_doc.ReadAttribFlt(path, index, "line_h", 4.f), fnt, clr);
+    }
+
     return true;
 }
 
@@ -1496,6 +1516,7 @@ bool CUIXmlInit::InitComboBox(CUIXml& xml_doc, const char* path, int index, CUIC
     CGameFont* pFont;
 
     pWnd->SetListLength(xml_doc.ReadAttribInt(path, index, "list_length", 4));
+    pWnd->m_op22_tex = xml_doc.ReadAttrib(path, index, "op22_tex", ""); // OP22: вид по макету
 
     InitWindow(xml_doc, path, index, pWnd);
     InitOptionsItem(xml_doc, path, index, pWnd);

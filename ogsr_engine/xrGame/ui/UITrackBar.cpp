@@ -4,6 +4,7 @@
 #include "UIFrameLineWnd.h"
 #include "UI3tButton.h"
 #include "UITextureMaster.h"
+#include "UIStatic.h" // OP22
 #include "..\..\xr_3da\xr_input.h"
 
 #define DEF_CONTROL_HEIGHT 21
@@ -92,7 +93,64 @@ void CUITrackBar::SetCurrentValue()
 }
 
 //. #include "../HUDmanager.h"
-void CUITrackBar::Draw() { CUIWindow::Draw(); }
+void CUITrackBar::Draw()
+{
+    if (m_op22) // OP22: полоса и заливка под ползунком, значение справа
+    {
+        Frect r;
+        GetAbsoluteRect(r);
+        const float lh = m_op22_back->GetHeight();
+        const float y = r.y1 + (r.height() - lh) / 2;
+        const float knob_x = m_pSlider->GetWndPos().x;
+        m_op22_back->SetWndPos(r.x1, y);
+        m_op22_back->SetWidth(op22_track_w());
+        m_op22_back->Draw();
+        m_op22_fill->SetWndPos(r.x1, y);
+        m_op22_fill->SetWidth(_max(0.f, knob_x));
+        if (knob_x > 0.5f)
+            m_op22_fill->Draw();
+        m_op22_val->SetWndPos(r.x1 + op22_track_w(), r.y1);
+        m_op22_val->SetHeight(r.height());
+        m_op22_val->Draw();
+    }
+    CUIWindow::Draw();
+}
+
+void CUITrackBar::op22_setup(float val_w, float knob_w, float knob_h, float line_h, CGameFont* font, u32 color)
+{
+    m_op22 = true;
+    m_op22_val_w = val_w;
+    m_pFrameLine->Show(false);
+    m_pFrameLine_d->Show(false);
+    for (auto [st, tex] : {std::pair<CUIStatic**, LPCSTR>{&m_op22_back, "ui\\ct_tr_trk_back"}, {&m_op22_fill, "ui\\ct_tr_trk_fill"}, {&m_op22_val, nullptr}})
+    {
+        if (!*st)
+            *st = xr_new<CUIStatic>();
+        if (tex)
+        {
+            (*st)->InitTexture(tex);
+            (*st)->SetStretchTexture(true);
+            (*st)->SetWndSize(Fvector2().set(10.f, line_h));
+        }
+    }
+    m_op22_val->SetWndSize(Fvector2().set(val_w, GetHeight()));
+    m_op22_val->SetTextAlignment(CGameFont::alRight);
+    m_op22_val->SetVTextAlignment(valCenter);
+    if (font)
+        m_op22_val->SetFont(font);
+    m_op22_val->SetTextColor(color);
+    m_pSlider->InitTexture("ui\\ct_tr_knob");
+    m_pSlider->SetStretchTexture(true);
+    m_pSlider->SetWndSize(Fvector2().set(knob_w, knob_h));
+    m_pSlider->SetWndPos(Fvector2().set(0.f, (GetHeight() - knob_h) / 2)); // значение ставит SetCurrentValue: здесь ещё нет родителя
+}
+
+CUITrackBar::~CUITrackBar()
+{
+    xr_delete(m_op22_back); // OP22
+    xr_delete(m_op22_fill);
+    xr_delete(m_op22_val);
+}
 
 void CUITrackBar::SaveValue()
 {
@@ -115,7 +173,13 @@ void CUITrackBar::SaveValue()
         sprintf_s(buf, "%d", m_i_val);
     }
 
-    m_pSlider->SetText(buf);
+    if (m_op22) // OP22: значение справа, не на ползунке
+    {
+        m_op22_val->SetText(buf);
+        m_pSlider->SetText("");
+    }
+    else
+        m_pSlider->SetText(buf);
     GetMessageTarget()->SendMessage(this, TRACKBAR_CHANGED);
 }
 
@@ -192,7 +256,7 @@ void CUITrackBar::UpdatePosRelativeToMouse()
     }
 
     float btn_width = m_pSlider->GetWidth();
-    float window_width = GetWidth();
+    float window_width = op22_track_w(); // OP22
     float fpos = cursor_pos.x;
 
     if (GetInvert())
@@ -256,7 +320,7 @@ void CUITrackBar::UpdatePos()
 #endif
 
     float btn_width = m_pSlider->GetWidth();
-    float window_width = GetWidth();
+    float window_width = op22_track_w(); // OP22
     float free_space = window_width - btn_width;
     Fvector2 pos = m_pSlider->GetWndPos();
 

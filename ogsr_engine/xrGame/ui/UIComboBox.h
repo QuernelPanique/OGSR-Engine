@@ -84,6 +84,14 @@ protected:
     int m_backup_itoken_id{};
 
     CUI_IB_FrameLineWnd m_frameLine;
+
+public:
+    // OP22: вид по макету - фон одной текстурой точного размера (op22_tex), высота из разметки
+    shared_str m_op22_tex;
+    float m_op22_h{};
+    CUIStatic* m_op22_bg{};
+
+protected:
     CUILabel m_text;
     CUIFrameWindow m_frameWnd;
 

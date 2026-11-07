@@ -38,6 +38,19 @@ public:
 
 protected:
     void UpdatePos();
+
+public:
+    // OP22: вид по макету - тонкая полоса с заливкой до ползунка, значение справа (атрибут op22 в разметке)
+    bool m_op22{};
+    float m_op22_val_w{};
+    class CUIStatic* m_op22_back{};
+    class CUIStatic* m_op22_fill{};
+    class CUIStatic* m_op22_val{};
+    virtual ~CUITrackBar();
+    void op22_setup(float val_w, float knob_w, float knob_h, float line_h, class CGameFont* font, u32 color);
+    float op22_track_w() const { return m_op22 ? GetWidth() - m_op22_val_w : GetWidth(); }
+
+protected:
     void UpdatePosRelativeToMouse();
 
     CUI3tButton* m_pSlider;

@@ -6,6 +6,7 @@
 class CUICheckButton : public CUI3tButton, public CUIOptionsItem
 {
 public:
+    bool m_op22{}; // OP22: вид по макету (атрибут op22_tex)
     CUICheckButton(void);
     virtual ~CUICheckButton(void);
 

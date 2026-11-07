@@ -52,6 +52,12 @@ void CUICheckButton::Init(float x, float y, float width, float height)
 
 void CUICheckButton::InitTexture(LPCSTR tex_name)
 {
+    if (m_op22) // OP22: квадрат по макету, текстура на весь размер окна
+    {
+        CUI3tButton::InitTexture(tex_name);
+        SetStretchTexture(true);
+        return;
+    }
     CUI3tButton::InitTexture(tex_name);
     Frect r = m_background.GetE()->GetStaticItem()->GetOriginalRect();
     CUI3tButton::SetTextX(r.width());
