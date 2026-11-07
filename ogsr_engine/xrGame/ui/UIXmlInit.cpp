@@ -596,6 +596,7 @@ bool CUIXmlInit::InitListWnd(CUIXml& xml_doc, LPCSTR path, int index, CUIListWnd
     }
 
     pWnd->SetScrollBarProfile(xml_doc.ReadAttrib(path, index, "scroll_profile", "default"));
+    pWnd->m_op22_sel = xml_doc.ReadAttrib(path, index, "op22_sel", ""); // OP22
     pWnd->Init(x, y, width, height, item_height);
     pWnd->EnableActiveBackground(!!active_background);
 

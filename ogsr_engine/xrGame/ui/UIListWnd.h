@@ -138,6 +138,11 @@ protected:
     bool m_bAlwaysShowScroll_enable;
     bool m_bAlwaysShowScroll;
     bool m_bActiveBackground;
+
+public:
+    shared_str m_op22_sel; // OP22: своя подсветка строки на всю высоту (атрибут op22_sel у списка)
+
+protected:
     // Если хотим принудительно выставлять фокус, то поднять этот флаг
     bool m_bForceFocusedItem;
 

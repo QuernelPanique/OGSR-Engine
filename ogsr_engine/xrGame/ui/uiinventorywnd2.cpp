@@ -10,6 +10,8 @@
 #include "../hudmanager.h"
 #include "../inventory.h"
 #include "UIInventoryUtilities.h"
+#include "../string_table.h" // OP22
+#include <format> // OP22
 
 #include "UICellItem.h"
 #include "UICellItemFactory.h"
@@ -68,6 +70,10 @@ void CUIInventoryWnd::InitInventory()
         return;
 
     m_pInv = &pInvOwner->inventory();
+
+    if (m_op22_caption) // OP22: «Меченый, ранг: опытный»
+        m_op22_caption->SetText(std::format("{}, {}: {}", pInvOwner->Name(), *CStringTable().translate("ui_st_rank"),
+                                            *CStringTable().translate(InventoryUtilities::GetRankAsText(pInvOwner->Rank()))).c_str());
 
     int bag_scroll = m_pUIBagList->ScrollPos();
 
@@ -152,7 +158,8 @@ void CUIInventoryWnd::InitInventory()
         if (!m_op22_lists[s])
             continue;
         if (PIItem it = m_pInv->m_slots[s].m_pIItem)
-            m_op22_lists[s]->SetItem(create_cell_item(it));
+            if (!it->m_flags.test(CInventoryItem::FIHiddenForInventory))
+                m_op22_lists[s]->SetItem(create_cell_item(it));
     }
 
     PIItem _outfit = m_pInv->m_slots[OUTFIT_SLOT].m_pIItem;
@@ -179,7 +186,7 @@ void CUIInventoryWnd::InitInventory()
         }
     }
     // fake
-    _itm = m_pInv->m_slots[GRENADE_SLOT].m_pIItem;
+    _itm = m_op22_lists[GRENADE_SLOT] ? nullptr : m_pInv->m_slots[GRENADE_SLOT].m_pIItem; // OP22: у гранаты свой слот
     if (_itm)
     {
         if (!_itm->m_flags.test(CInventoryItem::FIHiddenForInventory))
@@ -634,4 +641,12 @@ void CUIInventoryWnd::op22_quick_fill()
     }
 }
 
-void CUIInventoryWnd::UpdateWeight() { InventoryUtilities::UpdateWeight(UIBagWnd, true); }
+void CUIInventoryWnd::UpdateWeight()
+{
+    if (m_op22_weight || m_op22_weight_bar) // OP22: вес по макету
+    {
+        InventoryUtilities::op22_UpdateWeight(m_op22_weight, m_op22_weight_bar);
+        return;
+    }
+    InventoryUtilities::UpdateWeight(UIBagWnd, true);
+}

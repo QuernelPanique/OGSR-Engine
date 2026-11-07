@@ -121,6 +121,43 @@ void CUIInventoryWnd::Init()
     UIProgressBack.AttachChild(&UIProgressBarRadiation);
     xml_init.InitProgressBar(uiXml, "progress_bar_radiation", 0, &UIProgressBarRadiation);
 
+    // OP22: окно по макету
+    if (uiXml.NavigateToNode("progress_bar_satiety", 0))
+    {
+        m_op22_satiety = xr_new<CUIProgressBar>();
+        m_op22_satiety->SetAutoDelete(true);
+        UIProgressBack.AttachChild(m_op22_satiety);
+        xml_init.InitProgressBar(uiXml, "progress_bar_satiety", 0, m_op22_satiety);
+    }
+    if (uiXml.NavigateToNode("progress_bar_thirst", 0))
+    {
+        m_op22_thirst = xr_new<CUIProgressBar>();
+        m_op22_thirst->SetAutoDelete(true);
+        UIProgressBack.AttachChild(m_op22_thirst);
+        xml_init.InitProgressBar(uiXml, "progress_bar_thirst", 0, m_op22_thirst);
+    }
+    if (uiXml.NavigateToNode("op22_weight", 0))
+    {
+        m_op22_weight = xr_new<CUIStatic>();
+        m_op22_weight->SetAutoDelete(true);
+        AttachChild(m_op22_weight);
+        xml_init.InitStatic(uiXml, "op22_weight", 0, m_op22_weight);
+    }
+    if (uiXml.NavigateToNode("op22_weight_bar", 0))
+    {
+        m_op22_weight_bar = xr_new<CUIProgressBar>();
+        m_op22_weight_bar->SetAutoDelete(true);
+        AttachChild(m_op22_weight_bar);
+        xml_init.InitProgressBar(uiXml, "op22_weight_bar", 0, m_op22_weight_bar);
+    }
+    if (uiXml.NavigateToNode("op22_caption", 0))
+    {
+        m_op22_caption = xr_new<CUIStatic>();
+        m_op22_caption->SetAutoDelete(true);
+        AttachChild(m_op22_caption);
+        xml_init.InitStatic(uiXml, "op22_caption", 0, m_op22_caption);
+    }
+
     UIPersonalWnd.AttachChild(&UIStaticPersonal);
     xml_init.InitStatic(uiXml, "static_personal", 0, &UIStaticPersonal);
     //	UIStaticPersonal.Init				(1, UIPersonalWnd.GetHeight() - 175, 260, 260);
@@ -251,6 +288,7 @@ void CUIInventoryWnd::Init()
             {TORCH_SLOT, "dragdrop_torch"},           {NIGHT_VISION_SLOT, "dragdrop_detector_anoms"}, // ОП: 11 - детектор аномалий
             {BIODETECTOR_SLOT, "dragdrop_pnv"},       // ОП: 12 - ПНВ
             {OP22_SHOTGUN_SLOT, "dragdrop_secondwpn"}, {OP22_SHOTGUN_SLOT, "dragdrop_shotgun"}, {OP22_BIODEV_SLOT, "dragdrop_biodev"},
+            {GRENADE_SLOT, "dragdrop_grenade"}, {BOLT_SLOT, "dragdrop_bolt"}, {PDA_SLOT, "dragdrop_pda"}, // OP22: окно по макету
         };
         for (const auto& [slot, node] : op22_slots)
         {
@@ -471,6 +509,14 @@ void CUIInventoryWnd::Update()
 
         v = pEntityAlive->conditions().GetRadiation() * 100.0f;
         UIProgressBarRadiation.SetProgressPos(v);
+
+        if (CActor* op22_a = smart_cast<CActor*>(pEntityAlive)) // OP22: сытость и жажда
+        {
+            if (m_op22_satiety)
+                m_op22_satiety->SetProgressPos(op22_a->conditions().GetSatiety() * 100.0f);
+            if (m_op22_thirst)
+                m_op22_thirst->SetProgressPos(op22_a->conditions().GetThirst() * 100.0f);
+        }
 
         CInventoryOwner* pOurInvOwner = smart_cast<CInventoryOwner*>(pEntityAlive);
 

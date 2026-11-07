@@ -349,6 +349,8 @@ void CUIListWnd::DrawActiveBackFrame(const Frect& rect, CUIListItem* itm)
 {
     Fvector2 _pos;
     _pos.set(rect.left, rect.top + (itm->GetIndex() - m_iFirstShownIndex) * GetItemHeight());
+    if (m_op22_sel.size()) // OP22: подсветка на всю высоту строки
+        m_ActiveBackgroundFrame->SetHeight(GetItemHeight());
     float _d = GetItemHeight() - m_ActiveBackgroundFrame->GetHeight();
     if (_d > 0)
         _pos.y += (float)iFloor(_d / 2.0f);
@@ -624,7 +626,7 @@ void CUIListWnd::create_active_back()
         return;
 
     m_ActiveBackgroundFrame = xr_new<CUIFrameLineWnd>();
-    m_ActiveBackgroundFrame->Init("ui_listline", 0, 0, GetWidth(), 18);
+    m_ActiveBackgroundFrame->Init(m_op22_sel.size() ? m_op22_sel.c_str() : "ui_listline", 0, 0, GetWidth(), m_op22_sel.size() ? GetItemHeight() : 18);
 }
 
 void CUIListWnd::destroy_active_back()

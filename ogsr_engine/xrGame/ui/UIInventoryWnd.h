@@ -151,6 +151,12 @@ protected:
     CUIStatic* m_op22_bat_icon{};
     CUIStatic* m_op22_bat_text{};
     CUIProgressBar* m_op22_bat_bar{};
+    // OP22: окно по макету - шкалы сытости и жажды, вес текстом и шкалой, подпись «имя, ранг»
+    CUIProgressBar* m_op22_satiety{};
+    CUIProgressBar* m_op22_thirst{};
+    CUIStatic* m_op22_weight{};
+    CUIProgressBar* m_op22_weight_bar{};
+    CUIStatic* m_op22_caption{};
     u32 m_op22_bat_next{};
     shared_str m_op22_bat_sect;
     void op22_update_battery();

@@ -3,6 +3,7 @@
 #include "../WeaponAmmo.h"
 #include "../UIStaticItem.h"
 #include "UIStatic.h"
+#include "UIProgressBar.h" // OP22
 #include "xrServer_Objects_ALife.h"
 #include "../eatable_item.h"
 #include "../Level.h"
@@ -289,6 +290,27 @@ LPCSTR InventoryUtilities::GetTimePeriodAsString(LPSTR _buff, u32 buff_sz, ALife
 }
 
 //////////////////////////////////////////////////////////////////////////
+
+// OP22: вес в стиле макета - «38,6 / 60 кг», красный при перегрузе, и шкала заполнения
+void InventoryUtilities::op22_UpdateWeight(CUIStatic* wnd, CUIProgressBar* bar)
+{
+    CInventoryOwner* pInvOwner = smart_cast<CInventoryOwner*>(Level().CurrentEntity());
+    if (!pInvOwner)
+        return;
+    const float total = pInvOwner->inventory().CalcTotalWeight();
+    const float max = pInvOwner->MaxCarryWeight();
+    if (wnd)
+    {
+        string128 buf{};
+        sprintf_s(buf, "%s%.1f / %.0f %s", total > max ? "%c[red]" : "", total, max, *CStringTable().translate("st_kg"));
+        for (char* c = buf; *c; ++c)
+            if (*c == '.')
+                *c = ',';
+        wnd->SetText(buf);
+    }
+    if (bar)
+        bar->SetProgressPos(max > 0.f ? _min(100.f, total * 100.f / max) : 0.f);
+}
 
 void InventoryUtilities::UpdateWeight(CUIStatic& wnd, bool withPrefix)
 {

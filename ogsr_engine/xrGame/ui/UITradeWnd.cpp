@@ -168,6 +168,16 @@ void CUITradeWnd::Init()
     AttachChild(&m_uidata->UIToTalkButton);
     xml_init.Init3tButton(uiXml, "button", 1, &m_uidata->UIToTalkButton);
 
+    for (auto [node, wnd] : {std::pair<LPCSTR, CUIStatic**>{"op22_total", &m_op22_total}, {"op22_weight", &m_op22_weight}}) // OP22
+    {
+        if (!uiXml.NavigateToNode(node, 0))
+            continue;
+        *wnd = xr_new<CUIStatic>();
+        (*wnd)->SetAutoDelete(true);
+        AttachChild(*wnd);
+        xml_init.InitStatic(uiXml, node, 0, *wnd);
+    }
+
     m_pUIPropertiesBox = xr_new<CUIPropertiesBox>();
     m_pUIPropertiesBox->SetAutoDelete(true);
     AttachChild(m_pUIPropertiesBox);
@@ -580,8 +590,25 @@ void CUITradeWnd::UpdatePrices()
     }
 
     static const char* StMoneyDescr = CStringTable().translate("ui_st_money_descr").c_str();
-    m_uidata->UIOurPriceCaption.GetPhraseByIndex(2)->str = std::format("{} {}", m_iOurTradePrice, StMoneyDescr).c_str();
-    m_uidata->UIOthersPriceCaption.GetPhraseByIndex(2)->str = std::format("{} {}", m_iOthersTradePrice, StMoneyDescr).c_str();
+    if (m_op22_total) // OP22: «+3 200 р.», «-4 100 р.», итог сделки
+    {
+        auto money = [](int v, bool sign) {
+            std::string d = std::to_string(v < 0 ? -v : v);
+            for (int i = int(d.size()) - 3; i > 0; i -= 3)
+                d.insert(size_t(i), " ");
+            return std::string(v < 0 ? "-" : (sign && v > 0 ? "+" : "")) + d + " " + StMoneyDescr;
+        };
+        m_uidata->UIOurPriceCaption.GetPhraseByIndex(2)->str = money(int(m_iOurTradePrice), true).c_str();
+        m_uidata->UIOthersPriceCaption.GetPhraseByIndex(2)->str = money(-int(m_iOthersTradePrice), true).c_str();
+        m_op22_total->SetText(money(int(m_iOurTradePrice) - int(m_iOthersTradePrice), true).c_str());
+        if (m_op22_weight)
+            InventoryUtilities::op22_UpdateWeight(m_op22_weight, nullptr);
+    }
+    else
+    {
+        m_uidata->UIOurPriceCaption.GetPhraseByIndex(2)->str = std::format("{} {}", m_iOurTradePrice, StMoneyDescr).c_str();
+        m_uidata->UIOthersPriceCaption.GetPhraseByIndex(2)->str = std::format("{} {}", m_iOthersTradePrice, StMoneyDescr).c_str();
+    }
     m_uidata->UIOurMoneyStatic.SetText(std::format("{} {}", m_pInvOwner->get_money(), StMoneyDescr).c_str());
     m_uidata->UIOtherMoneyStatic.SetText(m_pOthersInvOwner->InfinitiveMoney() ? "---" : std::format("{} {}", m_pOthersInvOwner->get_money(), StMoneyDescr).c_str());
 }

@@ -66,6 +66,9 @@ protected:
     CUICharacterInfo* m_pUICharacterInfoRight;
     CUIPropertiesBox* m_pUIPropertiesBox;
     CUI3tButton* m_pUITakeAll;
+    CUI3tButton* m_op22_exit{}; // OP22: окно по макету
+    CUIStatic* m_op22_weight{};
+    class CUIProgressBar* m_op22_weight_bar{};
 
 public:
     CUICellItem* m_pCurrentCellItem;

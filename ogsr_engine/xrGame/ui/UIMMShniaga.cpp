@@ -11,6 +11,7 @@
 #include "../object_broker.h"
 #include "../Actor.h"
 #include "../saved_game_wrapper.h"
+#include "../UICursor.h" // OP22
 
 extern string_path g_last_saved_game;
 
@@ -84,6 +85,24 @@ void CUIMMShniaga::Init(CUIXml& xml_doc, LPCSTR path)
     CUIXmlInit::InitStatic(xml_doc, _path, 0, m_gratings[1]);
     strconcat(sizeof(_path), _path, path, ":buttons_region");
     CUIXmlInit::InitScrollView(xml_doc, _path, 0, m_view);
+    // OP22: вторая колонка для выбора сложности и её подложка
+    strconcat(sizeof(_path), _path, path, ":new_game_panel");
+    if (xml_doc.NavigateToNode(_path, 0))
+    {
+        m_op22_panel = xr_new<CUIStatic>();
+        m_op22_panel->SetAutoDelete(true);
+        AttachChild(m_op22_panel);
+        CUIXmlInit::InitStatic(xml_doc, _path, 0, m_op22_panel);
+        m_op22_panel->Show(false);
+    }
+    strconcat(sizeof(_path), _path, path, ":buttons_region_new");
+    if (xml_doc.NavigateToNode(_path, 0))
+    {
+        m_view_new = xr_new<CUIScrollView>();
+        m_view_new->SetAutoDelete(true);
+        AttachChild(m_view_new);
+        CUIXmlInit::InitScrollView(xml_doc, _path, 0, m_view_new);
+    }
     strconcat(sizeof(_path), _path, path, ":shniaga:magnifire:y_offset");
     m_offset = xml_doc.ReadFlt(_path, 0, 0);
 
@@ -140,6 +159,15 @@ void CUIMMShniaga::CreateList(xr_vector<CUIStatic*>& lst, CUIXml& xml_doc, LPCST
 
     height = xml_doc.ReadAttribFlt(path, 0, "btn_height");
     R_ASSERT(height);
+    // OP22: стиль макета - текст слева с отступом, текстура обычной и выбранной кнопки, цвет текста выбранной
+    if (xml_doc.ReadAttribInt(path, 0, "op22", 0) == 1)
+    {
+        m_op22 = true;
+        m_op22_tx = xml_doc.ReadAttribFlt(path, 0, "text_x", 0.f);
+        m_op22_tex[0] = xml_doc.ReadAttrib(path, 0, "tex", "");
+        m_op22_tex[1] = xml_doc.ReadAttrib(path, 0, "tex_sel", "");
+        m_op22_clr[1] = color_argb(255, xml_doc.ReadAttribInt(path, 0, "sel_r", 23), xml_doc.ReadAttribInt(path, 0, "sel_g", 18), xml_doc.ReadAttribInt(path, 0, "sel_b", 4));
+    }
 
     CUIXmlInit::InitFont(xml_doc, path, 0, color, pF);
     R_ASSERT(pF);
@@ -158,8 +186,18 @@ void CUIMMShniaga::CreateList(xr_vector<CUIStatic*>& lst, CUIXml& xml_doc, LPCST
         if (pF)
             st->SetFont(pF);
         st->SetTextColor(color);
-        st->SetTextAlignment(CGameFont::alCenter);
+        st->SetTextAlignment(m_op22 ? CGameFont::alLeft : CGameFont::alCenter);
         st->SetVTextAlignment(valCenter);
+        if (m_op22)
+        {
+            m_op22_clr[0] = color;
+            st->SetTextX(m_op22_tx);
+            if (m_op22_tex[0].size())
+            {
+                st->InitTexture(m_op22_tex[0].c_str());
+                st->SetStretchTexture(true);
+            }
+        }
         st->SetWindowName(xml_doc.ReadAttrib("btn", i, "name"));
         st->SetMessageTarget(this);
 
@@ -168,9 +206,27 @@ void CUIMMShniaga::CreateList(xr_vector<CUIStatic*>& lst, CUIXml& xml_doc, LPCST
     xml_doc.SetLocalRoot(xml_doc.GetRoot());
 }
 
+// OP22: выбранная кнопка залита (текстура tex_sel), остальные обычные
+void CUIMMShniaga::op22_style(xr_vector<CUIStatic*>& lst, CUIWindow* sel)
+{
+    if (!m_op22)
+        return;
+    for (CUIStatic* st : lst)
+    {
+        const bool on = st == sel;
+        if (m_op22_tex[on].size())
+            st->InitTexture(m_op22_tex[on].c_str());
+        st->SetTextColor(m_op22_clr[on]);
+    }
+}
+
 void CUIMMShniaga::ShowMain()
 {
     m_page = 0;
+    if (m_view_new)
+        m_view_new->Clear();
+    if (m_op22_panel)
+        m_op22_panel->Show(false);
     m_view->Clear();
     for (u32 i = 0; i < m_buttons.size(); i++)
         m_view->AddWindow(m_buttons[i], false);
@@ -181,6 +237,19 @@ void CUIMMShniaga::ShowMain()
 void CUIMMShniaga::ShowNewGame()
 {
     m_page = 1;
+    if (m_view_new) // OP22: главное меню остаётся слева, «Новая игра» выбрана, сложность - во второй колонке
+    {
+        for (CUIStatic* st : m_buttons)
+            if (!xr_strcmp("btn_new_game", st->WindowName()))
+                op22_style(m_buttons, st);
+        if (m_op22_panel)
+            m_op22_panel->Show(true);
+        m_view_new->Clear();
+        for (u32 i = 0; i < m_buttons_new.size(); i++)
+            m_view_new->AddWindow(m_buttons_new[i], false);
+        SendMessage(m_buttons_new[0], STATIC_FOCUS_RECEIVED);
+        return;
+    }
     m_view->Clear();
     for (u32 i = 0; i < m_buttons_new.size(); i++)
         m_view->AddWindow(m_buttons_new[i], false);
@@ -221,6 +290,7 @@ void CUIMMShniaga::SelectBtn(int btn)
     else
         m_selected = m_buttons_new[btn];
     m_selected_btn = btn;
+    op22_style(0 == m_page ? m_buttons : m_buttons_new, m_selected); // OP22
     ProcessEvent(E_Begin);
 }
 
@@ -281,6 +351,17 @@ bool CUIMMShniaga::OnMouse(float x, float y, EUIMessages mouse_action)
 {
     if (WINDOW_LBUTTON_DOWN == mouse_action)
     {
+        // OP22: щелчок мимо колонки сложности закрывает её, ничего не запуская
+        if (1 == m_page && m_view_new)
+        {
+            Frect r;
+            m_view_new->GetAbsoluteRect(r);
+            if (!r.in(GetUICursor()->GetCursorPosition()))
+            {
+                ShowMain();
+                return true;
+            }
+        }
         OnBtnClick();
     }
 

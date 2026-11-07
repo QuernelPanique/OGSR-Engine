@@ -61,6 +61,14 @@ protected:
     float m_mag_pos;
     float m_offset{};
 
+    // OP22: кнопки в стиле макета: слева, своя текстура обычной и выбранной, сложность - во второй колонке
+    bool m_op22{};
+    float m_op22_tx{};
+    shared_str m_op22_tex[2];
+    u32 m_op22_clr[2]{};
+    CUIScrollView* m_view_new{};
+    CUIStatic* m_op22_panel{};
+    void op22_style(xr_vector<CUIStatic*>& lst, CUIWindow* sel);
     xr_vector<CUIStatic*> m_buttons;
     xr_vector<CUIStatic*> m_buttons_new;
     int m_selected_btn;

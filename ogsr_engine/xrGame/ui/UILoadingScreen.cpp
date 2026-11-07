@@ -44,6 +44,7 @@ void UILoadingScreen::Initialize()
     }
 
     loadingLogo = UIHelper::CreateStatic(uiXml, "loading_logo", this, false);
+    UIHelper::CreateStatic(uiXml, "op22_panel", this, false); // OP22: панель над картинкой уровня, под текстами
     loadingProgressPercent = UIHelper::CreateStatic(uiXml, "loading_progress_percent", this, false);
     loadingStage = UIHelper::CreateStatic(uiXml, "loading_stage", this, false);
 

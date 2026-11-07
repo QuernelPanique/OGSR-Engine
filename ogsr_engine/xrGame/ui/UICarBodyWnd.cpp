@@ -20,6 +20,7 @@
 #include "../eatable_item.h"
 #include "../alife_registry_wrappers.h"
 #include "UI3tButton.h"
+#include "UIProgressBar.h" // OP22
 #include "UIListBoxItem.h"
 #include "../InventoryBox.h"
 #include "../game_object_space.h"
@@ -76,15 +77,18 @@ void CUICarBodyWnd::Init()
     AttachChild(m_pUIOthersIcon);
     xml_init.InitStatic(uiXml, "static_icon", 1, m_pUIOthersIcon);
 
+    // OP22: своя карточка персонажа, если есть (у торговли и обыска разный вид)
+    string_path op22_tmp;
+    LPCSTR op22_char_xml = FS.exist(op22_tmp, "$game_config$", "ui\\carbody_character.xml") ? "carbody_character.xml" : "trade_character.xml";
     m_pUICharacterInfoLeft = xr_new<CUICharacterInfo>();
     m_pUICharacterInfoLeft->SetAutoDelete(true);
     m_pUIOurIcon->AttachChild(m_pUICharacterInfoLeft);
-    m_pUICharacterInfoLeft->Init(0, 0, m_pUIOurIcon->GetWidth(), m_pUIOurIcon->GetHeight(), "trade_character.xml");
+    m_pUICharacterInfoLeft->Init(0, 0, m_pUIOurIcon->GetWidth(), m_pUIOurIcon->GetHeight(), op22_char_xml);
 
     m_pUICharacterInfoRight = xr_new<CUICharacterInfo>();
     m_pUICharacterInfoRight->SetAutoDelete(true);
     m_pUIOthersIcon->AttachChild(m_pUICharacterInfoRight);
-    m_pUICharacterInfoRight->Init(0, 0, m_pUIOthersIcon->GetWidth(), m_pUIOthersIcon->GetHeight(), "trade_character.xml");
+    m_pUICharacterInfoRight->Init(0, 0, m_pUIOthersIcon->GetWidth(), m_pUIOthersIcon->GetHeight(), op22_char_xml);
 
     m_pUIOurBagWnd = xr_new<CUIStatic>();
     m_pUIOurBagWnd->SetAutoDelete(true);
@@ -137,6 +141,28 @@ void CUICarBodyWnd::Init()
     m_pUITakeAll->SetAutoDelete(true);
     AttachChild(m_pUITakeAll);
     xml_init.Init3tButton(uiXml, "take_all_btn", 0, m_pUITakeAll);
+
+    if (uiXml.NavigateToNode("op22_exit_btn", 0)) // OP22: окно по макету
+    {
+        m_op22_exit = xr_new<CUI3tButton>();
+        m_op22_exit->SetAutoDelete(true);
+        AttachChild(m_op22_exit);
+        xml_init.Init3tButton(uiXml, "op22_exit_btn", 0, m_op22_exit);
+    }
+    if (uiXml.NavigateToNode("op22_weight", 0))
+    {
+        m_op22_weight = xr_new<CUIStatic>();
+        m_op22_weight->SetAutoDelete(true);
+        AttachChild(m_op22_weight);
+        xml_init.InitStatic(uiXml, "op22_weight", 0, m_op22_weight);
+    }
+    if (uiXml.NavigateToNode("op22_weight_bar", 0))
+    {
+        m_op22_weight_bar = xr_new<CUIProgressBar>();
+        m_op22_weight_bar->SetAutoDelete(true);
+        AttachChild(m_op22_weight_bar);
+        xml_init.InitProgressBar(uiXml, "op22_weight_bar", 0, m_op22_weight_bar);
+    }
 
     BindDragDropListEnents(m_pUIOurBagList);
     BindDragDropListEnents(m_pUIOthersBagList);
@@ -294,7 +320,10 @@ void CUICarBodyWnd::UpdateLists()
         m_pUIOthersBagList->SetItem(itm);
     }
 
-    InventoryUtilities::UpdateWeight(*m_pUIOurBagWnd);
+    if (m_op22_weight || m_op22_weight_bar) // OP22
+        InventoryUtilities::op22_UpdateWeight(m_op22_weight, m_op22_weight_bar);
+    else
+        InventoryUtilities::UpdateWeight(*m_pUIOurBagWnd);
     m_b_need_update = false;
 }
 
@@ -302,6 +331,11 @@ void CUICarBodyWnd::SendMessage(CUIWindow* pWnd, s16 msg, void* pData)
 {
     if (BUTTON_CLICKED == msg)
     {
+        if (m_op22_exit && m_op22_exit == pWnd) // OP22: «Выход»
+        {
+            GetHolder()->StartStopMenu(this, true);
+            return;
+        }
         if (m_pUITakeAll == pWnd)
         {
             TakeAll();
@@ -435,7 +469,10 @@ void CUICarBodyWnd::Show()
     InventoryUtilities::SendInfoToActor("ui_car_body");
     inherited::Show();
     SetCurrentItem(NULL);
-    InventoryUtilities::UpdateWeight(*m_pUIOurBagWnd);
+    if (m_op22_weight || m_op22_weight_bar) // OP22
+        InventoryUtilities::op22_UpdateWeight(m_op22_weight, m_op22_weight_bar);
+    else
+        InventoryUtilities::UpdateWeight(*m_pUIOurBagWnd);
 
     if (Core.Features.test(xrCore::Feature::engine_ammo_repacker) && !Core.Features.test(xrCore::Feature::hard_ammo_reload))
         if (auto pActor = Actor())
@@ -646,7 +683,10 @@ void CUICarBodyWnd::DropItemsfromCell(bool b_all)
 
     SetCurrentItem(NULL);
 
-    InventoryUtilities::UpdateWeight(*m_pUIOurBagWnd);
+    if (m_op22_weight || m_op22_weight_bar) // OP22
+        InventoryUtilities::op22_UpdateWeight(m_op22_weight, m_op22_weight_bar);
+    else
+        InventoryUtilities::UpdateWeight(*m_pUIOurBagWnd);
 
     PlaySnd(eInvDropItem);
 }

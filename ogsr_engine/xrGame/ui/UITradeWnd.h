@@ -87,6 +87,8 @@ protected:
     CTrade* m_pTrade;
     CTrade* m_pOthersTrade;
     CUIPropertiesBox* m_pUIPropertiesBox;
+    CUIStatic* m_op22_total{}; // OP22: окно по макету - итог сделки и вес
+    CUIStatic* m_op22_weight{};
 
     u32 m_iOurTradePrice;
     u32 m_iOthersTradePrice;
