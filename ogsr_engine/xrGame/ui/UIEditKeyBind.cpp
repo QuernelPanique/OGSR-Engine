@@ -77,7 +77,7 @@ void CUIEditKeyBind::Draw() // OP22: рамка по ширине клавиши
 {
     if (m_op22_box && !m_op22_is_empty)
     {
-        float w = GetFont()->SizeOf_(m_lines.GetText());
+        float w = CUILinesOwner::GetFont()->SizeOf_(m_lines.GetText());
         UI()->ClientToScreenScaledWidth(w);
         Fvector2 p;
         GetAbsolutePos(p);
