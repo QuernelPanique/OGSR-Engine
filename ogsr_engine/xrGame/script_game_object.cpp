@@ -327,14 +327,15 @@ Fvector CScriptGameObject::bone_position(LPCSTR bone_name) const
         return Fvector();
     }
 
-    u16 bone_id;
+    u16 bone_id = BI_NONE;
 
     if (xr_strlen(bone_name))
         bone_id = k->LL_BoneID(bone_name);
-    else
-        bone_id = k->LL_GetBoneRoot();
 
-    ASSERT_FMT_DBG(bone_id != BI_NONE, "model doesn't have bone [%s] for section [%s]", bone_name, object().cNameSect().c_str());
+    // OP22: as in xrGame.dll of OP: no such bone - root bone, silently (rx_ff asks bip01_spine of any enemy,
+    // monsters without it included, 4 times a second for every NPC)
+    if (bone_id == BI_NONE)
+        bone_id = k->LL_GetBoneRoot();
 
     Fmatrix matrix;
     matrix.mul_43(object().XFORM(), k->LL_GetBoneInstance(bone_id).mTransform);

@@ -176,6 +176,18 @@ public:
     CKinematics();
     virtual ~CKinematics();
 
+    // OP22: bone is not in the model (BI_NONE, e.g. a script hit with a bone name of another skeleton). The OP engine
+    // reads memory and goes on here, OGSR stopped the game. Take the root bone and log once per model instance.
+    mutable bool op22_bad_bone_logged{};
+    void op22_log_bad_bone(u16 bone_id) const;
+    ICF u16 op22_safe_bone(u16 bone_id) const
+    {
+        if (bone_id < LL_BoneCount())
+            return bone_id;
+        op22_log_bad_bone(bone_id);
+        return iRoot;
+    }
+
     // Low level interface
     u16 LL_BoneID(const char* B) const override;
     u16 LL_BoneID(const shared_str& B) const override;
@@ -187,7 +199,7 @@ public:
     {
         //Msg("visual_name: %s, bone_id: %d", dbg_name.c_str(), bone_id);
 
-        ASSERT_FMT(bone_id < LL_BoneCount(), "visual_name: %s, bone_id: %d", dbg_name.c_str(), bone_id);
+        bone_id = op22_safe_bone(bone_id);
         R_ASSERT(bone_instances);
         return bone_instances[bone_id];
     }
@@ -195,14 +207,14 @@ public:
     {
         //Msg("visual_name: %s, bone_id: %d", dbg_name.c_str(), bone_id);
 
-        ASSERT_FMT(bone_id < LL_BoneCount(), "visual_name: %s, bone_id: %d", dbg_name.c_str(), bone_id);
+        bone_id = op22_safe_bone(bone_id);
         R_ASSERT(bone_instances);
         return bone_instances[bone_id];
     }
 
     CBoneData& LL_GetData(u16 bone_id)
     {
-        ASSERT_FMT(bone_id < LL_BoneCount(), "visual_name: %s, bone_id: %d", dbg_name.c_str(), bone_id);
+        bone_id = op22_safe_bone(bone_id);
         VERIFY(bones);
         CBoneData& bd = *((*bones)[bone_id]);
         return bd;
@@ -210,14 +222,14 @@ public:
 
     virtual const IBoneData& GetBoneData(u16 bone_id) const
     {
-        ASSERT_FMT(bone_id < LL_BoneCount(), "visual_name: %s, bone_id: %d", dbg_name.c_str(), bone_id);
+        bone_id = op22_safe_bone(bone_id);
         VERIFY(bones);
         CBoneData& bd = *((*bones)[bone_id]);
         return bd;
     }
     CBoneData* LL_GetBoneData(u16 bone_id)
     {
-        ASSERT_FMT(bone_id < LL_BoneCount(), "visual_name: %s, bone_id: %d", dbg_name.c_str(), bone_id);
+        bone_id = op22_safe_bone(bone_id);
         VERIFY(bones);
         const u32 sz = sizeof(vecBones);
         const u32 sz1 = sizeof(((*bones)[bone_id])->children);
@@ -234,7 +246,7 @@ public:
     ICF Fmatrix& LL_GetTransform_R(u16 bone_id) { return LL_GetBoneInstance(bone_id).mRenderTransform; } // rendering only
     Fobb& LL_GetBox(u16 bone_id)
     {
-        ASSERT_FMT(bone_id < LL_BoneCount(), "visual_name: %s, bone_id: %d", dbg_name.c_str(), bone_id);
+        bone_id = op22_safe_bone(bone_id);
         return (*bones)[bone_id]->obb;
     }
     const Fbox& GetBox() const { return vis.box; }
@@ -250,7 +262,7 @@ public:
 
     BOOL LL_GetBoneVisible(u16 bone_id)
     {
-        ASSERT_FMT(bone_id < LL_BoneCount(), "visual_name: %s, bone_id: %d", dbg_name.c_str(), bone_id);
+        bone_id = op22_safe_bone(bone_id);
         return visimask.is(bone_id);
     }
     void LL_SetBoneVisible(u16 bone_id, BOOL val, BOOL bRecursive);

@@ -531,6 +531,15 @@ void CKinematics::Release()
     inherited::Release();
 }
 
+// OP22: see op22_safe_bone
+void CKinematics::op22_log_bad_bone(u16 bone_id) const
+{
+    if (op22_bad_bone_logged)
+        return;
+    op22_bad_bone_logged = true;
+    Msg("! [OP22] visual [%s] has no bone id [%d], root bone used", dbg_name.c_str(), bone_id);
+}
+
 void CKinematics::LL_SetBoneVisible(const u16 bone_id, const BOOL val, const BOOL bRecursive)
 {
     //R_ASSERT(bone_id < LL_BoneCount());
