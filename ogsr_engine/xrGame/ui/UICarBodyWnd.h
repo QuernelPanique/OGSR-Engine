@@ -9,6 +9,7 @@ class CUIItemInfo;
 class CUICharacterInfo;
 class CUIPropertiesBox;
 class CUI3tButton;
+class CUIProgressBar; // OP22
 class CUICellItem;
 class IInventoryBox;
 class CInventoryOwner;
@@ -68,7 +69,7 @@ protected:
     CUI3tButton* m_pUITakeAll;
     CUI3tButton* m_op22_exit{}; // OP22: окно по макету
     CUIStatic* m_op22_weight{};
-    class CUIProgressBar* m_op22_weight_bar{};
+    CUIProgressBar* m_op22_weight_bar{};
 
 public:
     CUICellItem* m_pCurrentCellItem;

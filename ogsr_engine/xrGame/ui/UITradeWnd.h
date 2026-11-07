@@ -6,6 +6,7 @@ class CInventoryOwner;
 class CEatableItem;
 class CTrade;
 class CUIPropertiesBox;
+class CUIStatic; // OP22
 
 struct CUITradeInternal;
 

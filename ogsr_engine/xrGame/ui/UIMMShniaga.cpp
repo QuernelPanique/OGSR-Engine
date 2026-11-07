@@ -351,16 +351,25 @@ bool CUIMMShniaga::OnMouse(float x, float y, EUIMessages mouse_action)
 {
     if (WINDOW_LBUTTON_DOWN == mouse_action)
     {
-        // OP22: щелчок мимо колонки сложности закрывает её, ничего не запуская
+        // OP22: щелчок мимо колонки сложности закрывает её, ничего не запуская; мимо кнопок меню - ничего не делает
         if (1 == m_page && m_view_new)
         {
             Frect r;
             m_view_new->GetAbsoluteRect(r);
-            if (!r.in(GetUICursor()->GetCursorPosition()))
+            const Fvector2 op22_c = GetUICursor()->GetCursorPosition();
+            if (!r.in(op22_c.x, op22_c.y))
             {
                 ShowMain();
                 return true;
             }
+        }
+        else if (m_op22)
+        {
+            Frect r;
+            m_view->GetAbsoluteRect(r);
+            const Fvector2 op22_c = GetUICursor()->GetCursorPosition();
+            if (!r.in(op22_c.x, op22_c.y))
+                return true;
         }
         OnBtnClick();
     }

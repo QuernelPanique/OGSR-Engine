@@ -4,6 +4,7 @@
 #include "../character_info_defs.h"
 
 class CUIStatic;
+class CUIProgressBar; // OP22
 
 //размеры сетки в текстуре инвентаря
 #define INV_GRID_WIDTH 50
@@ -67,7 +68,7 @@ void UpdateWeight(CUIStatic& wnd, bool withPrefix = false);
 
 // Функции получения строки-идентификатора ранга и отношения по их числовому идентификатору
 LPCSTR GetRankAsText(CHARACTER_RANK_VALUE rankID);
-void op22_UpdateWeight(class CUIStatic* wnd, class CUIProgressBar* bar); // OP22
+void op22_UpdateWeight(CUIStatic* wnd, CUIProgressBar* bar); // OP22
 LPCSTR GetReputationAsText(CHARACTER_REPUTATION_VALUE rankID);
 LPCSTR GetGoodwillAsText(CHARACTER_GOODWILL goodwill);
 
