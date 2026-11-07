@@ -268,7 +268,7 @@ void CUIItemInfo::InitItem(CInventoryItem* pInvItem)
 
 void CUIItemInfo::TryAddWpnInfo(CPhysicsShellHolder& obj)
 {
-    if (UIWpnParams->Check(obj))
+    if (UIWpnParams->Check(obj) && !fis_zero(UIWpnParams->GetHeight())) // OP22: wpn_params высотой 0 - окно без параметров оружия (обыск, ящик)
     {
         UIWpnParams->SetInfo(obj);
         UIDesc->AddWindow(UIWpnParams, false);

@@ -252,8 +252,13 @@ void CUICharacterInfo::SetRelation(ALife::ERelationType relation, CHARACTER_GOOD
 {
     // OP22: g_show_relation_in_ui
     const bool op22_show = op22_opt("g_show_relation_in_ui", true);
-    if (m_op22_rel_over_rep && m_icons[eUIReputation]) // OP22: отношение есть - репутацию на этом месте не показываем
-        m_icons[eUIReputation]->Show(false);
+    if (m_op22_rel_over_rep) // OP22: отношение есть - репутацию (значение и подпись) на этом месте не показываем
+    {
+        if (m_icons[eUIReputation])
+            m_icons[eUIReputation]->Show(false);
+        if (m_icons[eUIReputationCaption])
+            m_icons[eUIReputationCaption]->Show(false);
+    }
     m_icons[eUIRelation]->Show(op22_show);
     if (m_icons[eUIRelationCaption])
         m_icons[eUIRelationCaption]->Show(op22_show);
