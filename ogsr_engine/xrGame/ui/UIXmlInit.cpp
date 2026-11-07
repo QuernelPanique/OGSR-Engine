@@ -282,6 +282,15 @@ bool CUIXmlInit::InitSpin(CUIXml& xml_doc, const char* path, int index, CUICusto
         color = GetColor(xml_doc, foo, index, 0x00);
         pWnd->SetTextColorD(color);
     }
+    strconcat(sizeof(foo), foo, path, ":text");
+    if (xml_doc.NavigateToNode(foo, index)) // OP22: шрифт текста из разметки
+    {
+        CGameFont* f{};
+        u32 c{};
+        InitFont(xml_doc, foo, index, c, f);
+        if (f)
+            pWnd->op22_font(f);
+    }
 
     return true;
 }
@@ -1402,6 +1411,7 @@ bool CUIXmlInit::InitScrollView(CUIXml& xml_doc, const char* path, int index, CU
 
     float vi = xml_doc.ReadAttribFlt(path, index, "vert_interval", 0.0f);
     pWnd->m_vertInterval = (vi);
+    pWnd->m_op22_horz = !!xml_doc.ReadAttribInt(path, index, "op22_horz", 0); // OP22
 
     bool bInverseDir = (1 == xml_doc.ReadAttribInt(path, index, "inverse_dir", 0));
     pWnd->m_flags.set(CUIScrollView::eInverseDir, bInverseDir);

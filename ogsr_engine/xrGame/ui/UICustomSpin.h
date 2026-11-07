@@ -47,6 +47,7 @@ public:
     // OP22: вид по макету - фон одной текстурой (op22_tex), высота из разметки, стрелки справа
     shared_str m_op22_tex;
     class CUIStatic* m_op22_bg{};
+    void op22_font(class CGameFont* f);
 
 protected:
     CUI3tButton* m_pBtnUp;

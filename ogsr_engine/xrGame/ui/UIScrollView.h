@@ -9,6 +9,8 @@ class CUIScrollView : public CUIWindow, public CUIWndCallback
 {
     typedef CUIWindow inherited;
     friend class CUIXmlInit; // for init
+public:
+    bool m_op22_horz{}; // OP22: элементы в строку слева направо (значки состояния HUD), атрибут op22_horz
 protected:
     enum
     {

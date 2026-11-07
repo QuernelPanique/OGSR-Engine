@@ -108,6 +108,28 @@ void CUIScrollView::RecalcSize()
 {
     if (!m_pad)
         return;
+    if (m_op22_horz) // OP22: в строку, интервал - между элементами
+    {
+        Fvector2 sz;
+        sz.set(0.f, 0.f);
+        float x = m_rightIndent;
+        for (CUIWindow* w : m_pad->GetChildWndList())
+        {
+            Fvector2 p;
+            p.set(x, m_upIndent);
+            w->SetWndPos(p);
+            if (!w->GetVisible())
+                continue;
+            x += w->GetWndSize().x + m_vertInterval;
+            sz.y = _max(sz.y, w->GetWndSize().y);
+        }
+        sz.x = x;
+        sz.y += m_upIndent + m_downIndent;
+        m_pad->SetWndSize(sz);
+        m_flags.set(eNeedRecalc, FALSE);
+        UpdateScroll();
+        return;
+    }
     Fvector2 pad_size;
     pad_size.set(0.0f, 0.0f);
 

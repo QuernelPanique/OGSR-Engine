@@ -263,7 +263,7 @@ u16 CGameFont::GetCutLengthPos(float fTargetWidth, const char* pszText)
 
     for (; i <= len; i++)
     {
-        fDelta = (GetCharTC(wsStr[i]).z * GetWidthScale());
+        fDelta = (op22_w(GetCharTC(wsStr[i])) * GetWidthScale()); // OP22: без поля
 
         if (IsSpaceCharacter(wsStr[i]))
             fDelta += GetfXStep() * GetWidthScale();
@@ -291,7 +291,7 @@ u16 CGameFont::SplitByWidth(u16* puBuffer, u16 uBufferSize, float fTargetWidth, 
 
     for (u16 i = 1; i <= len; i++)
     {
-        fDelta = GetCharTC(wsStr[i]).z * GetWidthScale();
+        fDelta = op22_w(GetCharTC(wsStr[i])) * GetWidthScale(); // OP22: без поля
 
         if (IsSpaceCharacter(wsStr[i]))
             fDelta += GetfXStep() * GetWidthScale();
@@ -362,7 +362,7 @@ void CGameFont::OutSkip(float val) { fCurrentY += val * CurrentHeight_(); }
 
 float CGameFont::SizeOf_(const char cChar)
 {
-    float x = GetCharTC((u16)(u8)(cChar)).z;
+    float x = op22_w(GetCharTC((u16)(u8)(cChar))); // OP22: без поля
     if (IsMultibyte() && IsSpaceCharacter((u16)(u8)(cChar)))
         x += GetfXStep();
     return x * vInterval.x * GetWidthScale();
@@ -370,7 +370,7 @@ float CGameFont::SizeOf_(const char cChar)
 
 float CGameFont::SizeOf_(const u16 cChar)
 {
-    float x = GetCharTC(cChar).z;
+    float x = op22_w(GetCharTC(cChar)); // OP22: без поля
     if (IsMultibyte() && IsSpaceCharacter(cChar))
         x += GetfXStep();
     return x * vInterval.x * GetWidthScale();
@@ -394,7 +394,7 @@ float CGameFont::SizeOf_(LPCSTR s)
     float X = 0;
     if (len)
         for (int j = 0; j < len; j++)
-            X += GetCharTC((u16)(u8)s[j]).z;
+            X += op22_w(GetCharTC((u16)(u8)s[j])); // OP22: без поля
 
     return (X * vInterval.x) * GetWidthScale();
 }
@@ -410,7 +410,7 @@ float CGameFont::SizeOf_(const wide_char* wsStr)
     if (len)
         for (unsigned int j = 1; j <= len; j++)
         {
-            fDelta = GetCharTC(wsStr[j]).z;
+            fDelta = op22_w(GetCharTC(wsStr[j])); // OP22: без поля
 
             if (IsSpaceCharacter(wsStr[j]))
                 fDelta += GetfXStep();
@@ -420,7 +420,8 @@ float CGameFont::SizeOf_(const wide_char* wsStr)
     return (X * vInterval.x) * GetWidthScale();
 }
 
-float CGameFont::CurrentHeight_() { return fCurrentHeight * vInterval.y * GetHeightScale(); }
+// OP22: высота строки без поля обводки (поле - в пикселях атласа, fHeight - высота ячейки атласа)
+float CGameFont::CurrentHeight_() { return (fCurrentHeight - (fHeight > 0 ? 2.f * m_op22_pad * fCurrentHeight / fHeight : 0.f)) * vInterval.y * GetHeightScale(); }
 
 void CGameFont::SetHeightI(float S)
 {

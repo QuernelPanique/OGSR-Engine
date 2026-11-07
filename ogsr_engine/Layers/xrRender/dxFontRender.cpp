@@ -88,11 +88,18 @@ void dxFontRender::RenderFragment(CGameFont& owner, u32& i, bool shadow_mode, fl
             Y -= 0.5f;
             Y2 -= 0.5f;
 
+            // OP22: поле обводки - квадрат буквы левее и выше на поле, шаг - без поля
+            const float op22_px = owner.m_op22_pad * g_current_font_scale.x * owner.GetWidthScale();
+            const float op22_py = owner.GetHeight() > 0 && owner.op22_cell_h() > 0 ? owner.m_op22_pad * S / owner.op22_cell_h() : 0.f;
+            Y -= op22_py;
+            Y2 -= op22_py;
+
             for (u32 j = 0; j < len; j++)
             {
                 const Fvector l = owner.IsMultibyte() ? owner.GetCharTC(wsStr[1 + j]) : owner.GetCharTC((u8)PS.string[j]);
 
                 const float scw = l.z * g_current_font_scale.x * owner.GetWidthScale();
+                const float op22_dx = fis_zero(l.z) ? 0.f : op22_px; // OP22
 
                 const float fTCWidth = l.z / owner.vTS.x;
 
@@ -101,18 +108,18 @@ void dxFontRender::RenderFragment(CGameFont& owner, u32& i, bool shadow_mode, fl
                     const float tu = (l.x / owner.vTS.x);
                     const float tv = (l.y / owner.vTS.y);
 
-                    v->set(X, Y2, clr2, tu, tv + owner.fTCHeight);
+                    v->set(X - op22_dx, Y2, clr2, tu, tv + owner.fTCHeight);
                     v++;
-                    v->set(X, Y, clr, tu, tv);
+                    v->set(X - op22_dx, Y, clr, tu, tv);
                     v++;
 
-                    v->set(X + scw, Y2, clr2, tu + fTCWidth, tv + owner.fTCHeight);
+                    v->set(X - op22_dx + scw, Y2, clr2, tu + fTCWidth, tv + owner.fTCHeight);
                     v++;
-                    v->set(X + scw, Y, clr, tu + fTCWidth, tv);
+                    v->set(X - op22_dx + scw, Y, clr, tu + fTCWidth, tv);
                     v++;
                 }
 
-                X += scw * owner.GetInterval().x;
+                X += (scw - 2.f * op22_dx) * owner.GetInterval().x;
 
                 if (owner.IsMultibyte())
                 {

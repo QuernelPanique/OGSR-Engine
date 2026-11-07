@@ -130,4 +130,9 @@ public:
 
     shared_str m_font_name;
     bool m_bCustom{};
+
+    // OP22: поле вокруг буквы в атласе (пиксели), для мягкой обводки: шаг и высота строки - без поля
+    float m_op22_pad{};
+    IC float op22_w(const Fvector& l) const { return l.z > 0 ? l.z - 2.f * m_op22_pad : l.z; }
+    IC float op22_cell_h() const { return fHeight; }
 };

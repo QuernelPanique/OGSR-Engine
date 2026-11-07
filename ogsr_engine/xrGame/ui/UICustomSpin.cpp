@@ -112,6 +112,8 @@ void CUICustomSpin::OnBtnUpClick() { GetMessageTarget()->SendMessage(this, BUTTO
 
 void CUICustomSpin::OnBtnDownClick() { GetMessageTarget()->SendMessage(this, BUTTON_CLICKED); }
 
+void CUICustomSpin::op22_font(CGameFont* f) { m_pLines->SetFont(f); } // OP22
+
 void CUICustomSpin::Draw()
 {
     Fvector2 pos;
