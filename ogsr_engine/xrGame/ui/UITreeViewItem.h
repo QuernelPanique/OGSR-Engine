@@ -98,7 +98,11 @@ public:
     void SetManualSetColor(bool val) { m_bManualSetColor = val; }
     void op22_SetTheme();
     // Устанавливаем цвет в зависимости от состояния элемента
-    void SetItemColor() { m_bArticleRead ? SetTextColor(m_uReadedColor) : SetTextColor(m_uUnreadedColor); }
+    void SetItemColor()
+    {
+        SetTextColor(m_op22_theme && CursorOverWindow() ? color_rgba(23, 18, 4, 255) :
+            (m_bArticleRead ? m_uReadedColor : m_uUnreadedColor));
+    }
 
 private:
     friend class CUITreeViewItem;

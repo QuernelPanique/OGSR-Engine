@@ -282,7 +282,7 @@ void CUITreeViewItem::SendMessage(CUIWindow* pWnd, s16 msg, void* pData)
             SetTextColor(color_rgba(23, 18, 4, 255));
         }
 
-        if (pPrevFocusedItem)
+        if (pPrevFocusedItem && pPrevFocusedItem != this)
         {
             pPrevFocusedItem->UIBkg.TextureOff();
             if (pPrevFocusedItem->m_op22_theme) pPrevFocusedItem->SetItemColor();
