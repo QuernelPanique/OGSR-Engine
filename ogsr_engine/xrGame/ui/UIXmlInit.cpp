@@ -213,6 +213,8 @@ bool CUIXmlInit::InitStatic(CUIXml& xml_doc, LPCSTR path, int index, CUIStatic* 
     InitMultiText(xml_doc, path, index, pWnd);
     InitTexture(xml_doc, path, index, pWnd);
     InitTextureOffset(xml_doc, path, index, pWnd);
+    pWnd->m_op22_binding = xml_doc.ReadAttrib(path, index, "op22_binding", "");
+    pWnd->m_op22_text_inset = !!xml_doc.ReadAttribInt(path, index, "op22_text_inset", 0);
 
     pWnd->EnableHeading(!!xml_doc.ReadAttribInt(path, index, "heading", 0));
 
@@ -1169,6 +1171,10 @@ bool CUIXmlInit::InitMultiTextStatic(CUIXml& xml_doc, const char* path, int inde
         InitFont(xml_doc, ph, i, argb, pFont);
         p->effect.SetFont(pFont);
         p->effect.SetTextColor(argb);
+
+        LPCSTR align = xml_doc.ReadAttrib(ph, i, "align", "l");
+        p->effect.SetFontAlignment(!xr_strcmp(align, "r") ? CGameFont::alRight :
+            (!xr_strcmp(align, "c") ? CGameFont::alCenter : CGameFont::alLeft));
 
         CStringTable st;
 

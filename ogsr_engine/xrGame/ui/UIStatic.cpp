@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../xr_level_controller.h"
 #include "uistatic.h"
 #include "UIXmlInit.h"
 #include "UITextureMaster.h"
@@ -182,6 +183,8 @@ void CUIStatic::DrawText()
     if (m_pLines)
     {
         m_pLines->SetWndSize(m_wndSize);
+        if (m_op22_text_inset)
+            m_pLines->SetWidth(_max(1.f, m_wndSize.x - _max(0.f, m_TextOffset.x)));
 
         if (IsHighlightText() && xr_strlen(m_pLines->GetText()) > 0 && m_bEnableTextHighlighting)
             DrawHighlightedText();
@@ -246,6 +249,18 @@ void CUIStatic::DrawTexture()
 void CUIStatic::Update()
 {
     inherited::Update();
+    if (m_op22_binding == "quick_slots")
+    {
+        xr_string text;
+        for (int i = 0; i < 4; ++i)
+        {
+            LPCSTR key = dik_to_keyname(get_action_dik(EGameActions(kUSE_QUICK_SLOT0 + i)));
+            if (i) text += " / ";
+            if (key && *key == 'k') ++key;
+            text += key && *key ? key : "-";
+        }
+        if (!GetText() || text != GetText()) SetText(text.c_str());
+    }
     // OP22: подсказка статика - как у кнопки (CUIButton::Update)
     if (m_op22_hint.size() && g_btnHint && CursorOverWindow() && !g_btnHint->Owner() && Device.dwTimeGlobal > m_dwFocusReceiveTime + 500)
         op22_PlaceBtnHint(this, *m_op22_hint);
@@ -617,7 +632,7 @@ void CUIStatic::OnFocusLost()
 
 void CUIStatic::AdjustHeightToText()
 {
-    m_pLines->SetWidth(GetWidth());
+    m_pLines->SetWidth(_max(1.f, GetWidth() - (m_op22_text_inset ? _max(0.f, m_TextOffset.x) : 0.f)));
     m_pLines->ParseText();
     SetHeight(m_pLines->GetVisibleHeight());
 }

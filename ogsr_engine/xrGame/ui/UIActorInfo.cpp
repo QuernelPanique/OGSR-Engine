@@ -81,6 +81,13 @@ void CUIActorInfoWnd::Init()
     UICharacterWindow->AttachChild(UICharacterInfo);
     UICharacterInfo->Init(0, 0, UICharacterWindow->GetWidth(), UICharacterWindow->GetHeight(), ACTOR_CHARACTER_XML);
 
+    if (uiXml.NavigateToNode("op22_relations", 0))
+    {
+        m_op22_relations = xr_new<CUIScrollView>();
+        m_op22_relations->SetAutoDelete(true);
+        AttachChild(m_op22_relations);
+        xml_init.InitScrollView(uiXml, "op22_relations", 0, m_op22_relations);
+    }
     //Элементы автоматического добавления
     xml_init.InitAutoStatic(uiXml, "right_auto_static", UICharIconFrame);
     xml_init.InitAutoStatic(uiXml, "left_auto_static", UIInfoFrame);
@@ -95,6 +102,14 @@ void CUIActorInfoWnd::Show(bool status)
     UICharacterInfo->InitCharacter(Actor()->ID());
     UICharIconHeader->UITitleText.SetText(Actor()->Name());
     FillPointsInfo();
+    if (m_op22_relations)
+    {
+        m_op22_relations->Clear();
+        CUIXml xml;
+        xml.Init(CONFIG_PATH, UI_PATH, ACTOR_STATISTIC_XML);
+        xml.SetLocalRoot(xml.NavigateToNode("actor_stats_wnd", 0));
+        FillReputationDetails(&xml, "detail_part_reputation", m_op22_relations);
+    }
 }
 
 void CUIActorInfoWnd::FillPointsInfo()
@@ -249,8 +264,9 @@ void CUIActorInfoWnd::FillPointsDetail(const shared_str& id)
 }
 void CUIActorInfoWnd::Reset() { inherited::Reset(); }
 
-void CUIActorInfoWnd::FillReputationDetails(CUIXml* xml, LPCSTR path)
+void CUIActorInfoWnd::FillReputationDetails(CUIXml* xml, LPCSTR path, CUIScrollView* target)
 {
+    if (!target) target = UIDetailList;
     XML_NODE* _list_node = xml->NavigateToNode("relation_communities_list", 0);
     int cnt = xml->GetNodesNum("relation_communities_list", 0, "r");
 
@@ -280,7 +296,7 @@ void CUIActorInfoWnd::FillReputationDetails(CUIXml* xml, LPCSTR path)
         sprintf_s(buff, "%d", gw);
         itm->m_text3->SetTextST(buff);
 
-        UIDetailList->AddWindow(itm, true);
+        target->AddWindow(itm, true);
     }
 }
 

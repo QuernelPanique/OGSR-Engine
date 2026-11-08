@@ -440,12 +440,14 @@ float CGameFont::GetWidthScale() const
     if (uFlags & fsDeviceIndependent)
         return 1.f;
 
-    return g_fontWidthScale * (!fis_zero(fXScale) ? fXScale : 1);
+    const float viewport = m_op22_reference_width > 0.f ? float(Device.dwWidth) / m_op22_reference_width : 1.f;
+    return viewport * g_fontWidthScale * (!fis_zero(fXScale) ? fXScale : 1);
 }
 float CGameFont::GetHeightScale() const
 {
     if (uFlags & fsDeviceIndependent)
         return 1.f;
 
-    return g_fontHeightScale * (!fis_zero(fYScale) ? fYScale : 1);
+    const float viewport = m_op22_reference_height > 0.f ? float(Device.dwHeight) / m_op22_reference_height : 1.f;
+    return viewport * g_fontHeightScale * (!fis_zero(fYScale) ? fYScale : 1);
 }

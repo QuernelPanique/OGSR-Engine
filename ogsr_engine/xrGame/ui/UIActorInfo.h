@@ -35,8 +35,9 @@ protected:
 
     CUIScrollView* UIMasterList;
     CUIScrollView* UIDetailList;
+    CUIScrollView* m_op22_relations{};
     void FillPointsInfo();
-    void FillReputationDetails(CUIXml* xml, LPCSTR path);
+    void FillReputationDetails(CUIXml* xml, LPCSTR path, CUIScrollView* target = nullptr);
     void FillMasterPart(CUIXml* xml, const shared_str& key_name);
 };
 

@@ -49,6 +49,11 @@ public:
     CUIStatic* m_text1;
     CUIStatic* m_text2;
     CUIStatic* m_text3;
+    CUIStatic* m_op22_community{};
+    CUIStatic* m_op22_rank{};
+    CUIStatic* m_op22_selection{};
+    u32 m_op22_normal[5]{};
+    void op22_SetCharacter(CSE_ALifeTraderAbstract* trader);
 
 public:
     CUIStalkerRankingInfoItem(CUIStalkersRankingWnd*);

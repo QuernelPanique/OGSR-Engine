@@ -364,3 +364,14 @@ void CUICharacterInfo::ClearInfo()
         if (m_icons[i])
             m_icons[i]->Show(false);
 }
+
+void CUICharacterInfo::op22_SetSelected(bool selected)
+{
+    for (int i = eUIName; i < eMaxCaption; ++i)
+    {
+        if (!m_icons[i]) continue;
+        if (!m_op22_has_normal) m_op22_normal[i] = m_icons[i]->GetTextColor();
+        m_icons[i]->SetTextColor(selected ? color_rgba(23, 18, 4, 255) : m_op22_normal[i]);
+    }
+    m_op22_has_normal = true;
+}

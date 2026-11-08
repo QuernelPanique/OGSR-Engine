@@ -42,6 +42,8 @@ protected:
         eMaxCaption,
     };
     CUIStatic* m_icons[eMaxCaption];
+    u32 m_op22_normal[eMaxCaption]{};
+    bool m_op22_has_normal{};
 
     enum
     {
@@ -63,6 +65,7 @@ public:
     void Init(float x, float y, float width, float height, const char* xml_name);
     void InitCharacter(u16 id);
     void ClearInfo();
+    void op22_SetSelected(bool selected);
 
     virtual void Update();
 

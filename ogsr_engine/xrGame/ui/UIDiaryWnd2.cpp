@@ -7,6 +7,7 @@
 #include "UIXmlInit.h"
 #include "../object_broker.h"
 #include "UITabControl.h"
+#include "UITabButton.h"
 #include "UIScrollView.h"
 #include "UIListWnd.h"
 #include "UITreeViewItem.h"
@@ -125,7 +126,14 @@ void CUIDiaryWnd::Init()
     m_oldSectionImage = xr_new<CUIStatic>();
     xml_init.InitStatic(uiXml, "old_section_static", 0, m_oldSectionImage);
 
-    RearrangeTabButtons(m_FilterTab, m_sign_places);
+    if (uiXml.ReadAttribInt("main_wnd", 0, "op22_layout", 0))
+    {
+        const auto* buttons = m_FilterTab->GetButtonsVector();
+        m_sign_places.resize(buttons->size());
+        for (u32 i = 0; i < buttons->size(); ++i)
+            m_sign_places[i].set((*buttons)[i]->GetWndPos().x, (*buttons)[i]->GetWndPos().y + (*buttons)[i]->GetHeight() - 2.f);
+    }
+    else RearrangeTabButtons(m_FilterTab, m_sign_places);
 }
 
 void CUIDiaryWnd::SendMessage(CUIWindow* pWnd, s16 msg, void* pData) { CUIWndCallback::OnEvent(pWnd, msg, pData); }

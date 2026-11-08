@@ -176,6 +176,13 @@ void CUICarBodyWnd::Init()
         AttachChild(m_op22_sub);
         xml_init.InitStatic(uiXml, "op22_sub", 0, m_op22_sub);
     }
+    if (uiXml.NavigateToNode("op22_contents", 0))
+    {
+        m_op22_contents = xr_new<CUIStatic>();
+        m_op22_contents->SetAutoDelete(true);
+        AttachChild(m_op22_contents);
+        xml_init.InitStatic(uiXml, "op22_contents", 0, m_op22_contents);
+    }
     if (uiXml.NavigateToNode("op22_weight", 0))
     {
         m_op22_weight = xr_new<CUIStatic>();
@@ -357,6 +364,17 @@ void CUICarBodyWnd::UpdateLists()
         m_pInventoryBox->AddAvailableItems(ruck_list);
 
     std::sort(ruck_list.begin(), ruck_list.end(), InventoryUtilities::GreaterRoomInRuck);
+
+    if (m_op22_contents)
+    {
+        float weight = 0.f;
+        for (const auto& item : ruck_list)
+            weight += item->Weight();
+        string128 text;
+        xr_sprintf(text, *CStringTable().translate("ct_tr_box_contents"), u32(ruck_list.size()), weight);
+        m_op22_contents->SetText(text);
+        m_op22_contents->Show(m_pInventoryBox != nullptr);
+    }
 
     //Чужой рюкзак
     for (const auto& inv_item : ruck_list)

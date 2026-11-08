@@ -75,6 +75,7 @@ protected:
     shared_str m_op22_t_box, m_op22_t_body, m_op22_t_monster, m_op22_r_box, m_op22_r_body;
     void op22_titles(bool box, CInventoryOwner* others);
     CUIStatic* m_op22_weight{};
+    CUIStatic* m_op22_contents{};
     CUIProgressBar* m_op22_weight_bar{};
 
 public:

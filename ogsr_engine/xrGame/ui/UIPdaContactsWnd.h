@@ -9,6 +9,7 @@ class CUIStatic;
 class CUIAnimatedStatic;
 class CUIScrollView;
 class CPda;
+class CUICharacterInfo;
 
 class CUIPdaContactsWnd : public CUIWindow
 {
@@ -38,6 +39,8 @@ public:
 
     CUIScrollView* UIListWnd;
     CUIScrollView* UIDetailsWnd;
+    CUICharacterInfo* m_op22_character{};
+    float m_op22_row_height{85.f};
 
 protected:
     CUIFrameWindow* UIFrameContacts;

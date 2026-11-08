@@ -3,6 +3,7 @@
 #include "UIXmlInit.h"
 #include "UI3tButton.h"
 #include "UIEditBox.h"
+#include "UIScrollView.h"
 #include "../string_table.h"
 
 CUIMessageBox::CUIMessageBox()
@@ -33,6 +34,8 @@ void CUIMessageBox::Clear()
     xr_delete(m_UIButtonCancel);
     xr_delete(m_UIStaticPicture);
     xr_delete(m_UIStaticText);
+    xr_delete(m_op22_text_view);
+    xr_delete(m_op22_title);
     xr_delete(m_UIEditPass);
     xr_delete(m_UIEditUserPass);
     xr_delete(m_UIEditHost);
@@ -206,6 +209,41 @@ void CUIMessageBox::Init(LPCSTR box_template)
     }
     break;
     };
+    if (m_UIStaticText && uiXml.ReadAttribInt(box_template, 0, "op22_auto_height", 0))
+    {
+        m_op22_base_height = GetHeight();
+        m_op22_base_text_height = m_UIStaticText->GetHeight();
+        CUI3tButton* buttons[] = {m_UIButtonYesOk, m_UIButtonNo, m_UIButtonCancel};
+        for (int i = 0; i < 3; ++i) if (buttons[i]) m_op22_button_y[i] = buttons[i]->GetWndPos().y;
+        m_op22_text_view = xr_new<CUIScrollView>();
+        AttachChild(m_op22_text_view);
+        const auto pos = m_UIStaticText->GetWndPos();
+        m_op22_text_view->Init(pos.x, pos.y, m_UIStaticText->GetWidth(), m_op22_base_text_height);
+        DetachChild(m_UIStaticText);
+        m_UIStaticText->SetWidth(_max(1.f, m_UIStaticText->GetWidth() - 16.f));
+        m_op22_text_view->AddWindow(m_UIStaticText, false);
+        strconcat(sizeof(str), str, box_template, ":op22_title");
+        m_op22_title = xr_new<CUIStatic>();
+        AttachChild(m_op22_title);
+        xml_init.InitStatic(uiXml, str, 0, m_op22_title);
+        op22_LayoutText();
+    }
+}
+
+void CUIMessageBox::op22_LayoutText()
+{
+    if (!m_op22_text_view) return;
+    m_UIStaticText->AdjustHeightToText();
+    const float height = clampr(m_UIStaticText->GetHeight(), m_op22_base_text_height, 560.f);
+    const float delta = height - m_op22_base_text_height;
+    m_op22_text_view->SetHeight(height);
+    m_op22_text_view->ForceUpdate();
+    m_op22_text_view->ScrollToBegin();
+    CUI3tButton* buttons[] = {m_UIButtonYesOk, m_UIButtonNo, m_UIButtonCancel};
+    for (int i = 0; i < 3; ++i)
+        if (buttons[i]) buttons[i]->SetWndPos(buttons[i]->GetWndPos().x, m_op22_button_y[i] + delta);
+    SetHeight(m_op22_base_height + delta);
+    SetWndPos(GetWndPos().x, (768.f - GetHeight()) / 2.f);
 }
 
 void CUIMessageBox::SendMessage(CUIWindow* pWnd, s16 msg, void* pData)
@@ -256,7 +294,12 @@ void CUIMessageBox::SendMessage(CUIWindow* pWnd, s16 msg, void* pData)
     inherited::SendMessage(pWnd, msg, pData);
 }
 
-void CUIMessageBox::SetText(LPCSTR str) { m_UIStaticText->SetText(*(CStringTable().translate(str))); }
+void CUIMessageBox::SetText(LPCSTR str)
+{
+    if (!m_UIStaticText) return;
+    m_UIStaticText->SetText(*(CStringTable().translate(str)));
+    op22_LayoutText();
+}
 
 LPCSTR CUIMessageBox::GetText() { return m_UIStaticText->GetText(); }
 

@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "UICharacterInfo.h"
 #include "UIPdaContactsWnd.h"
 #include "UIPdaAux.h"
 #include "../Pda.h"
@@ -24,6 +25,7 @@ void CUIPdaContactsWnd::Show(bool status)
     inherited::Show(status);
     if (status)
         UIDetailsWnd->Clear();
+    if (m_op22_character) m_op22_character->Show(false);
 }
 
 void CUIPdaContactsWnd::Init()
@@ -68,12 +70,21 @@ void CUIPdaContactsWnd::Init()
     UIListWnd->SetAutoDelete(true);
     UIFrameContacts->AttachChild(UIListWnd);
     xml_init.InitScrollView(uiXml, "list", 0, UIListWnd);
+    m_op22_row_height = uiXml.ReadAttribFlt("list", 0, "item_height", 85.f);
 
     UIDetailsWnd = xr_new<CUIScrollView>();
     UIDetailsWnd->SetAutoDelete(true);
     UIRightFrame->AttachChild(UIDetailsWnd);
     xml_init.InitScrollView(uiXml, "detail_list", 0, UIDetailsWnd);
 
+    if (uiXml.NavigateToNode("op22_character", 0))
+    {
+        m_op22_character = xr_new<CUICharacterInfo>();
+        m_op22_character->SetAutoDelete(true);
+        UIRightFrame->AttachChild(m_op22_character);
+        m_op22_character->Init(0, 0, UIRightFrame->GetWidth(), 260.f, "pda_contact_detail.xml");
+        m_op22_character->Show(false);
+    }
     xml_init.InitAutoStatic(uiXml, "left_auto_static", UIFrameContacts);
     xml_init.InitAutoStatic(uiXml, "right_auto_static", UIRightFrame);
 }
@@ -104,7 +115,7 @@ void CUIPdaContactsWnd::AddContact(CPda* pda, u16 owner_id)
 
     auto pItem = xr_new<CUIPdaContactItem>(this);
     UIListWnd->AddWindow(pItem, true);
-    pItem->Init(0, 0, UIListWnd->GetWidth(), 85);
+    pItem->Init(0, 0, UIListWnd->GetWidth(), m_op22_row_height);
     CObject* pObject = Level().Objects.net_Find(owner_id);
     pItem->InitCharacter(smart_cast<CInventoryOwner*>(pObject));
     pItem->m_data = (void*)pda;
@@ -154,9 +165,19 @@ extern CSE_ALifeTraderAbstract* ch_info_get_from_id(u16 id);
 void CUIPdaContactItem::SetSelected(bool b)
 {
     CUISelectable::SetSelected(b);
+    if (m_op22_selection)
+    {
+        m_op22_selection->Show(b);
+        UIInfo->op22_SetSelected(b);
+    }
     if (b)
     {
         m_cw->UIDetailsWnd->Clear();
+        if (m_cw->m_op22_character)
+        {
+            m_cw->m_op22_character->InitCharacter(UIInfo->OwnerID());
+            m_cw->m_op22_character->Show(true);
+        }
 
         CCharacterInfo chInfo;
         CSE_ALifeTraderAbstract* T = ch_info_get_from_id(UIInfo->OwnerID());
@@ -164,6 +185,7 @@ void CUIPdaContactItem::SetSelected(bool b)
 
         CUIStatic* pSt = xr_new<CUIStatic>();
 
+        if (m_cw->UIDetailsWnd->GetFont()) pSt->SetFont(m_cw->UIDetailsWnd->GetFont());
         pSt->SetText(CStringTable().translate(chInfo.Bio().c_str()).c_str());
         pSt->SetTextComplexMode(true);
         pSt->SetWidth(m_cw->UIDetailsWnd->GetDesiredChildWidth());

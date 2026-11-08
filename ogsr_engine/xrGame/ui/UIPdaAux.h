@@ -17,6 +17,7 @@ enum EPdaTabs
     eptRanking,
     eptActorStatistic,
     eptEncyclopedia,
+    eptSkills,
     eptNoActiveTab = u16(-1)
 };
 

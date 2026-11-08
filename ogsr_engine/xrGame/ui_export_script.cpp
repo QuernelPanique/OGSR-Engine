@@ -28,6 +28,8 @@ void UIRegistrator::script_register(lua_State* L)
             )]
             .def("SizeOf", (float(CGameFont::*)(LPCSTR)) &CGameFont::SizeOf_)
             .def("CurrentHeight", & CGameFont::CurrentHeight_)
+            .def("SetWidthScale", &CGameFont::SetWidthScale)
+            .def("SetHeightScale", &CGameFont::SetHeightScale)
             ,
         // убрал потому что не работает
         //class_<CUICaption>("CUICaption")

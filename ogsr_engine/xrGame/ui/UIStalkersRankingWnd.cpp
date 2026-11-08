@@ -12,6 +12,9 @@
 #include "../Level.h"
 #include "../pda.h"
 #include "../actor.h"
+#include "../character_info.h"
+#include "../string_table.h"
+#include "UIInventoryUtilities.h"
 #include "../xrServer_Objects_ALife_Monsters.h"
 
 #define STALKERS_RANKING_XML "stalkers_ranking.xml"
@@ -163,6 +166,7 @@ void CUIStalkersRankingWnd::AddStalkerItem(CUIXml* xml, int num, CSE_ALifeTrader
     itm->m_text3->SetText(s.c_str());
 
     itm->m_humanID = t->object_id();
+    itm->op22_SetCharacter(t);
     UIList->AddWindow(itm, true);
 }
 
@@ -188,6 +192,7 @@ void CUIStalkersRankingWnd::AddActorItem(CUIXml* xml, int num, CSE_ALifeTraderAb
     itm->m_text3->SetText(s.c_str());
 
     itm->m_humanID = t->object_id();
+    itm->op22_SetCharacter(t);
     UIList->AddWindow(itm, true);
 }
 
@@ -227,6 +232,14 @@ void CUIStalkerRankingInfoItem::Init(CUIXml* xml, LPCSTR path, int idx)
 
     xml->SetLocalRoot(xml->NavigateToNode(path, idx));
 
+    if (xml->NavigateToNode("op22_selection", 0))
+    {
+        m_op22_selection = xr_new<CUIStatic>();
+        m_op22_selection->SetAutoDelete(true);
+        AttachChild(m_op22_selection);
+        xml_init.InitStatic(*xml, "op22_selection", 0, m_op22_selection);
+        m_op22_selection->Show(false);
+    }
     m_text1 = xr_new<CUIStatic>();
     m_text1->SetAutoDelete(true);
     AttachChild(m_text1);
@@ -244,8 +257,30 @@ void CUIStalkerRankingInfoItem::Init(CUIXml* xml, LPCSTR path, int idx)
 
     xml_init.InitAutoStaticGroup(*xml, "auto", 0, this);
 
+    if (xml->NavigateToNode("op22_community", 0))
+    {
+        m_op22_community = xr_new<CUIStatic>();
+        m_op22_community->SetAutoDelete(true);
+        AttachChild(m_op22_community);
+        xml_init.InitStatic(*xml, "op22_community", 0, m_op22_community);
+        m_op22_rank = xr_new<CUIStatic>();
+        m_op22_rank->SetAutoDelete(true);
+        AttachChild(m_op22_rank);
+        xml_init.InitStatic(*xml, "op22_rank", 0, m_op22_rank);
+    }
+    CUIStatic* columns[] = {m_text1, m_text2, m_text3, m_op22_community, m_op22_rank};
+    for (int i = 0; i < 5; ++i) if (columns[i]) m_op22_normal[i] = columns[i]->GetTextColor();
     m_stored_alpha = color_get_A(m_text2->GetTextColor());
     xml->SetLocalRoot(_stored_root);
+}
+
+void CUIStalkerRankingInfoItem::op22_SetCharacter(CSE_ALifeTraderAbstract* trader)
+{
+    if (!m_op22_community) return;
+    CCharacterInfo info;
+    info.Init(trader);
+    m_op22_community->SetText(*CStringTable().translate(info.Community().id()));
+    m_op22_rank->SetText(*CStringTable().translate(InventoryUtilities::GetRankAsText(info.Rank().value())));
 }
 
 void CUIStalkerRankingInfoItem::SetSelected(bool b)
@@ -254,6 +289,12 @@ void CUIStalkerRankingInfoItem::SetSelected(bool b)
     m_text1->SetTextColor(subst_alpha(m_text1->GetTextColor(), b ? 255 : m_stored_alpha));
     m_text2->SetTextColor(subst_alpha(m_text2->GetTextColor(), b ? 255 : m_stored_alpha));
     m_text3->SetTextColor(subst_alpha(m_text3->GetTextColor(), b ? 255 : m_stored_alpha));
+    if (m_op22_selection)
+    {
+        m_op22_selection->Show(b);
+        CUIStatic* columns[] = {m_text1, m_text2, m_text3, m_op22_community, m_op22_rank};
+        for (int i = 0; i < 5; ++i) if (columns[i]) columns[i]->SetTextColor(b ? color_rgba(23, 18, 4, 255) : m_op22_normal[i]);
+    }
     if (b)
     {
         m_StalkersRankingWnd->ShowHumanInfo(m_humanID);

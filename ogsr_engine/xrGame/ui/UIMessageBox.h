@@ -5,6 +5,7 @@
 
 class CUI3tButton;
 class CUIEditBox;
+class CUIScrollView;
 
 class CUIMessageBox : public CUIStatic
 {
@@ -43,6 +44,11 @@ public:
 
 protected:
     xr_string m_ret_val;
+    CUIScrollView* m_op22_text_view{};
+    CUIStatic* m_op22_title{};
+    float m_op22_base_height{}, m_op22_base_text_height{};
+    float m_op22_button_y[3]{};
+    void op22_LayoutText();
     CUI3tButton* m_UIButtonYesOk;
     CUI3tButton* m_UIButtonNo;
     CUI3tButton* m_UIButtonCancel;

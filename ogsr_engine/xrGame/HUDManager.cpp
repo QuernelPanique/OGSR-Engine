@@ -146,6 +146,8 @@ void CFontManager::InitializeFont(CGameFont*& F, LPCSTR section_engine, u32 flag
 
     F->m_font_name = section_engine; // OP22: имя движкового шрифта (переинициализация - через профиль)
     F->m_op22_pad = READ_IF_EXISTS(pSettings, r_float, section, "op22_pad", 0.f); // OP22: поле обводки в атласе
+    F->m_op22_reference_width = READ_IF_EXISTS(pSettings, r_float, section, "op22_reference_width", 0.f);
+    F->m_op22_reference_height = READ_IF_EXISTS(pSettings, r_float, section, "op22_reference_height", 0.f);
 
     if (!(flags & CGameFont::fsDeviceIndependent))
     {

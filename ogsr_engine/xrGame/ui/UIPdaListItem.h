@@ -7,6 +7,7 @@
 #include "UIWindow.h"
 
 class CUIFrameWindow;
+class CUIStatic;
 class CUICharacterInfo;
 class CInventoryOwner;
 
@@ -26,5 +27,6 @@ public:
 protected:
     //информация о персонаже
     CUIFrameWindow* UIMask;
+    CUIStatic* m_op22_selection{};
     CUICharacterInfo* UIInfo;
 };

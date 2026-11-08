@@ -96,10 +96,12 @@ class CUIQuestionItem : public CUIWindow, public CUIWndCallback
 
 public:
     CUIStatic* m_num_text{};
+    u32 m_op22_number_normal{}, m_op22_number_hover{};
     CUI3tButton* m_text;
     shared_str m_s_value;
     CUIQuestionItem(CUIXml* xml_doc, LPCSTR path);
     void Init(LPCSTR val, LPCSTR text);
+    virtual void Update() override;
 
     virtual void SendMessage(CUIWindow* pWnd, s16 msg, void* pData = NULL);
     void OnTextClicked(CUIWindow* w, void*);

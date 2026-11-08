@@ -42,6 +42,7 @@ protected:
 
     // Текущий активный диалог
     CUIWindow* m_pActiveDialog;
+    CUIWindow* m_op22_skills{};
     xr_vector<Fvector2> m_sign_places_main;
 
 public:

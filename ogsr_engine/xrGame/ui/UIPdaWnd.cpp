@@ -31,6 +31,17 @@
 #include "player_hud.h"
 #include "../../xr_3da/XR_IOConsole.h"
 #include "inventory.h"
+#include "../ai_space.h"
+#include "../script_engine.h"
+
+static void op22_skills_page(bool open, CUIWindow* owner)
+{
+    luabind::functor<void> fn;
+    if (ai().script_engine().functor(open ? "op22_skills_page.open" : "op22_skills_page.close", fn))
+    {
+        if (open) fn(owner); else fn();
+    }
+}
 
 #define PDA_XML "pda.xml"
 u32 g_pda_info_state = 0;
@@ -57,6 +68,7 @@ CUIPdaWnd::CUIPdaWnd()
 
 CUIPdaWnd::~CUIPdaWnd()
 {
+    if (m_pActiveSection == eptSkills) op22_skills_page(false, nullptr);
     delete_data(UIMapWnd);
     delete_data(UIPdaContactsWnd);
     delete_data(UIEncyclopediaWnd);
@@ -64,6 +76,7 @@ CUIPdaWnd::~CUIPdaWnd()
     delete_data(UIActorInfo);
     delete_data(UIStalkersRanking);
     delete_data(UIEventsWnd);
+    delete_data(m_op22_skills);
     delete_data(m_updatedSectionImage);
     delete_data(m_oldSectionImage);
 }
@@ -143,7 +156,23 @@ void CUIPdaWnd::Init()
 
     m_pActiveSection = eptNoActiveTab;
 
-    RearrangeTabButtons(UITabControl, m_sign_places_main);
+    if (uiXml.ReadAttribInt("tab", 0, "op22_layout", 0))
+    {
+        const auto* buttons = UITabControl->GetButtonsVector();
+        m_sign_places_main.resize(buttons->size());
+        for (u32 i = 0; i < buttons->size(); ++i)
+        {
+            const auto* button = (*buttons)[i];
+            m_sign_places_main[i].set(button->GetWndPos().x + button->GetWidth() / 2.f, button->GetWndPos().y + button->GetHeight() - 2.f);
+        }
+    }
+    else
+        RearrangeTabButtons(UITabControl, m_sign_places_main);
+    if (UITabControl->GetButtonsVector()->size() > eptSkills)
+    {
+        m_op22_skills = xr_new<CUIWindow>();
+        m_op22_skills->Init(0, 0, 1024, 768);
+    }
 }
 
 void CUIPdaWnd::SendMessage(CUIWindow* pWnd, s16 msg, void* pData)
@@ -293,10 +322,12 @@ void CUIPdaWnd::Show()
     InventoryUtilities::SendInfoToActor("ui_pda");
 
     inherited::Show();
+    if (m_pActiveSection == eptSkills) op22_skills_page(true, m_op22_skills);
 }
 
 void CUIPdaWnd::Hide()
 {
+    if (m_pActiveSection == eptSkills) op22_skills_page(false, nullptr);
     inherited::Hide();
 
     InventoryUtilities::SendInfoToActor("ui_pda_hide");
@@ -331,6 +362,7 @@ void CUIPdaWnd::SetActiveSubdialog(EPdaTabs section)
     if (m_pActiveSection == section)
         return;
 
+    if (m_pActiveSection == eptSkills) op22_skills_page(false, nullptr);
     if (m_pActiveDialog)
     {
         UIMainPdaFrame->DetachChild(m_pActiveDialog);
@@ -372,8 +404,15 @@ void CUIPdaWnd::SetActiveSubdialog(EPdaTabs section)
         m_pActiveDialog = smart_cast<CUIWindow*>(UIEventsWnd);
         g_pda_info_state &= ~pda_section::quests;
         break;
-    default: Msg("not registered button identifier [%d]", UITabControl->GetActiveIndex());
+    case eptSkills:
+        m_pActiveDialog = m_op22_skills;
+        break;
+    default:
+        Msg("not registered button identifier [%d]", UITabControl->GetActiveIndex());
+        m_pActiveDialog = nullptr;
+        break;
     }
+    if (!m_pActiveDialog) return;
     UIMainPdaFrame->AttachChild(m_pActiveDialog);
     m_pActiveDialog->Show(true);
 
@@ -382,6 +421,7 @@ void CUIPdaWnd::SetActiveSubdialog(EPdaTabs section)
 
     m_pActiveSection = section;
     g_op22_pda_tab = (g_op22_pda_tab + 1) % 100000; // OP22
+    if (section == eptSkills) op22_skills_page(true, m_op22_skills);
 }
 
 void CUIPdaWnd::Draw()

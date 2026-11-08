@@ -34,6 +34,15 @@ void CUIPdaListItem::Init(float x, float y, float width, float height)
     R_ASSERT2(xml_result, "xml file not found");
 
     CUIXmlInit xml_init;
+    if (uiXml.NavigateToNode("op22_selection", 0))
+    {
+        m_op22_selection = xr_new<CUIStatic>();
+        m_op22_selection->SetAutoDelete(true);
+        AttachChild(m_op22_selection);
+        xml_init.InitStatic(uiXml, "op22_selection", 0, m_op22_selection);
+        m_op22_selection->SetWndSize(GetWndSize());
+        m_op22_selection->Show(false);
+    }
     UIInfo = xr_new<CUICharacterInfo>();
     UIInfo->SetAutoDelete(true);
     AttachChild(UIInfo);

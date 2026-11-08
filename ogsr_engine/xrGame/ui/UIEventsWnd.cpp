@@ -36,6 +36,7 @@ void CUIEventsWnd::Init()
 
     CUIXmlInit xml_init;
     xml_init.InitWindow(uiXml, "main_wnd", 0, this);
+    m_op22_split = !!uiXml.ReadAttribInt("main_wnd", 0, "op22_split", 0);
 
     m_UILeftFrame = xr_new<CUIFrameWindow>();
     m_UILeftFrame->SetAutoDelete(true);
@@ -215,6 +216,13 @@ bool CUIEventsWnd::Filter(CGameTask* t)
 
 void CUIEventsWnd::SetDescriptionMode(bool bMap)
 {
+    if (m_op22_split)
+    {
+        if (!m_UIRightWnd->IsChild(m_UIMapWnd)) m_UIRightWnd->AttachChild(m_UIMapWnd);
+        if (!m_UIRightWnd->IsChild(m_UITaskInfoWnd)) m_UIRightWnd->AttachChild(m_UITaskInfoWnd);
+        m_flags.set(flMapMode, true);
+        return;
+    }
     if (bMap)
     {
         m_UIRightWnd->DetachChild(m_UITaskInfoWnd);
@@ -252,7 +260,7 @@ void CUIEventsWnd::ShowDescription(CGameTask* t, int idx)
                 itm->MarkSelected(false);
         }
     }
-    else
+    if (!GetDescriptionMode() || m_op22_split)
     { // articles
         SGameTaskObjective& o = t->Objective(0);
 

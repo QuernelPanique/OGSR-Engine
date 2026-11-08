@@ -299,6 +299,11 @@ CUIQuestionItem::CUIQuestionItem(CUIXml* xml_doc, LPCSTR path)
         m_num_text->SetAutoDelete(true);
         AttachChild(m_num_text);
         xml_init.InitStatic(*xml_doc, str, 0, m_num_text);
+        m_op22_number_normal = m_num_text->GetTextColor();
+        m_op22_number_hover = color_argb(color_get_A(m_op22_number_normal),
+            xml_doc->ReadAttribInt(str, 0, "hover_r", color_get_R(m_op22_number_normal)),
+            xml_doc->ReadAttribInt(str, 0, "hover_g", color_get_G(m_op22_number_normal)),
+            xml_doc->ReadAttribInt(str, 0, "hover_b", color_get_B(m_op22_number_normal)));
     }
 }
 
@@ -313,6 +318,14 @@ void CUIQuestionItem::Init(LPCSTR val, LPCSTR text)
     float new_h = _max(m_min_height, m_text->GetWndPos().y + m_text->GetHeight() + 2.f * pad);
     m_text->SetHeight(new_h - m_text->GetWndPos().y);
     SetHeight(new_h);
+}
+
+void CUIQuestionItem::Update()
+{
+    inherited::Update();
+    if (m_num_text)
+        m_num_text->SetTextColor(m_text->CursorOverWindow() || m_text->GetButtonsState() == CUIButton::BUTTON_PUSHED ?
+            m_op22_number_hover : m_op22_number_normal);
 }
 
 void CUIQuestionItem::OnTextClicked(CUIWindow* w, void*) { GetMessageTarget()->SendMessage(this, LIST_ITEM_CLICKED, (void*)this); }

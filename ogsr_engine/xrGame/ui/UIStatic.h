@@ -210,6 +210,11 @@ protected:
     CUIStaticItem m_UIStaticItem;
 
     Fvector2 m_TextOffset;
+public:
+    // Opt-in: legacy XML intentionally draws outside its text offsets.
+    bool m_op22_text_inset{};
+    shared_str m_op22_binding;
+protected:
 
     bool m_bHeading;
     float m_fHeading;
