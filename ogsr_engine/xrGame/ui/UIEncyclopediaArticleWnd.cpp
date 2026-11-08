@@ -4,6 +4,7 @@
 #include "../encyclopedia_article.h"
 #include "UIXmlInit.h"
 #include "../string_table.h"
+#include "../UI.h"
 
 CUIEncyclopediaArticleWnd::CUIEncyclopediaArticleWnd() : m_Article(NULL) {}
 
@@ -21,6 +22,8 @@ void CUIEncyclopediaArticleWnd::Init(LPCSTR xml_name, LPCSTR start_from)
 
     strcpy_s(str, sizeof(str), start_from);
     xml_init.InitWindow(uiXml, str, 0, this);
+    m_op22_fit = !!uiXml.ReadAttribInt(start_from, 0, "op22_fit", 0);
+    m_op22_image_limit = uiXml.ReadAttribFlt(start_from, 0, "op22_max_image_height", 240.f);
 
     strconcat(sizeof(str), str, start_from, ":image");
     m_UIImage = xr_new<CUIStatic>();
@@ -46,7 +49,22 @@ void CUIEncyclopediaArticleWnd::SetArticle(CEncyclopediaArticle* article)
         float img_x = (GetWidth() - m_UIImage->GetWidth()) / 2.0f;
         img_x = _max(0.0f, img_x);
         m_UIImage->SetWndPos(img_x, m_UIImage->GetWndPos().y);
+        if (m_op22_fit)
+        {
+            const Frect source = m_UIImage->GetUIStaticItem().GetOriginalRect();
+            const float width = _max(1.f, source.width() * UI()->get_current_kx());
+            const float height = _max(1.f, source.height());
+            const float scale = _min(GetWidth() / width, m_op22_image_limit / height);
+            m_UIImage->SetStretchTexture(true);
+            m_UIImage->SetWndRect((GetWidth() - width * scale) / 2.f, 0.f, width * scale, height * scale);
+            m_UIImage->Show(true);
+        }
     };
+    if (m_op22_fit && !article->data()->image.TextureAvailable())
+    {
+        m_UIImage->Show(false);
+        m_UIImage->SetHeight(0.f);
+    }
     m_UIText->SetText(*CStringTable().translate(article->data()->text.c_str()));
     m_UIText->AdjustHeightToText();
 
@@ -55,8 +73,9 @@ void CUIEncyclopediaArticleWnd::SetArticle(CEncyclopediaArticle* article)
 
 void CUIEncyclopediaArticleWnd::AdjustLauout()
 {
-    m_UIText->SetWndPos(m_UIText->GetWndPos().x, m_UIImage->GetWndPos().y + m_UIImage->GetHeight());
-    SetHeight(m_UIImage->GetWndPos().y + m_UIImage->GetHeight() + m_UIText->GetHeight());
+    const float top = m_UIImage->GetWndPos().y + m_UIImage->GetHeight() + (m_op22_fit && m_UIImage->IsShown() ? 12.f : 0.f);
+    m_UIText->SetWndPos(m_UIText->GetWndPos().x, top);
+    SetHeight(top + m_UIText->GetHeight());
 }
 
 void CUIEncyclopediaArticleWnd::SetArticle(LPCSTR article)

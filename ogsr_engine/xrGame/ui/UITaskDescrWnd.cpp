@@ -6,6 +6,9 @@
 #include "UIScrollView.h"
 #include "UIEncyclopediaArticleWnd.h"
 #include "../encyclopedia_article.h"
+#include "../gametask.h"
+#include "../string_table.h"
+#include "UIStatic.h"
 
 CUITaskDescrWnd::CUITaskDescrWnd() {}
 
@@ -40,6 +43,41 @@ void CUITaskDescrWnd::Init(CUIXml* doc, LPCSTR start_from)
     m_UIMainFrame->AttachChild(m_UITaskInfoWnd);
     strconcat(sizeof(str), str, start_from, ":main_frame:scroll_view");
     xml_init.InitScrollView(*doc, str, 0, m_UITaskInfoWnd);
+    if (doc->ReadAttribInt(start_from, 0, "op22_summary", 0))
+    {
+        strconcat(sizeof(str), str, start_from, ":summary_title");
+        xml_init.InitFont(*doc, str, 0, m_op22_title_color, m_op22_title_font);
+        strconcat(sizeof(str), str, start_from, ":summary_text");
+        xml_init.InitFont(*doc, str, 0, m_op22_text_color, m_op22_text_font);
+    }
+}
+
+void CUITaskDescrWnd::AddTaskSummary(CGameTask* task, int objective)
+{
+    if (!m_op22_title_font || !m_op22_text_font) return;
+    const auto append = [&](LPCSTR text, CGameFont* font, u32 color)
+    {
+        auto* line = xr_new<CUIStatic>();
+        line->SetAutoDelete(true);
+        line->SetFont(font);
+        line->SetTextColor(color);
+        line->SetTextComplexMode(true);
+        line->SetWidth(m_UITaskInfoWnd->GetDesiredChildWidth());
+        line->SetText(text);
+        line->AdjustHeightToText();
+        line->SetHeight(line->GetHeight() + 8.f);
+        m_UITaskInfoWnd->AddWindow(line, true);
+    };
+    append(*CStringTable().translate(task->m_Title), m_op22_title_font, m_op22_title_color);
+    const int first = objective > 0 ? objective : (task->m_Objectives.size() > 1 ? 1 : 0);
+    const int end = objective > 0 ? objective + 1 : int(task->m_Objectives.size());
+    for (int i = first; i < end; ++i)
+    {
+        auto& item = task->m_Objectives[i];
+        const char* mark = item.TaskState() == eTaskStateCompleted ? "[+] " : item.TaskState() == eTaskStateFail ? "[-] " : "[ ] ";
+        const xr_string text = xr_string(mark) + *CStringTable().translate(item.description);
+        append(text.c_str(), m_op22_text_font, m_op22_text_color);
+    }
 }
 
 void CUITaskDescrWnd::Draw() { inherited::Draw(); }

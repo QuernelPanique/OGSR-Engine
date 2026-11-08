@@ -11,6 +11,8 @@ class CUIEncyclopediaArticleWnd : public CUIWindow
     CUIStatic* m_UIImage;
     CUIStatic* m_UIText;
     CEncyclopediaArticle* m_Article;
+    bool m_op22_fit{};
+    float m_op22_image_limit{240.f};
 
 protected:
     void AdjustLauout();

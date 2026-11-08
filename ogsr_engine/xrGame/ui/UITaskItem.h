@@ -46,6 +46,8 @@ protected:
     CUIStatic* m_remTimeStatic;
     CUI3tButton* m_switchDescriptionBtn;
     bool m_curr_descr_mode;
+    CUIStatic* m_op22_selection{};
+    u32 m_op22_caption_color{}, m_op22_time_color{}, m_op22_rem_color{};
     void Init();
 
 public:

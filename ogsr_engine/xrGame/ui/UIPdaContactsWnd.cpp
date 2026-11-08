@@ -83,6 +83,12 @@ void CUIPdaContactsWnd::Init()
     UIDetailsWnd->SetAutoDelete(true);
     UIRightFrame->AttachChild(UIDetailsWnd);
     xml_init.InitScrollView(uiXml, "detail_list", 0, UIDetailsWnd);
+    if (uiXml.NavigateToNode("op22_bio_font", 0))
+    {
+        CGameFont* font = nullptr;
+        xml_init.InitFont(uiXml, "op22_bio_font", 0, m_op22_bio_color, font);
+        UIDetailsWnd->SetFont(font);
+    }
 
     if (uiXml.NavigateToNode("op22_character", 0))
     {
@@ -228,6 +234,7 @@ void CUIPdaContactItem::SetSelected(bool b)
         chInfo.Init(T);
 
         CUIStatic* pSt = xr_new<CUIStatic>();
+        pSt->SetTextColor(m_cw->m_op22_bio_color);
 
         if (m_cw->UIDetailsWnd->GetFont()) pSt->SetFont(m_cw->UIDetailsWnd->GetFont());
         pSt->SetText(CStringTable().translate(chInfo.Bio().c_str()).c_str());

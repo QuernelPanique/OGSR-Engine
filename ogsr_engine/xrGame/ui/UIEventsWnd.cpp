@@ -265,6 +265,7 @@ void CUIEventsWnd::ShowDescription(CGameTask* t, int idx)
         SGameTaskObjective& o = t->Objective(0);
 
         m_UITaskInfoWnd->ClearAll();
+        if (m_op22_split) m_UITaskInfoWnd->AddTaskSummary(t, idx);
 
         if (Actor()->encyclopedia_registry->registry().objects_ptr())
         {

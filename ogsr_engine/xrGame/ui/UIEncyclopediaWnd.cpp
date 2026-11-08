@@ -130,6 +130,13 @@ void CUIEncyclopediaWnd::SendMessage(CUIWindow* pWnd, s16 msg, void* pData)
             SetCurrentArtice(pTVItem);
             UIArticleHeader->SetTextST(*(A.data()->name));
         }
+        if (m_op22_tree_theme)
+        {
+            UIArticleHeader->AdjustHeightToText();
+            const float top = UIArticleHeader->GetWndPos().y + UIArticleHeader->GetHeight() + 12.f;
+            UIInfoList->SetWndPos(0.f, top);
+            UIInfoList->SetHeight(_max(1.f, UIEncyclopediaInfoBkg->GetHeight() - top));
+        }
     }
 
     inherited::SendMessage(pWnd, msg, pData);

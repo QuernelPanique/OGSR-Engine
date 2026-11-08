@@ -76,6 +76,20 @@ void CUITaskRootItem::Init()
     xml_init.InitStatic(uiXml, "task_root_item:rem_time", 0, m_remTimeStatic);
 
     xml_init.Init3tButton(uiXml, "task_root_item:switch_description_btn", 0, m_switchDescriptionBtn);
+    if (uiXml.ReadAttribInt("task_root_item", 0, "op22_theme", 0))
+    {
+        m_op22_selection = xr_new<CUIStatic>();
+        m_op22_selection->SetAutoDelete(true);
+        m_op22_selection->Init(0.f, 0.f, GetWidth(), GetHeight());
+        m_op22_selection->InitTexture("ui\\ct_tr_listsel_back");
+        m_op22_selection->SetStretchTexture(true);
+        m_op22_selection->Show(false);
+        AttachChild(m_op22_selection);
+        BringToBottom(m_op22_selection);
+        m_op22_caption_color = m_captionStatic->GetTextColor();
+        m_op22_time_color = m_captionTime->GetTextColor();
+        m_op22_rem_color = m_remTimeStatic->GetTextColor();
+    }
 }
 
 void CUITaskRootItem::SetGameTask(CGameTask* gt, u16 obj_idx)
@@ -132,6 +146,7 @@ void CUITaskRootItem::SetGameTask(CGameTask* gt, u16 obj_idx)
 void CUITaskRootItem::Update()
 {
     inherited::Update();
+    if (m_op22_selection) m_op22_selection->SetWndSize(GetWndSize());
 
     if (m_curr_descr_mode != m_EventsWnd->GetDescriptionMode())
     {
@@ -163,7 +178,14 @@ void CUITaskRootItem::OnSwitchDescriptionClicked(CUIWindow*, void*)
     OnItemClicked(this, NULL);
 }
 
-void CUITaskRootItem::MarkSelected(bool b) {}
+void CUITaskRootItem::MarkSelected(bool b)
+{
+    if (!m_op22_selection) return;
+    m_op22_selection->Show(b);
+    m_captionStatic->SetTextColor(b ? color_rgba(23, 18, 4, 255) : m_op22_caption_color);
+    m_captionTime->SetTextColor(b ? color_rgba(23, 18, 4, 255) : m_op22_time_color);
+    m_remTimeStatic->SetTextColor(b ? color_rgba(23, 18, 4, 255) : m_op22_rem_color);
+}
 
 CUITaskSubItem::CUITaskSubItem(CUIEventsWnd* w) : inherited(w) { Init(); }
 

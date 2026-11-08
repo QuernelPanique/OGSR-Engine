@@ -45,6 +45,8 @@ protected:
     u32 m_uTreeRootColor;
     CGameFont* m_pTreeItemFont;
     u32 m_uTreeItemColor;
+    bool m_op22_layout{};
+    void op22_SetHeader(LPCSTR text);
 
     xr_vector<Fvector2> m_sign_places;
     CUIStatic* m_updatedSectionImage;

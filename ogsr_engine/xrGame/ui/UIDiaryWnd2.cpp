@@ -17,6 +17,7 @@
 #include "../alife_registry_wrappers.h"
 #include "../encyclopedia_article.h"
 #include "UIPdaAux.h"
+#include "../string_table.h"
 
 extern u32 g_pda_info_state;
 
@@ -53,6 +54,7 @@ void CUIDiaryWnd::Init()
     CUIXmlInit xml_init;
 
     xml_init.InitWindow(uiXml, "main_wnd", 0, this);
+    m_op22_layout = !!uiXml.ReadAttribInt("main_wnd", 0, "op22_layout", 0);
 
     m_UILeftFrame = xr_new<CUIFrameWindow>();
     m_UILeftFrame->SetAutoDelete(true);
@@ -175,6 +177,7 @@ void CUIDiaryWnd::UnloadJournalTab()
 
 void CUIDiaryWnd::LoadJournalTab()
 {
+    if (m_op22_layout) op22_SetHeader(m_FilterTab->GetButtonsVector()->at(eJournal)->GetText());
     m_UILeftWnd->AttachChild(m_SrcListWnd);
     m_SrcListWnd->Show(true);
 
@@ -193,6 +196,7 @@ void CUIDiaryWnd::UnloadNewsTab()
 
 void CUIDiaryWnd::LoadNewsTab()
 {
+    if (m_op22_layout) op22_SetHeader(m_FilterTab->GetButtonsVector()->at(eNews)->GetText());
     m_UIRightWnd->AttachChild(m_UINewsWnd);
     m_UINewsWnd->Show(true);
     g_pda_info_state &= ~pda_section::news;
@@ -205,9 +209,10 @@ void CUIDiaryWnd::OnSrcListItemClicked(CUIWindow* w, void* p)
     if (!pSelItem->IsRoot())
     {
         CUIEncyclopediaArticleWnd* article_info = xr_new<CUIEncyclopediaArticleWnd>();
-        article_info->Init("encyclopedia_item.xml", "encyclopedia_wnd:objective_item");
+        article_info->Init("encyclopedia_item.xml", m_op22_layout ? "diary_wnd:objective_item" : "encyclopedia_wnd:objective_item");
         article_info->SetArticle(&m_ArticlesDB[pSelItem->GetValue()]);
         m_DescrView->AddWindow(article_info, true);
+        if (m_op22_layout) op22_SetHeader(*CStringTable().translate(m_ArticlesDB[pSelItem->GetValue()].data()->name));
 
         // Исправление отображения зеленым цветом прочитанных записей в дневнике КПК
         if (!pSelItem->IsArticleReaded())
@@ -300,5 +305,23 @@ void CUIDiaryWnd::UpdateJournal()
             }
         }
         prevArticlesCount = Actor()->encyclopedia_registry->registry().objects_ptr()->size();
+        if (m_op22_layout)
+            for (u32 i = 0; i < m_SrcListWnd->GetItemsCount(); ++i)
+                if (auto* item = smart_cast<CUITreeViewItem*>(m_SrcListWnd->GetItem(i))) item->op22_SetTheme();
     }
+}
+
+void CUIDiaryWnd::op22_SetHeader(LPCSTR text)
+{
+    auto& title = m_UIRightHeader->UITitleText;
+    title.SetWndPos(0.f, 0.f);
+    title.SetWidth(m_UIRightFrame->GetWidth() - 16.f);
+    title.SetTextComplexMode(true);
+    title.SetText(text);
+    title.AdjustHeightToText();
+    const float top = title.GetHeight() + 12.f;
+    const float height = _max(1.f, m_UIRightFrame->GetHeight() - top);
+    m_UIRightWnd->SetWndPos(0.f, top);
+    m_UIRightWnd->SetHeight(height);
+    m_DescrView->SetHeight(height);
 }

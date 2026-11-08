@@ -94,6 +94,7 @@ void CUIActorInfoWnd::Init()
     //Элементы автоматического добавления
     xml_init.InitAutoStatic(uiXml, "right_auto_static", UICharIconFrame);
     xml_init.InitAutoStatic(uiXml, "left_auto_static", UIInfoFrame);
+    xml_init.InitAutoStatic(uiXml, "op22_auto_static", this);
 }
 
 void CUIActorInfoWnd::Show(bool status)
