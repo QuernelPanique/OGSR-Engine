@@ -34,6 +34,8 @@ bool FreeRoom_inBelt(TIItemContainer& item_list, PIItem item, int width, int hei
 
 //получить shader на иконки инвенторя
 ui_shader& GetEquipmentIconsShader(size_t icon_group = 0);
+bool op22_HDIconsExist(size_t icon_group, int page); // OP22: страница HD-иконок ui\op22_icons_<группа>_<страница>
+ui_shader& op22_GetHDIconsShader(size_t icon_group, int page);
 //удаляем все шейдеры
 void DestroyShaders();
 void CreateShaders();

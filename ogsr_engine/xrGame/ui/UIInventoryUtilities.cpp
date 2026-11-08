@@ -35,7 +35,38 @@ CharInfoStrings* charInfoGoodwillStrings = NULL;
 
 void InventoryUtilities::CreateShaders() {}
 
-void InventoryUtilities::DestroyShaders() { g_EquipmentIconsShaders.clear(); }
+static xr_unordered_map<size_t, ui_shader> g_op22_HDIconsShaders; // OP22: ключ - группа * 1000 + страница
+static xr_unordered_map<size_t, bool> g_op22_HDIconsExist;
+
+void InventoryUtilities::DestroyShaders()
+{
+    g_EquipmentIconsShaders.clear();
+    g_op22_HDIconsShaders.clear(); // OP22
+}
+
+bool InventoryUtilities::op22_HDIconsExist(size_t icon_group, int page)
+{
+    const size_t key = icon_group * 1000 + size_t(page);
+    if (auto it = g_op22_HDIconsExist.find(key); it != g_op22_HDIconsExist.end())
+        return it->second;
+    string_path name;
+    xr_sprintf(name, "ui\\op22_icons_%u_%d.dds", u32(icon_group), page);
+    const bool has = !!FS.exist("$game_textures$", name);
+    g_op22_HDIconsExist[key] = has;
+    return has;
+}
+
+ui_shader& InventoryUtilities::op22_GetHDIconsShader(size_t icon_group, int page)
+{
+    const size_t key = icon_group * 1000 + size_t(page);
+    if (auto it = g_op22_HDIconsShaders.find(key); it == g_op22_HDIconsShaders.end())
+    {
+        string_path file;
+        xr_sprintf(file, "ui\\op22_icons_%u_%d", u32(icon_group), page);
+        g_op22_HDIconsShaders[key]->create("hud\\default", file);
+    }
+    return g_op22_HDIconsShaders.at(key);
+}
 
 bool InventoryUtilities::GreaterRoomInRuck(PIItem item1, PIItem item2)
 {

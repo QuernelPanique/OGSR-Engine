@@ -21,4 +21,8 @@ public:
     Frect& original_rect() const;
     void set_shader(CUIStatic*);
     void set_shader(CUIStaticItem*);
+    // OP22: HD-иконки (атлас x2 страницами ui\op22_icons_<группа>_<страница>): страница и область в ней, есть ли страница
+    int op22_page() const;
+    Frect op22_tex_rect() const;
+    bool op22_hd() const;
 };
