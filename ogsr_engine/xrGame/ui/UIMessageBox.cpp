@@ -219,6 +219,7 @@ void CUIMessageBox::Init(LPCSTR box_template)
         AttachChild(m_op22_text_view);
         const auto pos = m_UIStaticText->GetWndPos();
         m_op22_text_view->Init(pos.x, pos.y, m_UIStaticText->GetWidth(), m_op22_base_text_height);
+        m_op22_text_view->Init(); // CUIScrollView must create its pad and scrollbar before AddWindow.
         DetachChild(m_UIStaticText);
         m_UIStaticText->SetWidth(_max(1.f, m_UIStaticText->GetWidth() - 16.f));
         m_op22_text_view->AddWindow(m_UIStaticText, false);
