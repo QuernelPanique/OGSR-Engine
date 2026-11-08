@@ -323,6 +323,9 @@ void CUIDragDropListEx::ReinitScroll()
     m_vScrollBar->Show((dh > 0) || m_flags.test(flAlwaysShowScroll));
     m_vScrollBar->Enable((dh > 0) || m_flags.test(flAlwaysShowScroll));
 
+    // OP22: каретка пропорциональна видимой части (как на макетах): диапазон - высота содержимого, страница - высота
+    // списка; позиции прокрутки те же 0..dh. Было: страница 1 - каретка с квадратик при длинном рюкзаке (08.11)
+    const bool op22_prop = dh > 0 && iFloor(h2) > 0;
     if (dh < 0)
     {
         //			dh = 0;
@@ -330,10 +333,10 @@ void CUIDragDropListEx::ReinitScroll()
     }
     else
     {
-        m_vScrollBar->SetRange(0, iFloor(dh));
+        m_vScrollBar->SetRange(0, op22_prop ? iFloor(h1) - 1 : iFloor(dh));
     }
     m_vScrollBar->SetStepSize(CellSize().y / 3);
-    m_vScrollBar->SetPageSize(1);
+    m_vScrollBar->SetPageSize(op22_prop ? iFloor(h2) : 1);
 
     m_vScrollBar->SetScrollPos(m_vScrollBar->GetScrollPos());
 

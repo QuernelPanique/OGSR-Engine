@@ -259,6 +259,9 @@ bool CUIXmlInit::InitStatic(CUIXml& xml_doc, LPCSTR path, int index, CUIStatic* 
 
 bool CUIXmlInit::InitCheck(CUIXml& xml_doc, LPCSTR path, int index, CUICheckButton* pWnd)
 {
+    // OP22: размер флажка - из разметки: InitStatic с <texture> проходит обычную инициализацию флажка ОП, и высота
+    // становится «высота текстуры - 5» ещё до запоминания (флажки вытянуты, 08.11)
+    const float op22_w = xml_doc.ReadAttribFlt(path, index, "width", 0.f), op22_h = xml_doc.ReadAttribFlt(path, index, "height", 0.f);
     InitStatic(xml_doc, path, index, pWnd);
     InitOptionsItem(xml_doc, path, index, pWnd);
 
@@ -269,8 +272,8 @@ bool CUIXmlInit::InitCheck(CUIXml& xml_doc, LPCSTR path, int index, CUICheckButt
         pWnd->m_op22 = true;
         pWnd->InitTexture(op22_tex.c_str());
         pWnd->SetWndRect(r);
-        pWnd->SetWidth(r.width()); // OP22: и фону кнопки (SetWndRect его не меняет - флажок был высотой текстуры ui_checker, 08.11)
-        pWnd->SetHeight(r.height());
+        pWnd->SetWidth(op22_w > 0.f ? op22_w : r.width()); // OP22: и фону кнопки (SetWndRect его не меняет, 08.11)
+        pWnd->SetHeight(op22_h > 0.f ? op22_h : r.height());
     }
 
     return true;
