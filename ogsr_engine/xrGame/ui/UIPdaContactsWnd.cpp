@@ -30,9 +30,18 @@ CUIPdaContactsWnd::~CUIPdaContactsWnd() {}
 void CUIPdaContactsWnd::Show(bool status)
 {
     inherited::Show(status);
-    if (status)
-        UIDetailsWnd->Clear();
-    if (m_op22_character) m_op22_character->Show(false);
+    if (status && m_op22_character)
+    {
+        if (CUIWindow* selected = UIListWnd->GetSelected())
+            UIListWnd->SetSelected(selected);
+        else
+        {
+            UIDetailsWnd->Clear();
+            m_op22_character->Show(false);
+            if (m_op22_map_button) m_op22_map_button->Enable(false);
+        }
+    }
+    else if (status) UIDetailsWnd->Clear();
 }
 
 void CUIPdaContactsWnd::Init()
@@ -133,6 +142,7 @@ void CUIPdaContactsWnd::Update()
 {
     if (TRUE == m_flags.test(flNeedUpdate))
     {
+        const u16 selected = m_op22_selected;
         RemoveAll();
 
         CPda* pPda = Actor()->GetPDA();
@@ -142,7 +152,13 @@ void CUIPdaContactsWnd::Update()
         const auto m_pda_list = pPda->ActivePDAContacts();
 
         for (const auto& [id, pda] : m_pda_list)
+        {
             AddContact(pda, id);
+            if (m_op22_character && id == selected)
+                UIListWnd->SetSelected(UIListWnd->GetItem(UIListWnd->GetSize() - 1));
+        }
+        if (m_op22_character && !UIListWnd->GetSelected() && UIListWnd->GetSize())
+            UIListWnd->SetSelected(UIListWnd->GetItem(0));
 
         m_flags.set(flNeedUpdate, FALSE);
     }

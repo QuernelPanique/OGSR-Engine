@@ -115,6 +115,8 @@ void CUIEventsWnd::Reload() { m_flags.set(flNeedReload, TRUE); }
 void CUIEventsWnd::ReloadList(bool bClearOnly)
 {
     m_ListWnd->Clear();
+    // Selection belongs to the rebuilt list; its former description is stale.
+    if (m_op22_split) m_UITaskInfoWnd->ClearAll();
     if (bClearOnly)
         return;
     if (!g_actor)
