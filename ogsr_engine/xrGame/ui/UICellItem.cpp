@@ -252,6 +252,12 @@ void CUICellItem::UpdateConditionProgressBar()
             else
                 m_condition_auto_width = false;
             float y = itm_grid_size.y * (cell_size.y + cell_space.y) - m_pConditionState->GetHeight() - 2.f;
+            if (m_op22_grid_orig.x >= 0) // OP22: предмет вписан в слот (adjust_cells, уменьшен и по центру) - шкала в левом
+            {                            // нижнем углу слота, как на макете; от сетки она уезжала за низ слота и обрезалась (08.11)
+                const Fvector2 p = GetWndPos();
+                x = 2.f - p.x;
+                y = m_pParentList->GetWndSize().y - p.y - m_pConditionState->GetHeight() - 2.f;
+            }
             m_pConditionState->SetWndPos({x, y});
             m_pConditionState->SetProgressPos(itm->GetCondition() * 100.0f);
             m_pConditionState->Show(true);
