@@ -822,7 +822,7 @@ CMapLocation* CUIMapWnd::UnderSpot(Fvector RealPosition, CUICustomMap* curr_map)
     CMapLocation* ml = nullptr;
     for (auto it = Spots.begin(); it != Spots.end(); ++it)
     {
-        if ((*it).location->IsUserDefined())
+        if ((*it).location->IsUserDefined() && op22_AllowSpot((*it).location))
         {
             m_position_on_map = curr_map->ConvertRealToLocal((*it).location->Position(), false);
             float distance = m_position_on_map.distance_to(m_position_mouse);

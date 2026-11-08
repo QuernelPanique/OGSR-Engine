@@ -5,7 +5,7 @@
 
 // OP22: часть рамки без описания текстуры (textures_descr) имеет нулевой исходный размер до первой отрисовки - тогда
 // деление на ноль переполняет счёт вершин и движок падает («vl_Count=0»). Берём размер из самой текстуры.
-static void op22_frame_part_size(CUIStaticItem& it)
+static void op22_frame_part_size(CUIStaticItem& it, LPCSTR texture, int part)
 {
     const Frect r = it.GetOriginalRect();
     if (r.width() > 0.f && r.height() > 0.f)
@@ -21,7 +21,7 @@ static void op22_frame_part_size(CUIStaticItem& it)
     if (!once)
     {
         once = true;
-        Msg("! [OP22] frame texture part without textures_descr entry: size taken from the texture file");
+        Msg("! [OP22] frame texture [%s] part [%d] without textures_descr entry: size taken from the texture file", texture, part);
     }
 }
 
@@ -47,6 +47,7 @@ void CUIFrameRect::Init(LPCSTR texture, float x, float y, float w, float h) //, 
 
 void CUIFrameRect::InitTexture(const char* texture)
 {
+    m_op22_texture = texture;
     string_path fn, buf;
     strcpy_s(buf, texture);
     if (strext(buf))
@@ -115,7 +116,7 @@ void CUIFrameRect::UpdateSize()
 {
     VERIFY(g_bRendering);
     for (int i = 0; i < fmMax; ++i) // OP22
-        op22_frame_part_size(frame[i]);
+        op22_frame_part_size(frame[i], m_op22_texture.c_str(), i);
     // texture size
     Fvector2 ts;
     float rem_x, rem_y;
@@ -190,6 +191,8 @@ void CUIFrameRect::UpdateSize()
 
 void CUIFrameRect::Draw()
 {
+    if (m_wndSize.x <= 0.f || m_wndSize.y <= 0.f)
+        return;
     if (!uFlags.is(flValidSize))
         UpdateSize();
 

@@ -21,6 +21,7 @@
 #include "UIXmlInit.h"
 #include "UIInventoryUtilities.h"
 #include "../inventory.h"
+#include "../trade.h"
 
 CUITalkWnd::CUITalkWnd()
 {
@@ -369,6 +370,11 @@ void CUITalkWnd::AddAnswer(const shared_str& text, LPCSTR SpeakerName)
 
 void CUITalkWnd::SwitchToTrade()
 {
+    // A script can request this after distance/AI already ended the talk.
+    // GetPartnerInventory would assert on TT_NONE in that stale window.
+    if (!m_pOurInvOwner || !m_pOthersInvOwner || !m_pOurInvOwner->IsTalking() ||
+        m_pOurInvOwner->GetTrade()->GetPartner() != m_pOthersInvOwner)
+        return;
     if (m_pOurInvOwner->IsTradeEnabled() && m_pOthersInvOwner->IsTradeEnabled())
     {
         UITalkDialogWnd->Hide();

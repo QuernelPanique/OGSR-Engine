@@ -41,6 +41,7 @@ public:
 
 protected:
     CUIStaticItem frame[fmMax];
+    shared_str m_op22_texture;
 
     enum
     {
