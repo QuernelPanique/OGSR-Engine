@@ -75,7 +75,11 @@ Frect CUIXmlInit::GetFRect(CUIXml& xml_doc, const char* path, int index)
 
 bool CUIXmlInit::InitWindow(CUIXml& xml_doc, LPCSTR path, int index, CUIWindow* pWnd)
 {
-    R_ASSERT3(xml_doc.NavigateToNode(path, index), "XML node not found", path);
+    if (!xml_doc.NavigateToNode(path, index)) // OP22: как в ОП - нет узла: сообщение, окно остаётся пустым (не вылет)
+    {
+        Msg("! [OP22] XML node not found: [%s] in [%s]", path, xml_doc.m_xml_file_name);
+        return false;
+    }
 
     float x = xml_doc.ReadAttribFlt(path, index, "x");
     float y = xml_doc.ReadAttribFlt(path, index, "y");
@@ -124,7 +128,11 @@ bool CUIXmlInit::InitWindow(CUIXml& xml_doc, LPCSTR path, int index, CUIWindow* 
 
 bool CUIXmlInit::InitFrameWindow(CUIXml& xml_doc, LPCSTR path, int index, CUIFrameWindow* pWnd)
 {
-    R_ASSERT3(xml_doc.NavigateToNode(path, index), "XML node not found", path);
+    if (!xml_doc.NavigateToNode(path, index)) // OP22: как в ОП - нет узла: сообщение, окно остаётся пустым (не вылет)
+    {
+        Msg("! [OP22] XML node not found: [%s] in [%s]", path, xml_doc.m_xml_file_name);
+        return false;
+    }
 
     InitWindow(xml_doc, path, index, pWnd);
     InitTexture(xml_doc, path, index, pWnd);
@@ -195,7 +203,11 @@ bool CUIXmlInit::InitOptionsItem(CUIXml& xml_doc, const char* paht, int index, C
 
 bool CUIXmlInit::InitStatic(CUIXml& xml_doc, LPCSTR path, int index, CUIStatic* pWnd)
 {
-    R_ASSERT3(xml_doc.NavigateToNode(path, index), "XML node not found", path);
+    if (!xml_doc.NavigateToNode(path, index)) // OP22: как в ОП - нет узла: сообщение, окно остаётся пустым (не вылет)
+    {
+        Msg("! [OP22] XML node not found: [%s] in [%s]", path, xml_doc.m_xml_file_name);
+        return false;
+    }
 
     InitWindow(xml_doc, path, index, pWnd);
     InitMultiText(xml_doc, path, index, pWnd);
@@ -374,7 +386,11 @@ void CUIXmlInit::InitAccel(CUIXml& xml_doc, const char* path, int index, CUIButt
 
 bool CUIXmlInit::Init3tButton(CUIXml& xml_doc, const char* path, int index, CUI3tButton* pWnd)
 {
-    R_ASSERT3(xml_doc.NavigateToNode(path, index), "XML node not found", path);
+    if (!xml_doc.NavigateToNode(path, index)) // OP22: как в ОП - нет узла: сообщение, окно остаётся пустым (не вылет)
+    {
+        Msg("! [OP22] XML node not found: [%s] in [%s]", path, xml_doc.m_xml_file_name);
+        return false;
+    }
 
     InitWindow(xml_doc, path, index, pWnd);
     InitMultiText(xml_doc, path, index, pWnd);
@@ -444,7 +460,11 @@ bool CUIXmlInit::InitSound(CUIXml& xml_doc, const char* path, int index, CUI3tBu
 
 bool CUIXmlInit::InitButton(CUIXml& xml_doc, LPCSTR path, int index, CUIButton* pWnd)
 {
-    R_ASSERT3(xml_doc.NavigateToNode(path, index), "XML node not found", path);
+    if (!xml_doc.NavigateToNode(path, index)) // OP22: как в ОП - нет узла: сообщение, окно остаётся пустым (не вылет)
+    {
+        Msg("! [OP22] XML node not found: [%s] in [%s]", path, xml_doc.m_xml_file_name);
+        return false;
+    }
 
     InitStatic(xml_doc, path, index, pWnd);
 
@@ -469,7 +489,11 @@ bool CUIXmlInit::InitButton(CUIXml& xml_doc, LPCSTR path, int index, CUIButton* 
 //////////////////////////////////////////////////////////////////////////
 bool CUIXmlInit::InitDragDropListEx(CUIXml& xml_doc, const char* path, int index, CUIDragDropListEx* pWnd)
 {
-    R_ASSERT3(xml_doc.NavigateToNode(path, index), "XML node not found", path);
+    if (!xml_doc.NavigateToNode(path, index)) // OP22: как в ОП - нет узла: сообщение, окно остаётся пустым (не вылет)
+    {
+        Msg("! [OP22] XML node not found: [%s] in [%s]", path, xml_doc.m_xml_file_name);
+        return false;
+    }
 
     float x = xml_doc.ReadAttribFlt(path, index, "x");
     float y = xml_doc.ReadAttribFlt(path, index, "y");
@@ -593,7 +617,11 @@ bool CUIXmlInit::InitDragDropListEx(CUIXml& xml_doc, const char* path, int index
 
 bool CUIXmlInit::InitListWnd(CUIXml& xml_doc, LPCSTR path, int index, CUIListWnd* pWnd)
 {
-    R_ASSERT3(xml_doc.NavigateToNode(path, index), "XML node not found", path);
+    if (!xml_doc.NavigateToNode(path, index)) // OP22: как в ОП - нет узла: сообщение, окно остаётся пустым (не вылет)
+    {
+        Msg("! [OP22] XML node not found: [%s] in [%s]", path, xml_doc.m_xml_file_name);
+        return false;
+    }
 
     float x = xml_doc.ReadAttribFlt(path, index, "x");
     float y = xml_doc.ReadAttribFlt(path, index, "y");
@@ -646,7 +674,11 @@ bool CUIXmlInit::InitListWnd(CUIXml& xml_doc, LPCSTR path, int index, CUIListWnd
 
 bool CUIXmlInit::InitProgressBar(CUIXml& xml_doc, LPCSTR path, int index, CUIProgressBar* pWnd)
 {
-    R_ASSERT3(xml_doc.NavigateToNode(path, index), "XML node not found", path);
+    if (!xml_doc.NavigateToNode(path, index)) // OP22: как в ОП - нет узла: сообщение, окно остаётся пустым (не вылет)
+    {
+        Msg("! [OP22] XML node not found: [%s] in [%s]", path, xml_doc.m_xml_file_name);
+        return false;
+    }
 
     string256 buf;
     Fvector2 pos, size;
@@ -746,7 +778,11 @@ bool CUIXmlInit::InitProgressBar(CUIXml& xml_doc, LPCSTR path, int index, CUIPro
 
 bool CUIXmlInit::InitProgressShape(CUIXml& xml_doc, const char* path, int index, CUIProgressShape* pWnd)
 {
-    R_ASSERT3(xml_doc.NavigateToNode(path, index), "XML node not found", path);
+    if (!xml_doc.NavigateToNode(path, index)) // OP22: как в ОП - нет узла: сообщение, окно остаётся пустым (не вылет)
+    {
+        Msg("! [OP22] XML node not found: [%s] in [%s]", path, xml_doc.m_xml_file_name);
+        return false;
+    }
 
     InitWindow(xml_doc, path, index, pWnd);
 
@@ -893,7 +929,11 @@ bool CUIXmlInit::InitFont(CUIXml& xml_doc, LPCSTR path, int index, u32& color, C
 
 bool CUIXmlInit::InitTabControl(CUIXml& xml_doc, LPCSTR path, int index, CUITabControl* pWnd)
 {
-    R_ASSERT3(xml_doc.NavigateToNode(path, index), "XML node not found", path);
+    if (!xml_doc.NavigateToNode(path, index)) // OP22: как в ОП - нет узла: сообщение, окно остаётся пустым (не вылет)
+    {
+        Msg("! [OP22] XML node not found: [%s] in [%s]", path, xml_doc.m_xml_file_name);
+        return false;
+    }
 
     bool status = true;
 
@@ -1051,7 +1091,11 @@ bool CUIXmlInit::InitEditBox(CUIXml& xml_doc, const char* path, int index, CUIEd
 
 bool CUIXmlInit::InitTextBanner(CUIXml& xml_doc, const char* path, int index, CUITextBanner* pBnr)
 {
-    R_ASSERT3(xml_doc.NavigateToNode(path, index), "XML node not found", path);
+    if (!xml_doc.NavigateToNode(path, index)) // OP22: как в ОП - нет узла: сообщение, окно остаётся пустым (не вылет)
+    {
+        Msg("! [OP22] XML node not found: [%s] in [%s]", path, xml_doc.m_xml_file_name);
+        return false;
+    }
 
     xr_map<shared_str, CUITextBanner::TextBannerStyles> conformityTable;
     conformityTable["none"] = CUITextBanner::tbsNone;
@@ -1086,7 +1130,11 @@ bool CUIXmlInit::InitTextBanner(CUIXml& xml_doc, const char* path, int index, CU
 
 bool CUIXmlInit::InitMultiTextStatic(CUIXml& xml_doc, const char* path, int index, CUIMultiTextStatic* pWnd)
 {
-    R_ASSERT3(xml_doc.NavigateToNode(path, index), "XML node not found", path);
+    if (!xml_doc.NavigateToNode(path, index)) // OP22: как в ОП - нет узла: сообщение, окно остаётся пустым (не вылет)
+    {
+        Msg("! [OP22] XML node not found: [%s] in [%s]", path, xml_doc.m_xml_file_name);
+        return false;
+    }
 
     bool status = true;
     string128 buf;
@@ -1130,7 +1178,11 @@ bool CUIXmlInit::InitMultiTextStatic(CUIXml& xml_doc, const char* path, int inde
 
 bool CUIXmlInit::InitAnimatedStatic(CUIXml& xml_doc, const char* path, int index, CUIAnimatedStatic* pWnd)
 {
-    R_ASSERT3(xml_doc.NavigateToNode(path, index), "XML node not found", path);
+    if (!xml_doc.NavigateToNode(path, index)) // OP22: как в ОП - нет узла: сообщение, окно остаётся пустым (не вылет)
+    {
+        Msg("! [OP22] XML node not found: [%s] in [%s]", path, xml_doc.m_xml_file_name);
+        return false;
+    }
 
     InitStatic(xml_doc, path, index, pWnd);
 
@@ -1405,7 +1457,11 @@ void CUIXmlInit::InitColorDefs()
 
 bool CUIXmlInit::InitScrollView(CUIXml& xml_doc, const char* path, int index, CUIScrollView* pWnd)
 {
-    R_ASSERT3(xml_doc.NavigateToNode(path, index), "XML node not found", path);
+    if (!xml_doc.NavigateToNode(path, index)) // OP22: как в ОП - нет узла: сообщение, окно остаётся пустым (не вылет)
+    {
+        Msg("! [OP22] XML node not found: [%s] in [%s]", path, xml_doc.m_xml_file_name);
+        return false;
+    }
 
     InitWindow(xml_doc, path, index, pWnd);
     pWnd->SetRightIndention(xml_doc.ReadAttribFlt(path, index, "right_ident", 0.0f));

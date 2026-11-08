@@ -49,7 +49,11 @@ void CUIOptionsManager::SendMessage2Group(const char* group, const char* message
 {
     groups_it it = m_groups.find(group);
 
-    R_ASSERT2(m_groups.end() != it, "invalid group name");
+    if (m_groups.end() == it) // OP22: как в ОП - неизвестная группа: сообщение, без вылета
+    {
+        Msg("! [OP22] options: invalid group name [%s] in %s", group, __FUNCTION__);
+        return;
+    }
 
     for (u32 i = 0; i < (*it).second.size(); i++)
         (*it).second[i]->OnMessage(message);
@@ -59,7 +63,11 @@ void CUIOptionsManager::SeveBackupValues(const char* group)
 {
     groups_it it = m_groups.find(group);
 
-    R_ASSERT3(m_groups.end() != it, "invalid group name", group);
+    if (m_groups.end() == it) // OP22: как в ОП - неизвестная группа: сообщение, без вылета
+    {
+        Msg("! [OP22] options: invalid group name [%s] in %s", group, __FUNCTION__);
+        return;
+    }
 
     for (u32 i = 0; i < (*it).second.size(); i++)
     {
@@ -76,7 +84,11 @@ void CUIOptionsManager::SetCurrentValues(const char* group)
 {
     groups_it it = m_groups.find(group);
 
-    R_ASSERT3(m_groups.end() != it, "invalid group name", group);
+    if (m_groups.end() == it) // OP22: как в ОП - неизвестная группа: сообщение, без вылета
+    {
+        Msg("! [OP22] options: invalid group name [%s] in %s", group, __FUNCTION__);
+        return;
+    }
 
     for (u32 i = 0; i < (*it).second.size(); i++)
     {
@@ -89,7 +101,11 @@ void CUIOptionsManager::SaveValues(const char* group)
 {
     groups_it it = m_groups.find(group);
 
-    R_ASSERT3(m_groups.end() != it, "invalid group name", group);
+    if (m_groups.end() == it) // OP22: как в ОП - неизвестная группа: сообщение, без вылета
+    {
+        Msg("! [OP22] options: invalid group name [%s] in %s", group, __FUNCTION__);
+        return;
+    }
 
     for (u32 i = 0; i < (*it).second.size(); i++)
     {
@@ -101,7 +117,11 @@ void CUIOptionsManager::SaveValues(const char* group)
 bool CUIOptionsManager::IsGroupChanged(const char* group)
 {
     groups_it it = m_groups.find(group);
-    R_ASSERT2(m_groups.end() != it, "invalid group name");
+    if (m_groups.end() == it) // OP22: как в ОП - неизвестная группа: сообщение, без вылета
+    {
+        Msg("! [OP22] options: invalid group name [%s] in %s", group, __FUNCTION__);
+        return false;
+    }
 
     for (u32 i = 0; i < (*it).second.size(); i++)
     {
@@ -115,7 +135,11 @@ bool CUIOptionsManager::IsGroupChanged(const char* group)
 void CUIOptionsManager::UndoGroup(const char* group)
 {
     groups_it it = m_groups.find(group);
-    R_ASSERT2(m_groups.end() != it, "invalid group name");
+    if (m_groups.end() == it) // OP22: как в ОП - неизвестная группа: сообщение, без вылета
+    {
+        Msg("! [OP22] options: invalid group name [%s] in %s", group, __FUNCTION__);
+        return;
+    }
 
     for (u32 i = 0; i < (*it).second.size(); i++)
     {
