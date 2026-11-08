@@ -269,6 +269,8 @@ bool CUIXmlInit::InitCheck(CUIXml& xml_doc, LPCSTR path, int index, CUICheckButt
         pWnd->m_op22 = true;
         pWnd->InitTexture(op22_tex.c_str());
         pWnd->SetWndRect(r);
+        pWnd->SetWidth(r.width()); // OP22: и фону кнопки (SetWndRect его не меняет - флажок был высотой текстуры ui_checker, 08.11)
+        pWnd->SetHeight(r.height());
     }
 
     return true;
