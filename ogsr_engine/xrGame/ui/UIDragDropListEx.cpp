@@ -454,13 +454,15 @@ void CUIDragDropListEx::SetItem(CUICellItem* itm, Ivector2 cell_pos) // start at
     if (op22_adjust) // OP22: иконка вписывается в список по центру, пропорции предмета сохраняются
     {
         const Ivector2 g = itm->m_op22_grid_orig;
-        const Fvector2 box = itm->GetWndSize();
+        const Fvector2 full = itm->GetWndSize();
+        const float pad = _min(m_op22_pad, _min(full.x, full.y) / 4.f); // OP22: поле вокруг иконки
+        const Fvector2 box{full.x - 2.f * pad, full.y - 2.f * pad};
         if (g.x > 0 && g.y > 0 && box.x > 0 && box.y > 0)
         {
             const float k = _min(box.x / float(g.x), box.y / float(g.y));
             const Fvector2 sz{k * g.x, k * g.y};
             itm->SetWndSize(sz);
-            itm->SetWndPos(Fvector2().set(itm->GetWndPos().x + (box.x - sz.x) / 2, itm->GetWndPos().y + (box.y - sz.y) / 2));
+            itm->SetWndPos(Fvector2().set(itm->GetWndPos().x + (full.x - sz.x) / 2, itm->GetWndPos().y + (full.y - sz.y) / 2));
         }
     }
 

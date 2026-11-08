@@ -97,8 +97,15 @@ CUICellItem* CUIOutfitDragDropList::RemoveItem(CUICellItem* itm, bool force_root
 
 void CUIOutfitDragDropList::Draw()
 {
-    if (Core.Features.test(xrCore::Feature::old_outfit_slot_style))
+    // OP22: слот по макету (op22_frame_on/off) - рамка, сетка и иконка предмета, как у остальных слотов, и дети списка
+    // (панель батареи экзоскелета). Старый стиль ОП рисовал только картинку в полный рост: ни рамки, ни батареи (08.11)
+    const bool op22 = m_op22_frame_on || m_op22_frame_off;
+    if (Core.Features.test(xrCore::Feature::old_outfit_slot_style) && !op22)
         m_background->Draw();
     else
+    {
+        if (op22)
+            m_background->Show(false);
         inherited::Draw();
+    }
 }
