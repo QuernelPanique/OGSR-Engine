@@ -594,6 +594,14 @@ void enable_input()
     GetUICursor()->SetUICursorPosition(pos);
 }
 
+// UI coordinates, independent of the platform input backend (X11/Wayland/Windows).
+void set_ui_cursor_pos(float x, float y)
+{
+    Fvector2 pos;
+    pos.set(clampr(x, 0.f, 1024.f), clampr(y, 0.f, 768.f));
+    GetUICursor()->SetUICursorPosition(pos);
+}
+
 bool g_block_all_except_movement{};
 bool g_actor_allow_ladder{true};
 bool g_actor_allow_pda{true};
@@ -1202,6 +1210,7 @@ void CLevel::script_register(lua_State* L)
             //
             def("send_event_key_press", &send_event_key_press), def("send_event_key_release", &send_event_key_release), def("send_event_key_hold", &send_event_key_hold),
             def("send_event_mouse_wheel", &send_event_mouse_wheel),
+            def("set_ui_cursor_pos", &set_ui_cursor_pos),
 
             def("iterate_nearest", &iterate_nearest),
 

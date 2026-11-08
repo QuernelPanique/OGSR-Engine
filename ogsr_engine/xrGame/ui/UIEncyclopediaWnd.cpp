@@ -84,6 +84,7 @@ void CUIEncyclopediaWnd::Init()
     UIIdxList->SetAutoDelete(true);
     UIEncyclopediaIdxBkg->AttachChild(UIIdxList);
     xml_init.InitListWnd(uiXml, "idx_list", 0, UIIdxList);
+    m_op22_tree_theme = !!uiXml.ReadAttribInt("idx_list", 0, "op22_theme", 0);
     UIIdxList->SetMessageTarget(this);
     UIIdxList->EnableScrollBar(true);
 
@@ -312,6 +313,9 @@ void CUIEncyclopediaWnd::UpdateArticles()
                     // Теперь создаем иерархию вещи по заданному пути
                     CreateTreeBranch(a.data()->group, a.data()->name, UIIdxList, idx++, m_pTreeRootFont, m_uTreeRootColor, m_pTreeItemFont, m_uTreeItemColor, a.readed);
             }
+            if (m_op22_tree_theme)
+                for (u32 i = 0; i < UIIdxList->GetSize(); ++i)
+                    if (auto* item = smart_cast<CUITreeViewItem*>(UIIdxList->GetItem(i))) item->op22_SetTheme();
             prevArticlesCount = Actor()->encyclopedia_registry->registry().objects_ptr()->size();
         }
         m_flags.set(eNeedReload, FALSE);

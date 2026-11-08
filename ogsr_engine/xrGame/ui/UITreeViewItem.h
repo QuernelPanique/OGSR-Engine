@@ -96,6 +96,7 @@ public:
     void SetReadedColor(u32 cl) { m_uReadedColor = cl; }
     void SetUnreadedColor(u32 cl) { m_uUnreadedColor = cl; }
     void SetManualSetColor(bool val) { m_bManualSetColor = val; }
+    void op22_SetTheme();
     // Устанавливаем цвет в зависимости от состояния элемента
     void SetItemColor() { m_bArticleRead ? SetTextColor(m_uReadedColor) : SetTextColor(m_uUnreadedColor); }
 
@@ -113,6 +114,7 @@ private:
     // Если true, то MarkArticleAsRead не будет вызывать
     // SetItemColor()
     bool m_bManualSetColor;
+    bool m_op22_theme{};
 };
 
 //////////////////////////////////////////////////////////////////////////

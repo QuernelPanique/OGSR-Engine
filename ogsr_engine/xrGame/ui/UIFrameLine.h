@@ -38,6 +38,7 @@ class CUIFrameLine : public CUICustomItem
 protected:
     float iSize;
     Fvector2 iPos;
+    shared_str m_op22_texture_name;
     u8 uFlags;
     bool bHorizontalOrientation;
 

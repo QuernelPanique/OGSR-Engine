@@ -53,6 +53,7 @@ public:
 
 protected:
     u32 prevArticlesCount;
+    bool m_op22_tree_theme{};
     // Элементы графического оформления
     CUIFrameWindow* UIEncyclopediaIdxBkg;
     CUIFrameWindow* UIEncyclopediaInfoBkg;

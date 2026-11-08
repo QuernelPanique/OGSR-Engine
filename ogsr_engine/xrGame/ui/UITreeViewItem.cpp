@@ -21,6 +21,7 @@ const int subShift = 1;
 const char* const treeItemBackgroundTexture = "ui\\ui_pda_over_list";
 // Цвет непрочитанного элемента
 static const u32 unreadColor = 0xff00ff00;
+static CUITreeViewItem* pPrevFocusedItem = nullptr;
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -37,7 +38,24 @@ CUITreeViewItem::CUITreeViewItem() : isRoot(false), isOpened(false), iTextShift(
 
 //////////////////////////////////////////////////////////////////////////
 
-CUITreeViewItem::~CUITreeViewItem() { DeleteAllSubItems(); }
+CUITreeViewItem::~CUITreeViewItem()
+{
+    if (pPrevFocusedItem == this) pPrevFocusedItem = nullptr;
+    DeleteAllSubItems();
+}
+
+void CUITreeViewItem::op22_SetTheme()
+{
+    m_op22_theme = true;
+    SetReadedColor(color_rgba(255, 233, 189, 255));
+    SetUnreadedColor(color_rgba(255, 195, 77, 255));
+    UIBkg.InitTexture("ui\\ct_tr_listsel_back");
+    UIBkg.SetTextureOffset(0, 0);
+    UIBkg.SetStretchTexture(true);
+    UIBkg.SetWndSize(GetWndSize());
+    SetItemColor();
+    for (auto* child : vSubItems) child->op22_SetTheme();
+}
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -244,8 +262,6 @@ void CUITreeViewItem::SetText(LPCSTR str)
 
 void CUITreeViewItem::SendMessage(CUIWindow* pWnd, s16 msg, void* pData)
 {
-    static CUITreeViewItem* pPrevFocusedItem = NULL;
-
     if (pWnd == this && BUTTON_CLICKED == msg)
     {
         if (IsRoot())
@@ -260,16 +276,23 @@ void CUITreeViewItem::SendMessage(CUIWindow* pWnd, s16 msg, void* pData)
     else if (pWnd == this && STATIC_FOCUS_RECEIVED == msg)
     {
         UIBkg.TextureOn();
+        if (m_op22_theme)
+        {
+            UIBkg.SetWndSize(GetWndSize());
+            SetTextColor(color_rgba(23, 18, 4, 255));
+        }
 
         if (pPrevFocusedItem)
         {
             pPrevFocusedItem->UIBkg.TextureOff();
+            if (pPrevFocusedItem->m_op22_theme) pPrevFocusedItem->SetItemColor();
         }
         pPrevFocusedItem = this;
     }
     else if (pWnd == this && STATIC_FOCUS_LOST == msg)
     {
         UIBkg.TextureOff();
+        if (m_op22_theme) SetItemColor();
         pPrevFocusedItem = NULL;
     }
     else
