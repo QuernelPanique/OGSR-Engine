@@ -68,6 +68,7 @@ void UpdateWeight(CUIStatic& wnd, bool withPrefix = false);
 
 // Функции получения строки-идентификатора ранга и отношения по их числовому идентификатору
 LPCSTR GetRankAsText(CHARACTER_RANK_VALUE rankID);
+std::string op22_group_digits(s64 v); // OP22: разряды через пробел, как на макете
 void op22_UpdateWeight(CUIStatic* wnd, CUIProgressBar* bar); // OP22
 LPCSTR GetReputationAsText(CHARACTER_REPUTATION_VALUE rankID);
 LPCSTR GetGoodwillAsText(CHARACTER_GOODWILL goodwill);

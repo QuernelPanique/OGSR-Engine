@@ -525,7 +525,7 @@ void CUIInventoryWnd::Update()
 
         // update money
         static const char* StMoneyDescr = CStringTable().translate("ui_st_money_descr").c_str();
-        UIMoneyWnd.SetText(std::format("{} {}", pOurInvOwner->get_money(), StMoneyDescr).c_str());
+        UIMoneyWnd.SetText(std::format("{} {}", InventoryUtilities::op22_group_digits(pOurInvOwner->get_money()), StMoneyDescr).c_str()); // OP22: «18 420 р.»
  
         if (m_b_need_update_stats)
         {

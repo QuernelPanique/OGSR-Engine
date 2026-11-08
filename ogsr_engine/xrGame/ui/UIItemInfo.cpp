@@ -186,7 +186,7 @@ void CUIItemInfo::InitItem(CInventoryItem* pInvItem)
     if (UICost)
     {
         static const char* StMoneyDescr = CStringTable().translate("ui_st_money_descr").c_str();  
-        UICost->SetText(std::format("{} {}", pInvItem->Cost(), StMoneyDescr).c_str());
+        UICost->SetText(std::format("{} {}", InventoryUtilities::op22_group_digits(pInvItem->Cost()), StMoneyDescr).c_str()); // OP22: «2 800 р.»
     }
 
     if (UICondProgresBar)

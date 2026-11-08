@@ -32,10 +32,13 @@ void UILoadingScreen::Initialize()
     const auto loadBackground = [&] { UIHelper::CreateStatic(uiXml, "background", this, false); };
 
     const auto node = uiXml.NavigateToNodeWithAttribute("loading_progress", "under_background", "0");
+    // OP22: при панели (op22_panel) полоса рисуется поверх картинки уровня и панели - иначе картинка во весь экран её закрывает (08.11)
+    const bool op22_over = node && uiXml.NavigateToNode("op22_panel", 0);
     if (node)
     {
         loadBackground();
-        loadProgressBar();
+        if (!op22_over)
+            loadProgressBar();
     }
     else
     {
@@ -45,6 +48,8 @@ void UILoadingScreen::Initialize()
 
     loadingLogo = UIHelper::CreateStatic(uiXml, "loading_logo", this, false);
     UIHelper::CreateStatic(uiXml, "op22_panel", this, false); // OP22: панель над картинкой уровня, под текстами
+    if (op22_over)
+        loadProgressBar();
     loadingProgressPercent = UIHelper::CreateStatic(uiXml, "loading_progress_percent", this, false);
     loadingStage = UIHelper::CreateStatic(uiXml, "loading_stage", this, false);
 
@@ -71,7 +76,7 @@ void UILoadingScreen::Update(const int stagesCompleted, const int stagesTotal)
     if (loadingProgressPercent)
     {
         string16 buf; // OP22: «100 %» - 5 знаков и ноль, буфер на 5 переполнялся (вылет при загрузке сейва 08.11)
-        xr_sprintf(buf, "%.0f %%", loadingProgress->GetProgressPos()); // OP22: «67 %», как на макете
+        xr_sprintf(buf, "%.0f%%", loadingProgress->GetProgressPos()); // OP22: «67%», как на макете
         loadingProgressPercent->SetText(buf);
     }
 

@@ -37,6 +37,16 @@ static void op22_frame_part_size(CUIStaticItem& it)
 }
 
 
+static void op22_short_frame_line()
+{
+    static bool once{};
+    if (!once)
+    {
+        once = true;
+        Msg("! [OP22] frame line is shorter than its end parts: center part skipped");
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////
 
 CUIFrameLine::CUIFrameLine() : uFlags(0), iSize(0), bHorizontalOrientation(true) { iPos.set(0, 0); }
@@ -89,10 +99,7 @@ void CUIFrameLine::UpdateSize()
     (bHorizontalOrientation) ? elements[flSecond].SetPos(iPos.x + iSize - s_width, iPos.y) : elements[flSecond].SetPos(iPos.x, iPos.y + iSize - s_height);
 
     // Dimentions of element textures must be the same
-    if (bHorizontalOrientation)
-        R_ASSERT(s_height == f_height);
-    else
-        R_ASSERT(f_width == s_width);
+    // OP22: в релизе ОП R_ASSERT не останавливает игру - разные части рамки рисуем как есть
 
     // Now stretch back texture to remaining space
     float back_width, back_height;
@@ -103,7 +110,12 @@ void CUIFrameLine::UpdateSize()
         back_height = f_height;
 
         // Size of frameline must be equal or greater than sum of size of two side textures
-        R_ASSERT(back_width > 0);
+        // OP22: рамка короче своих концов (узел шириной 1 за экраном) - центр не рисуем, не вылет (вылет 08.11, «Управление»)
+        if (back_width <= 0.f)
+        {
+            op22_short_frame_line();
+            back_width = 0.f;
+        }
     }
     else
     {
@@ -111,7 +123,11 @@ void CUIFrameLine::UpdateSize()
         back_height = iSize - f_height - s_height;
 
         // Size of frameline must be equal or greater than sum of size of two side textures
-        R_ASSERT(back_height > 0);
+        if (back_height <= 0.f) // OP22: как по ширине
+        {
+            op22_short_frame_line();
+            back_height = 0.f;
+        }
     }
 
     // Now resize back texture
@@ -121,7 +137,11 @@ void CUIFrameLine::UpdateSize()
     float b_width = elements[flBack].GetOriginalRect().width();
     float b_height = elements[flBack].GetOriginalRect().height();
 
-    if (bHorizontalOrientation)
+    if (b_width <= 0.f || b_height <= 0.f) // OP22: деление на ноль
+    {
+        elements[flBack].SetTile(0, 0, 0, 0);
+    }
+    else if (bHorizontalOrientation)
     {
         rem = fmod(back_width, b_width);
         tile = iFloor(back_width / b_width);

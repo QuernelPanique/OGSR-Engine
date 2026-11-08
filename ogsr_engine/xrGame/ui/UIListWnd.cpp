@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "UIStatic.h" // OP22
 #include "uilistwnd.h"
 //.#include "uiscrollbar.h"
 #include "UIFrameLineWnd.h"
@@ -39,6 +40,7 @@ CUIListWnd::~CUIListWnd()
 
     m_ItemList.clear();
     xr_delete(m_ActiveBackgroundFrame);
+    xr_delete(m_op22_sel_st); // OP22
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -349,8 +351,24 @@ void CUIListWnd::DrawActiveBackFrame(const Frect& rect, CUIListItem* itm)
 {
     Fvector2 _pos;
     _pos.set(rect.left, rect.top + (itm->GetIndex() - m_iFirstShownIndex) * GetItemHeight());
-    if (m_op22_sel.size()) // OP22: подсветка на всю высоту строки
-        m_ActiveBackgroundFrame->SetHeight(GetItemHeight());
+    if (m_op22_sel.size()) // OP22: подсветка на всю высоту строки. Рамка-линия рисует части высотой их текстуры
+    {                      // (8 px - вместо строки тонкая полоска, 08.11), поэтому растянутый статик из <op22_sel>_back
+        if (!m_op22_sel_st)
+        {
+            m_op22_sel_st = xr_new<CUIStatic>();
+            string256 buf;
+            m_op22_sel_st->InitTexture(strconcat(sizeof(buf), buf, m_op22_sel.c_str(), "_back"));
+            m_op22_sel_st->SetStretchTexture(true);
+        }
+        float w = GetWidth();
+        if (m_ScrollBar->IsShown())
+            w -= m_ScrollBar->GetWidth();
+        m_op22_sel_st->SetWndPos(_pos);
+        m_op22_sel_st->SetWidth(w);
+        m_op22_sel_st->SetHeight(GetItemHeight());
+        m_op22_sel_st->Draw();
+        return;
+    }
     float _d = GetItemHeight() - m_ActiveBackgroundFrame->GetHeight();
     if (_d > 0)
         _pos.y += (float)iFloor(_d / 2.0f);

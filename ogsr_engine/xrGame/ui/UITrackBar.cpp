@@ -141,7 +141,8 @@ void CUITrackBar::op22_setup(float val_w, float knob_w, float knob_h, float line
     m_op22_val->SetTextColor(color);
     m_pSlider->InitTexture("ui\\ct_tr_knob");
     m_pSlider->SetStretchTexture(true);
-    m_pSlider->SetWndSize(Fvector2().set(knob_w, knob_h));
+    m_pSlider->SetWidth(knob_w); // OP22: SetWidth/SetHeight - и фону кнопки (SetWndSize оставлял фону размер ui_slider_button 24x17, 08.11)
+    m_pSlider->SetHeight(knob_h);
     m_pSlider->SetWndPos(Fvector2().set(0.f, (GetHeight() - knob_h) / 2)); // значение ставит SetCurrentValue: здесь ещё нет родителя
 }
 

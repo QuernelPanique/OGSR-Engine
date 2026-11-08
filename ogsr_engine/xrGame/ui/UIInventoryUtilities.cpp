@@ -291,6 +291,14 @@ LPCSTR InventoryUtilities::GetTimePeriodAsString(LPSTR _buff, u32 buff_sz, ALife
 
 //////////////////////////////////////////////////////////////////////////
 
+std::string InventoryUtilities::op22_group_digits(s64 v)
+{
+    std::string d = std::to_string(v < 0 ? -v : v);
+    for (int i = int(d.size()) - 3; i > 0; i -= 3)
+        d.insert(size_t(i), " ");
+    return v < 0 ? "-" + d : d;
+}
+
 // OP22: вес в стиле макета - «38,6 / 60 кг», красный при перегрузе, и шкала заполнения
 void InventoryUtilities::op22_UpdateWeight(CUIStatic* wnd, CUIProgressBar* bar)
 {
