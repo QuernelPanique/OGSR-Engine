@@ -70,7 +70,7 @@ void UILoadingScreen::Update(const int stagesCompleted, const int stagesTotal)
 
     if (loadingProgressPercent)
     {
-        char buf[5];
+        string16 buf; // OP22: «100 %» - 5 знаков и ноль, буфер на 5 переполнялся (вылет при загрузке сейва 08.11)
         xr_sprintf(buf, "%.0f %%", loadingProgress->GetProgressPos()); // OP22: «67 %», как на макете
         loadingProgressPercent->SetText(buf);
     }
