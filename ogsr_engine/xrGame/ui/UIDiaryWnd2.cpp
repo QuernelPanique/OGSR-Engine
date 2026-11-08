@@ -306,7 +306,7 @@ void CUIDiaryWnd::UpdateJournal()
         }
         prevArticlesCount = Actor()->encyclopedia_registry->registry().objects_ptr()->size();
         if (m_op22_layout)
-            for (u32 i = 0; i < m_SrcListWnd->GetItemsCount(); ++i)
+            for (int i = 0; i < m_SrcListWnd->GetItemsCount(); ++i)
                 if (auto* item = smart_cast<CUITreeViewItem*>(m_SrcListWnd->GetItem(i))) item->op22_SetTheme();
     }
 }
