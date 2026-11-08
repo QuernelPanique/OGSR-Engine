@@ -14,6 +14,29 @@
 #include "../hudmanager.h"
 #include "UITextureMaster.h"
 
+// OP22: часть рамки без описания текстуры (textures_descr) имеет нулевой исходный размер до первой отрисовки - тогда
+// деление на ноль переполняет счёт вершин и движок падает («vl_Count=0»). Берём размер из самой текстуры.
+static void op22_frame_part_size(CUIStaticItem& it)
+{
+    const Frect r = it.GetOriginalRect();
+    if (r.width() > 0.f && r.height() > 0.f)
+        return;
+    UIRender->SetShader(*it.GetShader());
+    Fvector2 ts;
+    UIRender->GetActiveTextureResolution(ts);
+    if (ts.x > 0.f && ts.y > 0.f)
+        it.SetOriginalRect(0.f, 0.f, ts.x, ts.y);
+    else
+        it.SetOriginalRect(0.f, 0.f, 1.f, 1.f);
+    static bool once{};
+    if (!once)
+    {
+        once = true;
+        Msg("! [OP22] frame texture part without textures_descr entry: size taken from the texture file");
+    }
+}
+
+
 //////////////////////////////////////////////////////////////////////////
 
 CUIFrameLine::CUIFrameLine() : uFlags(0), iSize(0), bHorizontalOrientation(true) { iPos.set(0, 0); }
@@ -52,6 +75,8 @@ void CUIFrameLine::SetColor(u32 cl)
 void CUIFrameLine::UpdateSize()
 {
     VERIFY(g_bRendering);
+    for (int i = 0; i < flMax; ++i) // OP22
+        op22_frame_part_size(elements[i]);
 
     float f_width = elements[flFirst].GetOriginalRect().width();
     float f_height = elements[flFirst].GetOriginalRect().height();
