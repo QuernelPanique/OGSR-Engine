@@ -28,6 +28,8 @@ void CUIButton::script_register(lua_State* L)
                   .def("SetAccelerator", &CUIButton::SetAccelerator),
 
               class_<CUI3tButton, CUIButton>("CUI3tButton").def(constructor<>())
+                  .def("GetCheck", &CUI3tButton::GetCheck)
+                  .def("SetCheck", &CUI3tButton::SetCheck)
               //.		.def("Init",					(void(CUI3tButton::*)(float,float,float,float))CUI3tButton::Init)
               //.		.def("Init",					(void(CUI3tButton::*)(LPCSTR,float,float,float,float))CUI3tButton::Init)
               //.		.def("InitTexture",				(void(CUI3tButton::*)(LPCSTR))CUI3tButton::InitTexture)
