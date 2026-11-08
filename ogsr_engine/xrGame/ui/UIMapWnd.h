@@ -13,6 +13,8 @@ class CUITabControl;
 class CUIStatic;
 class CUI3tButton;
 class CUILevelMap;
+class CUICheckButton;
+class CUIButton;
 class CUIMapHint;
 class CMapLocation;
 class CUIPropertiesBox;
@@ -56,6 +58,10 @@ private:
     CUI3tButton* m_ToolBar[eMaxBtn];
     CUIMapHint* m_hint;
     CUIStatic* m_text_hint;
+    CUICheckButton* m_op22_filters[7]{};
+    xr_string m_op22_filter_patterns[7];
+    CUIButton* m_op22_overview{};
+    void op22_OnOverview(CUIWindow*, void*);
 
     void OnScrollV(CUIWindow*, void*);
     void OnScrollH(CUIWindow*, void*);
@@ -85,6 +91,7 @@ public:
     virtual void Reset();
     virtual void Update();
     float GetZoom() { return m_currentZoom; }
+    bool op22_AllowSpot(const CMapLocation*) const;
     void SetZoom(float value);
 
     void ShowHint(CUIWindow* parent, LPCSTR text);

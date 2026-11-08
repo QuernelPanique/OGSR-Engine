@@ -68,7 +68,10 @@ void CUIActorInfoWnd::Init()
 
     UIMasterList = xr_new<CUIScrollView>();
     UIMasterList->SetAutoDelete(true);
-    UICharIconFrame->AttachChild(UIMasterList);
+    if (uiXml.ReadAttribInt("master_list", 0, "op22_middle", 0))
+        UIInfoFrame->AttachChild(UIMasterList);
+    else
+        UICharIconFrame->AttachChild(UIMasterList);
     xml_init.InitScrollView(uiXml, "master_list", 0, UIMasterList);
 
     UICharacterWindow = xr_new<CUIWindow>();

@@ -11,6 +11,13 @@
 #include "UIScrollView.h"
 #include "../actor.h"
 #include "../string_table.h"
+#include "UI3tButton.h"
+#include "../HUDManager.h"
+#include "../ui.h"
+#include "../UIGameSP.h"
+#include "../Level.h"
+#include "UIPdaWnd.h"
+#include "UIMapWnd.h"
 
 #define PDA_CONTACT_HEIGHT 70
 
@@ -87,6 +94,33 @@ void CUIPdaContactsWnd::Init()
     }
     xml_init.InitAutoStatic(uiXml, "left_auto_static", UIFrameContacts);
     xml_init.InitAutoStatic(uiXml, "right_auto_static", UIRightFrame);
+    if (uiXml.NavigateToNode("op22_map_button", 0))
+    {
+        m_op22_map_button = xr_new<CUI3tButton>();
+        m_op22_map_button->SetAutoDelete(true);
+        UIRightFrame->AttachChild(m_op22_map_button);
+        xml_init.Init3tButton(uiXml, "op22_map_button", 0, m_op22_map_button);
+        m_op22_map_button->Enable(false);
+        m_op22_map_button->SetMessageTarget(this);
+    }
+}
+
+void CUIPdaContactsWnd::SendMessage(CUIWindow* sender, s16 msg, void* data)
+{
+    if (sender == m_op22_map_button && msg == BUTTON_CLICKED)
+    {
+        CObject* object = Level().Objects.net_Find(m_op22_selected);
+        auto* game = smart_cast<CUIGameSP*>(HUD().GetUI()->UIGame());
+        if (object && game && game->PdaMenu)
+        {
+            Fvector2 position;
+            position.set(object->Position().x, object->Position().z);
+            game->PdaMenu->SetActiveSubdialog(eptMap);
+            game->PdaMenu->UIMapWnd->SetTargetMap(Level().name(), position, true);
+        }
+        return;
+    }
+    inherited::SendMessage(sender, msg, data);
 }
 
 void CUIPdaContactsWnd::Update()
@@ -133,7 +167,12 @@ void CUIPdaContactsWnd::RemoveContact(CPda* pda)
         if (itm->m_data == (void*)pda)
         {
             if (itm->GetSelected())
+            {
                 UIDetailsWnd->Clear();
+                m_op22_selected = u16(-1);
+                if (m_op22_character) m_op22_character->Show(false);
+                if (m_op22_map_button) m_op22_map_button->Enable(false);
+            }
             UIListWnd->RemoveWindow(w);
             return;
         }
@@ -145,6 +184,9 @@ void CUIPdaContactsWnd::RemoveAll()
 {
     UIListWnd->Clear();
     UIDetailsWnd->Clear();
+    m_op22_selected = u16(-1);
+    if (m_op22_character) m_op22_character->Show(false);
+    if (m_op22_map_button) m_op22_map_button->Enable(false);
 }
 
 void CUIPdaContactsWnd::Reload() { m_flags.set(flNeedUpdate, TRUE); }
@@ -172,6 +214,8 @@ void CUIPdaContactItem::SetSelected(bool b)
     }
     if (b)
     {
+        m_cw->m_op22_selected = UIInfo->OwnerID();
+        if (m_cw->m_op22_map_button) m_cw->m_op22_map_button->Enable(true);
         m_cw->UIDetailsWnd->Clear();
         if (m_cw->m_op22_character)
         {

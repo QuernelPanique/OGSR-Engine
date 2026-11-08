@@ -12,6 +12,8 @@
 #include "UIFrameLineWnd.h"
 #include "UITabControl.h"
 #include "UI3tButton.h"
+#include "UICheckButton.h"
+#include "../UICursor.h"
 #include "UIMapWndActions.h"
 #include "UIMapWndActionsSpace.h"
 #include "map_hint.h"
@@ -177,6 +179,30 @@ void CUIMapWnd::Init(LPCSTR xml_name, LPCSTR start_from)
     m_GlobalMap->OptimalFit(m_UILevelFrame->GetWndRect());
     m_GlobalMap->SetMinZoom(m_GlobalMap->GetCurrentZoom());
     m_currentZoom = m_GlobalMap->GetCurrentZoom();
+
+    for (int i = 0; i < 7; ++i)
+    {
+        xr_sprintf(pth, "%s:main_wnd:op22_filter_%d", start_from, i);
+        if (!uiXml.NavigateToNode(pth, 0)) continue;
+        auto* check = m_op22_filters[i] = xr_new<CUICheckButton>();
+        check->SetAutoDelete(true);
+        AttachChild(check);
+        xml_init.InitCheck(uiXml, pth, 0, check);
+        check->SetCheck(!!uiXml.ReadAttribInt(pth, 0, "checked", 1));
+        m_op22_filter_patterns[i] = uiXml.ReadAttrib(pth, 0, "patterns", "");
+    }
+    xr_sprintf(pth, "%s:main_wnd:op22_overview", start_from);
+    if (uiXml.NavigateToNode(pth, 0))
+    {
+        m_op22_overview = xr_new<CUIButton>();
+        m_op22_overview->SetAutoDelete(true);
+        AttachChild(m_op22_overview);
+        xml_init.InitButton(uiXml, pth, 0, m_op22_overview);
+        m_op22_overview->InitTexture(gameLtx.r_string("global_map", "texture"));
+        m_op22_overview->SetStretchTexture(true);
+        Register(m_op22_overview);
+        AddCallback(*m_op22_overview->WindowName(), BUTTON_CLICKED, fastdelegate::MakeDelegate(this, &CUIMapWnd::op22_OnOverview));
+    }
 
     // initialize local maps
     constexpr const char* sect_name = "level_maps_single";
@@ -526,6 +552,44 @@ void CUIMapWnd::SendMessage(CUIWindow* pWnd, s16 msg, void* pData)
         }
         }
     }
+}
+
+bool CUIMapWnd::op22_AllowSpot(const CMapLocation* location) const
+{
+    if (location->IsUserDefined() && m_op22_filters[6]) return m_op22_filters[6]->GetCheck();
+    LPCSTR type = location->GetType();
+    for (int i = 0; i < 7; ++i)
+    {
+        if (!m_op22_filters[i] || m_op22_filter_patterns[i].empty()) continue;
+        const int count = _GetItemCount(m_op22_filter_patterns[i].c_str());
+        for (int j = 0; j < count; ++j)
+        {
+            string128 pattern;
+            _GetItem(m_op22_filter_patterns[i].c_str(), j, pattern);
+            if (*pattern && strstr(type, pattern)) return m_op22_filters[i]->GetCheck();
+        }
+    }
+    return true;
+}
+
+void CUIMapWnd::op22_OnOverview(CUIWindow*, void*)
+{
+    if (!m_op22_overview || GlobalMap()->Locked()) return;
+    Frect rect;
+    m_op22_overview->GetAbsoluteRect(rect);
+    const Fvector2 cursor = GetUICursor()->GetCursorPosition();
+    if (rect.width() <= 0.f || rect.height() <= 0.f) return;
+    const Frect bounds = GlobalMap()->BoundRect();
+    Fvector2 point;
+    point.set(bounds.x1 + (cursor.x - rect.x1) / rect.width() * bounds.width(),
+              bounds.y1 + (cursor.y - rect.y1) / rect.height() * bounds.height());
+    for (auto& [name, map] : m_GameMaps)
+        if (auto* level = smart_cast<CUILevelMap*>(map); level && level->GlobalRect().in(point))
+        {
+            SetTargetMap(level, true);
+            return;
+        }
+    SetTargetMap(GlobalMap());
 }
 
 CUICustomMap* CUIMapWnd::GetMapByIdx(u16 idx)

@@ -10,6 +10,7 @@ class CUIAnimatedStatic;
 class CUIScrollView;
 class CPda;
 class CUICharacterInfo;
+class CUI3tButton;
 
 class CUIPdaContactsWnd : public CUIWindow
 {
@@ -31,6 +32,7 @@ public:
     virtual void Reset();
 
     virtual void Show(bool status);
+    virtual void SendMessage(CUIWindow*, s16, void*) override;
 
     void AddContact(CPda* pda, u16 owner_id);
     void RemoveContact(CPda* pda);
@@ -41,6 +43,8 @@ public:
     CUIScrollView* UIDetailsWnd;
     CUICharacterInfo* m_op22_character{};
     float m_op22_row_height{85.f};
+    CUI3tButton* m_op22_map_button{};
+    u16 m_op22_selected{u16(-1)};
 
 protected:
     CUIFrameWindow* UIFrameContacts;

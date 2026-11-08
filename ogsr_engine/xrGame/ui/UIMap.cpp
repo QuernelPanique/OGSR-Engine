@@ -434,7 +434,7 @@ void CUILevelMap::UpdateSpots()
     Locations& ls = Level().MapManager().Locations();
     for (auto& l : ls)
     {
-        if (l.location->Update())
+        if (MapWnd()->op22_AllowSpot(l.location) && l.location->Update())
             l.location->UpdateLevelMap(this);
     }
 

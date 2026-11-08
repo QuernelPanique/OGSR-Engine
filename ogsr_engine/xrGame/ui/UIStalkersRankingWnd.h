@@ -28,6 +28,10 @@ protected:
     // информация о персонаже
     CUIWindow* UICharacterWindow{};
     CUICharacterInfo* UICharacterInfo{};
+    bool m_op22_actor_card{};
+    CUIStatic* m_op22_actor_place{};
+    CUIStatic* m_op22_actor_rating{};
+    CUIStatic* m_op22_actor_next{};
     void FillList();
     CUIScrollView* UIList{};
     void AddStalkerItem(CUIXml* xml, int num, CSE_ALifeTraderAbstract* t);

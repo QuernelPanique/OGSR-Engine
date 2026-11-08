@@ -77,6 +77,17 @@ void CUIStalkersRankingWnd::Init()
 
     xml_init.InitAutoStaticGroup(uiXml, "left_auto", 0, UIInfoFrame);
     xml_init.InitAutoStaticGroup(uiXml, "right_auto", 0, UICharIconFrame);
+    m_op22_actor_card = !!uiXml.ReadAttribInt("character_info", 0, "op22_actor_card", 0);
+    CUIStatic** fields[] = {&m_op22_actor_place, &m_op22_actor_rating, &m_op22_actor_next};
+    LPCSTR names[] = {"op22_actor_place", "op22_actor_rating", "op22_actor_next"};
+    for (int i = 0; i < 3; ++i)
+        if (uiXml.NavigateToNode(names[i], 0))
+        {
+            *fields[i] = xr_new<CUIStatic>();
+            (*fields[i])->SetAutoDelete(true);
+            UICharIconFrame->AttachChild(*fields[i]);
+            xml_init.InitStatic(uiXml, names[i], 0, *fields[i]);
+        }
 }
 
 void CUIStalkersRankingWnd::Show(bool status)
@@ -122,6 +133,17 @@ void CUIStalkersRankingWnd::FillList()
     {
         CSE_ALifeTraderAbstract* pActorAbstract = ch_info_get_from_id(Actor()->ID());
         int actor_place = get_actor_ranking();
+        if (m_op22_actor_card && pActorAbstract)
+        {
+            UICharacterInfo->InitCharacter(Actor()->ID());
+            if (m_op22_actor_place) m_op22_actor_place->SetText(std::to_string(actor_place + 1).c_str());
+            if (m_op22_actor_rating) m_op22_actor_rating->SetText(std::to_string(pActorAbstract->m_rank).c_str());
+            if (m_op22_actor_next)
+            {
+                auto* previous = actor_place > 0 ? ch_info_get_from_id(g_all_statistic_humans[actor_place - 1]) : nullptr;
+                m_op22_actor_next->SetText(previous ? std::to_string(_max(0, previous->m_rank - pActorAbstract->m_rank + 1)).c_str() : "-");
+            }
+        }
 
         int i = 0;
         while (i < 20 && i < g_all_statistic_humans.size())
@@ -150,7 +172,7 @@ void CUIStalkersRankingWnd::FillList()
     }
 }
 
-void CUIStalkersRankingWnd::ShowHumanInfo(u16 id) { UICharacterInfo->InitCharacter(id); }
+void CUIStalkersRankingWnd::ShowHumanInfo(u16 id) { UICharacterInfo->InitCharacter(m_op22_actor_card ? Actor()->ID() : id); }
 
 void CUIStalkersRankingWnd::AddStalkerItem(CUIXml* xml, int num, CSE_ALifeTraderAbstract* t)
 {

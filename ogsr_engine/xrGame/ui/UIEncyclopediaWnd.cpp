@@ -314,7 +314,7 @@ void CUIEncyclopediaWnd::UpdateArticles()
                     CreateTreeBranch(a.data()->group, a.data()->name, UIIdxList, idx++, m_pTreeRootFont, m_uTreeRootColor, m_pTreeItemFont, m_uTreeItemColor, a.readed);
             }
             if (m_op22_tree_theme)
-                for (u32 i = 0; i < UIIdxList->GetSize(); ++i)
+                for (int i = 0; i < UIIdxList->GetItemsCount(); ++i)
                     if (auto* item = smart_cast<CUITreeViewItem*>(UIIdxList->GetItem(i))) item->op22_SetTheme();
             prevArticlesCount = Actor()->encyclopedia_registry->registry().objects_ptr()->size();
         }
