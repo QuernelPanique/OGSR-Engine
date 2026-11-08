@@ -57,6 +57,8 @@ void CUIKeyBinding::op22_fill(CUIXml& xml_doc_ui, LPCSTR path_ui) // OP22: дв�
     const float col2 = xml_doc_ui.ReadAttribFlt(path_ui, 0, "op22_col2_x", 0.f);
     LPCSTR box = xml_doc_ui.ReadAttrib(path_ui, 0, "op22_key_box", "");
     const float pad = xml_doc_ui.ReadAttribFlt(path_ui, 0, "op22_key_pad", 0.f);
+    const float box_h = xml_doc_ui.ReadAttribFlt(path_ui, 0, "op22_key_h", 0.f);     // OP22: высота плашки клавиши
+    const float box_minw = xml_doc_ui.ReadAttribFlt(path_ui, 0, "op22_key_minw", 0.f); // OP22: наименьшая ширина плашки
     LPCSTR empty = xml_doc_ui.ReadAttrib(path_ui, 0, "op22_empty", "");
     const u32 empty_clr = color_argb(255, xml_doc_ui.ReadAttribInt(path_ui, 0, "op22_empty_r", 255), xml_doc_ui.ReadAttribInt(path_ui, 0, "op22_empty_g", 255),
                                      xml_doc_ui.ReadAttribInt(path_ui, 0, "op22_empty_b", 255));
@@ -70,7 +72,7 @@ void CUIKeyBinding::op22_fill(CUIXml& xml_doc_ui, LPCSTR path_ui) // OP22: дв�
             e->Init(m_header[k + 1].GetWndPos().x + dx, 0, m_header[k + 1].GetWidth() - 3.0f, row->GetWndSize().y);
             e->Register(exe, "key_binding");
             row->AttachChild(e);
-            e->op22_setup(box, pad, empty, empty_clr);
+            e->op22_setup(box, pad, empty, empty_clr, box_h, box_minw);
         }
     };
     const size_t half = (cmds.size() + 1) / 2;

@@ -56,9 +56,11 @@ u32 cut_string_by_length(CGameFont* pFont, LPCSTR src, LPSTR dst, u32 dst_size, 
     }
 }
 
-void CUIEditKeyBind::op22_setup(LPCSTR box_tex, float pad, LPCSTR empty, u32 empty_clr) // OP22
+void CUIEditKeyBind::op22_setup(LPCSTR box_tex, float pad, LPCSTR empty, u32 empty_clr, float box_h, float box_minw) // OP22
 {
     m_op22_pad = pad;
+    m_op22_box_h = box_h;
+    m_op22_box_minw = box_minw;
     m_op22_empty = empty;
     m_op22_empty_clr = empty_clr;
     m_op22_clr = m_lines.GetTextColor();
@@ -81,9 +83,13 @@ void CUIEditKeyBind::Draw() // OP22: рамка по ширине клавиши
         UI()->ClientToScreenScaledWidth(w);
         Fvector2 p;
         GetAbsolutePos(p);
-        m_op22_box->SetWndPos(p);
-        m_op22_box->SetWndSize(Fvector2().set(w + 2.f * m_op22_pad, GetHeight()));
+        const float bw = _max(m_op22_box_minw, w + 2.f * m_op22_pad);
+        const float bh = m_op22_box_h > 0.f ? _min(m_op22_box_h, GetHeight()) : GetHeight();
+        m_op22_box->SetWndPos(Fvector2().set(p.x, p.y + (GetHeight() - bh) / 2.f));
+        m_op22_box->SetWndSize(Fvector2().set(bw, bh));
         m_op22_box->Draw();
+        if (m_op22_box_minw > 0.f) // OP22: текст по центру плашки (на макете клавиша в центре рамки)
+            m_textPos.x = (bw - w) / 2.f;
     }
     CUILabel::Draw();
 }
