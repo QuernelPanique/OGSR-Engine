@@ -307,7 +307,11 @@ void CUIQuestionItem::Init(LPCSTR val, LPCSTR text)
     m_s_value = val;
     m_text->SetText(text);
     m_text->AdjustHeightToText();
-    float new_h = _max(m_min_height, m_text->GetWndPos().y + m_text->GetHeight());
+    // OP22: кнопка ответа (фон под курсором и область нажатия) - на всю строку: высота текста и его отступ сверху и
+    // снизу. Было: кнопка высотой с текст у верхнего края, а текст ниже на свой отступ - заливка полосой над текстом (08.11)
+    const float pad = _max(0.f, m_text->GetTextY());
+    float new_h = _max(m_min_height, m_text->GetWndPos().y + m_text->GetHeight() + 2.f * pad);
+    m_text->SetHeight(new_h - m_text->GetWndPos().y);
     SetHeight(new_h);
 }
 
