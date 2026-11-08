@@ -26,6 +26,8 @@
 #include "../script_engine.h"
 #include "../WeaponMagazined.h"
 #include "../WeaponAmmo.h"
+#include "UIProgressBar.h"
+#include "../op22_options.h"
 
 using namespace luabind;
 
@@ -41,14 +43,93 @@ class CUIOP22SectionCell : public CUICellItem
 public:
     shared_str m_section;
     float m_condition{1.f};
+    u32 m_script_count{};
+    bool m_show_condition{};
+    struct addon_t { CUIStatic* icon{}; float x{}, y{}, w{}, h{}; };
+    addon_t m_addons[3];
+    CUIStatic* m_battery{};
 
     CUIOP22SectionCell(LPCSTR section, float cond) : m_section(section), m_condition(cond)
     {
         CIconParams params(m_section);
         params.set_shader(this);
         m_grid_size.set(iFloor(params.grid_width + .5f), iFloor(params.grid_height + .5f));
+        m_pConditionState->Show(false);
     }
     virtual bool EqualTo(CUICellItem*) { return false; }
+    void SetAddon(int index, LPCSTR type, bool on)
+    {
+        auto& addon = m_addons[index];
+        if (!on) { if (addon.icon) addon.icon->Show(false); return; }
+        const xr_string prefix(type);
+        const xr_string name = prefix + "_name";
+        const xr_string status = prefix + "_status";
+        if (!pSettings->line_exist(m_section, name.c_str()) ||
+            !pSettings->line_exist(m_section, status.c_str()) || pSettings->r_u32(m_section, status.c_str()) != 2)
+            return;
+        if (!addon.icon)
+        {
+            CIconParams params(pSettings->r_string(m_section, name.c_str()));
+            addon.icon = xr_new<CUIStatic>();
+            addon.icon->SetAutoDelete(true);
+            params.set_shader(addon.icon);
+            addon.icon->SetStretchTexture(true);
+            AttachChild(addon.icon);
+            addon.w = params.grid_width * 50.f;
+            addon.h = params.grid_height * 50.f;
+            const xr_string x = prefix + "_x", y = prefix + "_y";
+            addon.x = pSettings->line_exist(m_section, x.c_str()) ? pSettings->r_float(m_section, x.c_str()) : 0.f;
+            addon.y = pSettings->line_exist(m_section, y.c_str()) ? pSettings->r_float(m_section, y.c_str()) : 0.f;
+        }
+        addon.icon->Show(true);
+        BringToTop(m_pConditionState);
+        BringToTop(m_text);
+    }
+    void SetAccum(LPCSTR section, bool on)
+    {
+        if (on && !m_battery)
+        {
+            m_battery = xr_new<CUIStatic>();
+            m_battery->SetAutoDelete(true);
+            CIconParams(section).set_shader(m_battery);
+            m_battery->SetStretchTexture(true);
+            m_battery->SetWndPos(3.f, 3.f);
+            m_battery->SetWndSize(Fvector2().set(15.f, 25.f));
+            AttachChild(m_battery);
+        }
+        if (m_battery) m_battery->Show(on);
+    }
+    virtual void UpdateItemText()
+    {
+        string32 text;
+        sprintf_s(text, "x%u", m_script_count + 1);
+        m_text->SetText(text);
+        m_text->Show(m_script_count > 0);
+    }
+    virtual void Update()
+    {
+        inherited::Update();
+        UpdateItemText();
+        const bool condition = m_show_condition && m_pParentList && m_pParentList->GetConditionProgBarVisibility() && op22_opt("ui_show_conditions", true);
+        m_pConditionState->Show(condition);
+        if (condition)
+        {
+            const float width = _max(0.f, _min(24.f, GetWidth() - 4.f));
+            m_pConditionState->SetWidth(width);
+            m_pConditionState->m_UIProgressItem.SetWidth(width);
+            m_pConditionState->m_UIBackgroundItem.SetWidth(width);
+            m_pConditionState->SetWndPos(2.f, GetHeight() - m_pConditionState->GetHeight() - 2.f);
+            m_pConditionState->SetProgressPos(m_condition * 100.f);
+        }
+        const float sx = GetWidth() / _max(1.f, m_grid_size.x * 50.f);
+        const float sy = GetHeight() / _max(1.f, m_grid_size.y * 50.f);
+        for (auto& addon : m_addons)
+            if (addon.icon)
+            {
+                addon.icon->SetWndPos(addon.x * sx, addon.y * sy);
+                addon.icon->SetWndSize(Fvector2().set(addon.w * sx, addon.h * sy));
+            }
+    }
 };
 
 // данные ячейки для скриптов: id ячейки, условие
@@ -266,9 +347,9 @@ static void dd_set_cb1(CUIDragDropListEx* l, int type)
 }
 
 // --- CUICellItem
-static u32 ci_ChildsCount(CUICellItem* c) { return c->ChildsCount(); }
+static u32 ci_ChildsCount(CUICellItem* c) { auto s = smart_cast<CUIOP22SectionCell*>(c); return s ? s->m_script_count : c->ChildsCount(); }
 static CUICellItem* ci_Child(CUICellItem* c, u32 i) { return i < c->ChildsCount() ? c->Child(i) : nullptr; }
-static bool ci_HasChilds(CUICellItem* c) { return c->ChildsCount() > 0; }
+static bool ci_HasChilds(CUICellItem* c) { return ci_ChildsCount(c) > 0; }
 static void ci_SetCellId(CUICellItem* c, LPCSTR id) { g_cell_ids[c] = id; }
 static LPCSTR ci_GetCellId(CUICellItem* c)
 {
@@ -300,16 +381,24 @@ static float ci_GetCellCondition(CUICellItem* c)
         return itm->GetCondition();
     return 1.f;
 }
-static void ci_noop(CUICellItem*) {}
+static void ci_ConditionShow(CUICellItem* c) { if (auto s = smart_cast<CUIOP22SectionCell*>(c)) s->m_show_condition = true; }
+static void ci_ConditionHide(CUICellItem* c) { if (auto s = smart_cast<CUIOP22SectionCell*>(c)) s->m_show_condition = false; }
+static void ci_Scope(CUICellItem* c) { if (auto s = smart_cast<CUIOP22SectionCell*>(c)) s->SetAddon(0, "scope", true); }
+static void ci_ScopeOff(CUICellItem* c) { if (auto s = smart_cast<CUIOP22SectionCell*>(c)) s->SetAddon(0, "scope", false); }
+static void ci_Silencer(CUICellItem* c) { if (auto s = smart_cast<CUIOP22SectionCell*>(c)) s->SetAddon(1, "silencer", true); }
+static void ci_SilencerOff(CUICellItem* c) { if (auto s = smart_cast<CUIOP22SectionCell*>(c)) s->SetAddon(1, "silencer", false); }
+static void ci_Launcher(CUICellItem* c) { if (auto s = smart_cast<CUIOP22SectionCell*>(c)) s->SetAddon(2, "grenade_launcher", true); }
+static void ci_LauncherOff(CUICellItem* c) { if (auto s = smart_cast<CUIOP22SectionCell*>(c)) s->SetAddon(2, "grenade_launcher", false); }
 static void ci_SetColor(CUICellItem* c, u32 clr) { c->SetTextureColor(clr); }
 static u32 ci_GetColor(CUICellItem* c) { return c->GetTextureColor(); }
 static void ci_SetMask(CUICellItem*, LPCSTR) {}
-static void ci_AttachAccum(CUICellItem*, LPCSTR, float) {}
-static void ci_SetChildsCount(CUICellItem*, int) {}
+static void ci_AttachAccum(CUICellItem* c, LPCSTR section, float) { if (auto s = smart_cast<CUIOP22SectionCell*>(c)) s->SetAccum(section, true); }
+static void ci_DetachAccum(CUICellItem* c) { if (auto s = smart_cast<CUIOP22SectionCell*>(c)) s->SetAccum(nullptr, false); }
+static void ci_SetChildsCount(CUICellItem* c, int count) { if (auto s = smart_cast<CUIOP22SectionCell*>(c)) { s->m_script_count = u32(_max(0, count)); s->UpdateItemText(); } }
 
 // --- create_cell_helper
 static CUICellItem* cch_item_section(LPCSTR section) { return xr_new<CUIOP22SectionCell>(section, 1.f); }
-static CUICellItem* cch_item_section_condition(LPCSTR section, float cond) { return xr_new<CUIOP22SectionCell>(section, cond); }
+static CUICellItem* cch_item_section_condition(LPCSTR section, float cond) { auto c = xr_new<CUIOP22SectionCell>(section, cond); c->m_show_condition = true; return c; }
 
 
 ////////////////////////////////////////////////////////////////////////////
@@ -701,19 +790,19 @@ void op22_register_dragdrop(lua_State* L)
                   .def("GetCellSection", &ci_GetCellSection)
                   .def("SetCellCondition", &ci_SetCellCondition)
                   .def("GetCellCondition", &ci_GetCellCondition)
-                  .def("ForceConditionShow", &ci_noop)
-                  .def("ForceConditionHide", &ci_noop)
+                  .def("ForceConditionShow", &ci_ConditionShow)
+                  .def("ForceConditionHide", &ci_ConditionHide)
                   .def("SetColor", &ci_SetColor)
                   .def("GetColor", &ci_GetColor)
                   .def("SetMask", &ci_SetMask)
-                  .def("AttachScope", &ci_noop)
-                  .def("DetachScope", &ci_noop)
-                  .def("AttachSilencer", &ci_noop)
-                  .def("DetachSilencer", &ci_noop)
-                  .def("AttachGrenadeLauncher", &ci_noop)
-                  .def("DetachGrenadeLauncher", &ci_noop)
+                  .def("AttachScope", &ci_Scope)
+                  .def("DetachScope", &ci_ScopeOff)
+                  .def("AttachSilencer", &ci_Silencer)
+                  .def("DetachSilencer", &ci_SilencerOff)
+                  .def("AttachGrenadeLauncher", &ci_Launcher)
+                  .def("DetachGrenadeLauncher", &ci_LauncherOff)
                   .def("AttachAccum", &ci_AttachAccum)
-                  .def("DetachAccum", &ci_noop)
+                  .def("DetachAccum", &ci_DetachAccum)
                   .def("SetChildsCount", &ci_SetChildsCount)];
 
     module(L, "create_cell_helper")[def("item_section", &cch_item_section), def("item_section_condition", &cch_item_section_condition)];
