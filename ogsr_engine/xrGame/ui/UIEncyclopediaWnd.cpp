@@ -85,6 +85,7 @@ void CUIEncyclopediaWnd::Init()
     UIEncyclopediaIdxBkg->AttachChild(UIIdxList);
     xml_init.InitListWnd(uiXml, "idx_list", 0, UIIdxList);
     m_op22_tree_theme = !!uiXml.ReadAttribInt("idx_list", 0, "op22_theme", 0);
+    m_op22_reference = !!uiXml.ReadAttribInt("idx_list", 0, "op22_reference", 0);
     UIIdxList->SetMessageTarget(this);
     UIIdxList->EnableScrollBar(true);
 
@@ -105,9 +106,15 @@ void CUIEncyclopediaWnd::SendMessage(CUIWindow* pWnd, s16 msg, void* pData)
         CUITreeViewItem* pTVItem = static_cast<CUITreeViewItem*>(pData);
         R_ASSERT(pTVItem);
 
-        if (pTVItem->vSubItems.size())
+        if (m_op22_reference)
+            for (int i=0;i<UIIdxList->GetItemsCount();++i)
+                if (auto* item=smart_cast<CUITreeViewItem*>(UIIdxList->GetItem(i))) item->op22_SetReferenceSelected(pTVItem);
+        if (pTVItem->IsRoot())
         {
-            auto& A = m_ArticlesDB[pTVItem->vSubItems[0]->GetValue()];
+            auto* leaf = pTVItem;
+            while (leaf->IsRoot() && !leaf->vSubItems.empty()) leaf = leaf->vSubItems.front();
+            if (leaf->IsRoot() || leaf->GetValue()<0 || leaf->GetValue()>=m_ArticlesDB.size()) return;
+            auto& A = m_ArticlesDB[leaf->GetValue()];
 
             xr_string caption = ALL_PDA_HEADER_PREFIX;
             caption += "/";
@@ -119,6 +126,7 @@ void CUIEncyclopediaWnd::SendMessage(CUIWindow* pWnd, s16 msg, void* pData)
         }
         else
         {
+            if (pTVItem->GetValue()<0 || pTVItem->GetValue()>=m_ArticlesDB.size()) return;
             auto& A = m_ArticlesDB[pTVItem->GetValue()];
             xr_string caption = ALL_PDA_HEADER_PREFIX;
             caption += "/";
@@ -322,7 +330,11 @@ void CUIEncyclopediaWnd::UpdateArticles()
             }
             if (m_op22_tree_theme)
                 for (int i = 0; i < UIIdxList->GetItemsCount(); ++i)
-                    if (auto* item = smart_cast<CUITreeViewItem*>(UIIdxList->GetItem(i))) item->op22_SetTheme();
+                    if (auto* item = smart_cast<CUITreeViewItem*>(UIIdxList->GetItem(i)))
+                    {
+                        if (m_op22_reference) item->op22_SetReference();
+                        else item->op22_SetTheme();
+                    }
             prevArticlesCount = Actor()->encyclopedia_registry->registry().objects_ptr()->size();
         }
         m_flags.set(eNeedReload, FALSE);

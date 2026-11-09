@@ -59,6 +59,66 @@ void CUITreeViewItem::op22_SetTheme()
 
 //////////////////////////////////////////////////////////////////////////
 
+void CUITreeViewItem::op22_SetReference(CGameFont* subtitle_font)
+{
+    op22_SetTheme();
+    m_op22_reference = true;
+    SetReadedColor(color_rgba(255,233,189,255));
+    SetUnreadedColor(color_rgba(255,233,189,255));
+    SetTextX(8.f);
+    SetElipsis(CUIStatic::eepEnd, 0);
+    if (!m_op22_rule)
+    {
+        m_op22_rule = xr_new<CUIStatic>();
+        m_op22_rule->SetAutoDelete(true);
+        m_op22_rule->Init(0.f,0.f,GetWidth(),1.066667f);
+        m_op22_rule->InitTexture("ui\\ct_tr_tasks_line");
+        m_op22_rule->SetStretchTexture(true);
+        AttachChild(m_op22_rule);
+        m_op22_rule->Enable(false);
+    }
+    if (subtitle_font && !m_op22_subtitle)
+    {
+        SetVTextAlignment(valTop); SetTextY(6.4f);
+        m_op22_subtitle = xr_new<CUIStatic>();
+        m_op22_subtitle->SetAutoDelete(true);
+        m_op22_subtitle->Init(8.f,28.8f,GetWidth()-16.f,18.133333f);
+        m_op22_subtitle->SetFont(subtitle_font);
+        m_op22_subtitle->SetTextST("ct_tr_diary_entries");
+        AttachChild(m_op22_subtitle);
+        m_op22_subtitle->Enable(false);
+    }
+    SetItemColor();
+    for (auto* child : vSubItems) child->op22_SetReference(subtitle_font);
+}
+
+void CUITreeViewItem::op22_SetReferenceSelected(CUITreeViewItem* item)
+{
+    m_op22_selected = this == item;
+    if (m_op22_reference)
+    {
+        m_op22_selected || CursorOverWindow() ? UIBkg.TextureOn() : UIBkg.TextureOff();
+        SetItemColor();
+    }
+    for (auto* child : vSubItems) child->op22_SetReferenceSelected(item);
+}
+
+void CUITreeViewItem::Draw()
+{
+    if (m_op22_reference)
+    {
+        UIBkg.SetWndSize(GetWndSize());
+        m_op22_rule->SetWidth(GetWidth());
+        if (m_op22_subtitle)
+        {
+            m_op22_subtitle->SetWidth(GetWidth()-16.f);
+            m_op22_subtitle->SetTextColor(m_op22_selected || CursorOverWindow() ?
+                color_rgba(23,18,4,255) : color_rgba(170,145,80,255));
+        }
+    }
+    inherited::Draw();
+}
+
 void CUITreeViewItem::OnRootChanged()
 {
     xr_string str;
@@ -284,14 +344,14 @@ void CUITreeViewItem::SendMessage(CUIWindow* pWnd, s16 msg, void* pData)
 
         if (pPrevFocusedItem && pPrevFocusedItem != this)
         {
-            pPrevFocusedItem->UIBkg.TextureOff();
+            if (!pPrevFocusedItem->m_op22_selected) pPrevFocusedItem->UIBkg.TextureOff();
             if (pPrevFocusedItem->m_op22_theme) pPrevFocusedItem->SetItemColor();
         }
         pPrevFocusedItem = this;
     }
     else if (pWnd == this && STATIC_FOCUS_LOST == msg)
     {
-        UIBkg.TextureOff();
+        if (!m_op22_selected) UIBkg.TextureOff();
         if (m_op22_theme) SetItemColor();
         pPrevFocusedItem = NULL;
     }

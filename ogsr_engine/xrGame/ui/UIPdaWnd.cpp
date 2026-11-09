@@ -152,6 +152,7 @@ void CUIPdaWnd::Init()
 
     if (uiXml.NavigateToNode("op22_tasks_shell", 0))
     {
+        m_op22_all_pages = !!uiXml.ReadAttribInt("op22_tasks_shell", 0, "all_pages", 0);
         m_op22_tasks_shell = xr_new<CUIStatic>();
         m_op22_tasks_shell->SetAutoDelete(true);
         UIMainPdaFrame->AttachChild(m_op22_tasks_shell);
@@ -455,11 +456,12 @@ void CUIPdaWnd::SetActiveSubdialog(EPdaTabs section)
     m_pActiveSection = section;
     if (m_op22_tasks_shell)
     {
-        m_op22_tasks_shell->Show(section == eptQuests);
-        UITabControl->Show(section != eptQuests);
-        UITimerBackground->Show(section != eptQuests);
-        if (section == eptQuests && m_op22_tasks_tabs->GetActiveIndex() != eptQuests)
-            m_op22_tasks_tabs->SetNewActiveTab(eptQuests);
+        const bool reference = m_op22_all_pages || section == eptQuests;
+        m_op22_tasks_shell->Show(reference);
+        UITabControl->Show(!reference);
+        UITimerBackground->Show(!reference);
+        if (reference && m_op22_tasks_tabs->GetActiveIndex() != section)
+            m_op22_tasks_tabs->SetNewActiveTab(section);
     }
     g_op22_pda_tab = (g_op22_pda_tab + 1) % 100000; // OP22
     if (section == eptSkills) op22_skills_page(true, m_op22_skills);

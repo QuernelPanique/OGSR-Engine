@@ -55,6 +55,12 @@ void CUIDiaryWnd::Init()
 
     xml_init.InitWindow(uiXml, "main_wnd", 0, this);
     m_op22_layout = !!uiXml.ReadAttribInt("main_wnd", 0, "op22_layout", 0);
+    m_op22_reference = !!uiXml.ReadAttribInt("main_wnd", 0, "op22_reference", 0);
+    if (m_op22_reference)
+    {
+        u32 color;
+        xml_init.InitFont(uiXml,"main_wnd:left_frame:work_area:src_list:subtitle_font",0,color,m_op22_subtitle_font);
+    }
 
     m_UILeftFrame = xr_new<CUIFrameWindow>();
     m_UILeftFrame->SetAutoDelete(true);
@@ -185,6 +191,12 @@ void CUIDiaryWnd::LoadJournalTab()
     m_DescrView->Show(true);
 
     UpdateJournal();
+    if (m_op22_reference && m_SrcListWnd->GetItemsCount())
+    {
+        int index = m_SrcListWnd->FindItemWithValue(m_op22_article);
+        if (index < 0) index = 0;
+        OnSrcListItemClicked(m_SrcListWnd, m_SrcListWnd->GetItem(index));
+    }
     g_pda_info_state &= ~pda_section::journal;
 }
 
@@ -205,8 +217,15 @@ void CUIDiaryWnd::LoadNewsTab()
 void CUIDiaryWnd::OnSrcListItemClicked(CUIWindow* w, void* p)
 {
     CUITreeViewItem* pSelItem = (CUITreeViewItem*)p;
+    if (!pSelItem) return;
+    if (m_op22_reference)
+    {
+        m_op22_article = pSelItem->GetValue();
+        for (int i=0;i<m_SrcListWnd->GetItemsCount();++i)
+            if (auto* item=smart_cast<CUITreeViewItem*>(m_SrcListWnd->GetItem(i))) item->op22_SetReferenceSelected(pSelItem);
+    }
     m_DescrView->Clear();
-    if (!pSelItem->IsRoot())
+    if (!pSelItem->IsRoot() && pSelItem->GetValue() >= 0 && pSelItem->GetValue() < m_ArticlesDB.size())
     {
         CUIEncyclopediaArticleWnd* article_info = xr_new<CUIEncyclopediaArticleWnd>();
         article_info->Init("encyclopedia_item.xml", m_op22_layout ? "diary_wnd:objective_item" : "encyclopedia_wnd:objective_item");
@@ -300,7 +319,17 @@ void CUIDiaryWnd::UpdateJournal()
                 auto& a = m_ArticlesDB.emplace_back();
                 a.Load(it->article_id);
                 bool bReaded = it->readed;
-                CreateTreeBranch(a.data()->group, a.data()->name, m_SrcListWnd, m_ArticlesDB.size() - 1, m_pTreeRootFont, m_uTreeRootColor, m_pTreeItemFont, m_uTreeItemColor,
+                if (m_op22_reference)
+                {
+                    auto* item = xr_new<CUITreeViewItem>();
+                    item->SetFont(m_pTreeItemFont);
+                    item->SetText(*CStringTable().translate(a.data()->name));
+                    item->SetValue(int(m_ArticlesDB.size()-1));
+                    item->MarkArticleAsRead(bReaded);
+                    m_SrcListWnd->AddItem<CUITreeViewItem>(item);
+                    item->op22_SetReference(m_op22_subtitle_font);
+                }
+                else CreateTreeBranch(a.data()->group, a.data()->name, m_SrcListWnd, m_ArticlesDB.size() - 1, m_pTreeRootFont, m_uTreeRootColor, m_pTreeItemFont, m_uTreeItemColor,
                                  bReaded);
             }
         }

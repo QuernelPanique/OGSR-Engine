@@ -97,10 +97,13 @@ public:
     void SetUnreadedColor(u32 cl) { m_uUnreadedColor = cl; }
     void SetManualSetColor(bool val) { m_bManualSetColor = val; }
     void op22_SetTheme();
+    void op22_SetReference(CGameFont* subtitle_font = nullptr);
+    void op22_SetReferenceSelected(CUITreeViewItem* item);
+    virtual void Draw();
     // Устанавливаем цвет в зависимости от состояния элемента
     void SetItemColor()
     {
-        SetTextColor(m_op22_theme && CursorOverWindow() ? color_rgba(23, 18, 4, 255) :
+        SetTextColor(m_op22_theme && (CursorOverWindow() || m_op22_selected) ? color_rgba(23, 18, 4, 255) :
             (m_bArticleRead ? m_uReadedColor : m_uUnreadedColor));
     }
 
@@ -119,6 +122,10 @@ private:
     // SetItemColor()
     bool m_bManualSetColor;
     bool m_op22_theme{};
+    bool m_op22_reference{};
+    bool m_op22_selected{};
+    CUIStatic* m_op22_rule{};
+    CUIStatic* m_op22_subtitle{};
 };
 
 //////////////////////////////////////////////////////////////////////////

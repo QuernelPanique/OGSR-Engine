@@ -50,6 +50,10 @@ void CUICharacterInfo::Init(float x, float y, float width, float height, CUIXml*
 
     CUIXmlInit xml_init;
     CUIStatic* pItem = NULL;
+    m_op22_numeric_relation = !!xml_doc->ReadAttribInt("relation_static", 0, "op22_numeric", 0);
+    m_op22_numeric_reputation = !!xml_doc->ReadAttribInt("reputation_static", 0, "op22_numeric", 0);
+    m_op22_combine_rank = !!xml_doc->ReadAttribInt("community_static", 0, "op22_combine_rank", 0);
+    xml_init.InitAutoStatic(*xml_doc, "op22_auto_static", this);
 
     if (xml_doc->NavigateToNode("icon_static", 0))
     {
@@ -201,7 +205,8 @@ void CUICharacterInfo::InitCharacter(u16 id)
 
     if (m_icons[eUIReputation])
     {
-        strcpy_s(str, stbl.translate(GetReputationAsText(chInfo.Reputation().value())).c_str());
+        if (m_op22_numeric_reputation) sprintf_s(str, "%+d", chInfo.Reputation().value());
+        else strcpy_s(str, stbl.translate(GetReputationAsText(chInfo.Reputation().value())).c_str());
         m_icons[eUIReputation]->SetText(str);
     }
 
@@ -223,6 +228,12 @@ void CUICharacterInfo::InitCharacter(u16 id)
         m_icons[eUICommunity]->SetText(str);
     }
 
+    if (m_op22_combine_rank && m_icons[eUICommunity])
+    {
+        xr_sprintf(str, "%s, %s", *stbl.translate(chInfo.Community().id()),
+            *stbl.translate(GetRankAsText(chInfo.Rank().value())));
+        m_icons[eUICommunity]->SetText(str);
+    }
     m_texture_name = chInfo.IconName().c_str();
     m_icons[eUIIcon]->InitTexture(m_texture_name.c_str());
     m_icons[eUIIcon]->SetStretchTexture(true);
@@ -268,10 +279,11 @@ void CUICharacterInfo::SetRelation(ALife::ERelationType relation, CHARACTER_GOOD
 
     CStringTable stbl;
 
-    m_icons[eUIRelation]->SetTextColor(GetRelationColor(relation));
+    m_icons[eUIRelation]->SetTextColor(m_op22_numeric_relation ?
+        (m_op22_selected ? color_rgba(23,18,4,255) : color_rgba(255,195,77,255)) : GetRelationColor(relation));
     string256 str;
-
-    sprintf_s(str, "%s", *stbl.translate(GetGoodwillAsText(goodwill)));
+    if (m_op22_numeric_relation) sprintf_s(str, "%+d", goodwill);
+    else sprintf_s(str, "%s", *stbl.translate(GetGoodwillAsText(goodwill)));
 
     m_icons[eUIRelation]->SetText(str);
 }
@@ -367,6 +379,7 @@ void CUICharacterInfo::ClearInfo()
 
 void CUICharacterInfo::op22_SetSelected(bool selected)
 {
+    m_op22_selected = selected;
     for (int i = eUIName; i < eMaxCaption; ++i)
     {
         if (!m_icons[i]) continue;

@@ -2,6 +2,7 @@
 #include "UIMapWnd.h"
 #include "UIMap.h"
 #include "UIXmlInit.h"
+#include "../string_table.h"
 
 #include "../map_manager.h"
 #include "UIInventoryUtilities.h"
@@ -265,6 +266,14 @@ void CUIMapWnd::Init(LPCSTR xml_name, LPCSTR start_from)
         border->SetStretchTexture(true);
         m_UIMainFrame->AttachChild(border);
         border->Enable(false);
+    }
+    m_op22_overlay = !!uiXml.ReadAttribInt(pth, 0, "op22_overlay", 0);
+    if (m_op22_overlay)
+    {
+        m_UIMainScrollH->Show(false); m_UIMainScrollH->Enable(false);
+        m_UIMainScrollV->Show(false); m_UIMainScrollV->Enable(false);
+        strconcat(sizeof(pth), pth, start_from, ":main_wnd:auto_static");
+        xml_init.InitAutoStatic(uiXml, pth, this);
     }
     Register(m_GlobalMap);
     m_ActionPlanner = xr_new<CMapActionPlanner>();
@@ -795,7 +804,17 @@ void CUIMapWnd::HideHint(CUIWindow* parent)
         m_hint->SetOwner(NULL);
 }
 
-void CUIMapWnd::Hint(const shared_str& text) { m_text_hint->SetTextST(*text); }
+void CUIMapWnd::Hint(const shared_str& text)
+{
+    if (m_op22_overlay)
+    {
+        string256 label;
+        xr_sprintf(label, "%s. %s %.1fx", *CStringTable().translate(text),
+            *CStringTable().translate("ct_tr_map_scale"), GetZoom() / GlobalMap()->GetMinZoom());
+        m_text_hint->SetText(label);
+    }
+    else m_text_hint->SetTextST(*text);
+}
 
 void CUIMapWnd::Reset()
 {

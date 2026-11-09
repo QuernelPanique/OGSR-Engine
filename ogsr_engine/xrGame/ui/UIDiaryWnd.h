@@ -46,6 +46,9 @@ protected:
     CGameFont* m_pTreeItemFont;
     u32 m_uTreeItemColor;
     bool m_op22_layout{};
+    bool m_op22_reference{};
+    int m_op22_article{};
+    CGameFont* m_op22_subtitle_font{};
     void op22_SetHeader(LPCSTR text);
 
     xr_vector<Fvector2> m_sign_places;

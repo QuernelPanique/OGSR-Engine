@@ -44,6 +44,10 @@ protected:
     CUIStatic* m_icons[eMaxCaption];
     u32 m_op22_normal[eMaxCaption]{};
     bool m_op22_has_normal{};
+    bool m_op22_selected{};
+    bool m_op22_numeric_relation{};
+    bool m_op22_numeric_reputation{};
+    bool m_op22_combine_rank{};
 
     enum
     {

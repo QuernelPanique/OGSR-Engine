@@ -46,6 +46,7 @@ public:
 
 private:
     float m_currentZoom;
+    bool m_op22_overlay{};
     CUIGlobalMap* m_GlobalMap;
     GameMaps m_GameMaps;
 

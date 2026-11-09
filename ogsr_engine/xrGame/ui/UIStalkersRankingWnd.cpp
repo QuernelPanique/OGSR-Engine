@@ -78,6 +78,7 @@ void CUIStalkersRankingWnd::Init()
     xml_init.InitAutoStaticGroup(uiXml, "left_auto", 0, UIInfoFrame);
     xml_init.InitAutoStaticGroup(uiXml, "right_auto", 0, UICharIconFrame);
     m_op22_actor_card = !!uiXml.ReadAttribInt("character_info", 0, "op22_actor_card", 0);
+    m_op22_reference = !!uiXml.ReadAttribInt("main_wnd", 0, "op22_reference", 0);
     CUIStatic** fields[] = {&m_op22_actor_place, &m_op22_actor_rating, &m_op22_actor_next};
     LPCSTR names[] = {"op22_actor_place", "op22_actor_rating", "op22_actor_next"};
     for (int i = 0; i < 3; ++i)
@@ -162,7 +163,12 @@ void CUIStalkersRankingWnd::FillList()
             i++;
         }
 
-        UIList->SetSelected(UIList->GetItem(0));
+        CUIWindow* selected = UIList->GetItem(0);
+        if (m_op22_reference)
+            for (u32 n=0;n<UIList->GetSize();++n)
+                if (auto* row=smart_cast<CUIStalkerRankingInfoItem*>(UIList->GetItem(n)))
+                    if (row->m_humanID==Actor()->ID()) { selected=row; break; }
+        UIList->SetSelected(selected);
     }
     else
     {
@@ -179,7 +185,7 @@ void CUIStalkersRankingWnd::AddStalkerItem(CUIXml* xml, int num, CSE_ALifeTrader
     CUIStalkerRankingInfoItem* itm = xr_new<CUIStalkerRankingInfoItem>(this);
     itm->Init(xml, "item_human", 0);
 
-    std::string s = std::to_string(num) + ".";
+    std::string s = std::to_string(num) + (m_op22_reference ? "" : ".");
     itm->m_text1->SetText(s.c_str());
 
     itm->m_text2->SetText(t->name_translated().c_str());
@@ -205,7 +211,7 @@ void CUIStalkersRankingWnd::AddActorItem(CUIXml* xml, int num, CSE_ALifeTraderAb
     itm = xr_new<CUIStalkerRankingInfoItem>(this);
     itm->Init(xml, "item_actor", 0);
 
-    std::string s = std::to_string(num) + ".";
+    std::string s = std::to_string(num) + (m_op22_reference ? "" : ".");
     itm->m_text1->SetText(s.c_str());
 
     itm->m_text2->SetText(t->name_translated().c_str());

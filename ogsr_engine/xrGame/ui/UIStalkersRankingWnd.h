@@ -29,6 +29,7 @@ protected:
     CUIWindow* UICharacterWindow{};
     CUICharacterInfo* UICharacterInfo{};
     bool m_op22_actor_card{};
+    bool m_op22_reference{};
     CUIStatic* m_op22_actor_place{};
     CUIStatic* m_op22_actor_rating{};
     CUIStatic* m_op22_actor_next{};

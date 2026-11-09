@@ -300,6 +300,16 @@ void CUIActorInfoWnd::FillReputationDetails(CUIXml* xml, LPCSTR path, CUIScrollV
         sprintf_s(buff, "%d", gw);
         itm->m_text3->SetTextST(buff);
 
+        if (itm->m_op22_bar)
+        {
+            float fraction = (float(gw)+1000.f)/2000.f;
+            clamp(fraction,0.f,1.f);
+            itm->m_op22_bar->SetWidth(_max(.01f,itm->m_op22_bar_width*fraction));
+            itm->m_op22_bar->Show(fraction>0.f);
+            itm->m_op22_bar->SetColor(gw<0 ? color_rgba(255,85,56,255) : color_rgba(255,195,77,255));
+            itm->m_text1->op22_SetHintText(buff);
+            if (comm.id()==shared_str("stalker")) itm->m_text1->SetTextST("ct_tr_loners");
+        }
         target->AddWindow(itm, true);
     }
 }
@@ -382,6 +392,14 @@ void CUIActorStaticticDetail::Init(CUIXml* xml, LPCSTR path, int idx)
     m_text3->SetAutoDelete(true);
     AttachChild(m_text3);
     xml_init.InitStatic(*xml, "text_3", 0, m_text3);
+    if (xml->NavigateToNode("op22_bar_background",0))
+    {
+        auto* back=xr_new<CUIStatic>(); back->SetAutoDelete(true); AttachChild(back);
+        xml_init.InitStatic(*xml,"op22_bar_background",0,back);
+        m_op22_bar=xr_new<CUIStatic>(); m_op22_bar->SetAutoDelete(true); AttachChild(m_op22_bar);
+        xml_init.InitStatic(*xml,"op22_bar_fill",0,m_op22_bar);
+        m_op22_bar_width=m_op22_bar->GetWidth();
+    }
 
     xml_init.InitAutoStaticGroup(*xml, "auto", 0, this);
 
