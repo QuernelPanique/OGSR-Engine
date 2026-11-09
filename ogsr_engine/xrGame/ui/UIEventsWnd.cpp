@@ -305,7 +305,7 @@ void CUIEventsWnd::ShowDescription(CGameTask* t, int idx)
         {
             m_op22_map_level = target->LevelName();
             m_op22_map_position = target->Position();
-            m_UIMapWnd->Show(true);
+            if (!m_UIMapWnd->IsShown()) m_UIMapWnd->Show(true);
             m_UIMapWnd->SetTargetMap(m_op22_map_level, m_op22_map_position, true);
         }
         else m_UIMapWnd->Show(false);
