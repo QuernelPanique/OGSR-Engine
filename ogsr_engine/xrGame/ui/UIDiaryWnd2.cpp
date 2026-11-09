@@ -336,7 +336,11 @@ void CUIDiaryWnd::UpdateJournal()
         prevArticlesCount = Actor()->encyclopedia_registry->registry().objects_ptr()->size();
         if (m_op22_layout)
             for (int i = 0; i < m_SrcListWnd->GetItemsCount(); ++i)
-                if (auto* item = smart_cast<CUITreeViewItem*>(m_SrcListWnd->GetItem(i))) item->op22_SetTheme();
+                if (auto* item = smart_cast<CUITreeViewItem*>(m_SrcListWnd->GetItem(i)))
+                {
+                    if (m_op22_reference) item->op22_SetReference(m_op22_subtitle_font);
+                    else item->op22_SetTheme();
+                }
     }
 }
 

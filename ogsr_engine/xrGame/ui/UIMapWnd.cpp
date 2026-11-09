@@ -272,8 +272,16 @@ void CUIMapWnd::Init(LPCSTR xml_name, LPCSTR start_from)
     {
         m_UIMainScrollH->Show(false); m_UIMainScrollH->Enable(false);
         m_UIMainScrollV->Show(false); m_UIMainScrollV->Enable(false);
+        strconcat(sizeof(pth), pth, start_from, ":main_wnd");
+        const int count=uiXml.GetNodesNum(pth,0,"auto_static");
         strconcat(sizeof(pth), pth, start_from, ":main_wnd:auto_static");
-        xml_init.InitAutoStatic(uiXml, pth, this);
+        for (int i=0;i<count;++i)
+        {
+            auto* decor=xr_new<CUIStatic>();
+            decor->SetAutoDelete(true); AttachChild(decor);
+            xml_init.InitStatic(uiXml,pth,i,decor);
+            decor->Enable(false);
+        }
     }
     Register(m_GlobalMap);
     m_ActionPlanner = xr_new<CMapActionPlanner>();
