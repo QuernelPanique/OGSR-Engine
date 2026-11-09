@@ -53,7 +53,6 @@ void CUICharacterInfo::Init(float x, float y, float width, float height, CUIXml*
     m_op22_numeric_relation = !!xml_doc->ReadAttribInt("relation_static", 0, "op22_numeric", 0);
     m_op22_numeric_reputation = !!xml_doc->ReadAttribInt("reputation_static", 0, "op22_numeric", 0);
     m_op22_combine_rank = !!xml_doc->ReadAttribInt("community_static", 0, "op22_combine_rank", 0);
-    xml_init.InitAutoStatic(*xml_doc, "op22_auto_static", this);
 
     if (xml_doc->NavigateToNode("icon_static", 0))
     {
@@ -159,6 +158,8 @@ void CUICharacterInfo::Init(float x, float y, float width, float height, CUIXml*
         xml_init.InitScrollView(*xml_doc, "biography_list", 0, pUIBio);
         AttachChild(pUIBio);
     }
+    for (auto* decor : xml_init.InitAutoStatic(*xml_doc, "op22_auto_static", this))
+        decor->Enable(false);
 }
 
 void CUICharacterInfo::Init(float x, float y, float width, float height, const char* xml_name)
