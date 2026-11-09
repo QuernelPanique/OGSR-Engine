@@ -33,6 +33,7 @@
 #include "inventory.h"
 #include "../ai_space.h"
 #include "../script_engine.h"
+#include "../string_table.h"
 
 static void op22_skills_page(bool open, CUIWindow* owner)
 {
@@ -148,6 +149,27 @@ void CUIPdaWnd::Init()
     xml_init.InitTabControl(uiXml, "tab", 0, UITabControl);
     UITabControl->SetMessageTarget(this);
 
+    if (uiXml.NavigateToNode("op22_tasks_shell", 0))
+    {
+        m_op22_tasks_shell = xr_new<CUIStatic>();
+        m_op22_tasks_shell->SetAutoDelete(true);
+        UIMainPdaFrame->AttachChild(m_op22_tasks_shell);
+        xml_init.InitStatic(uiXml, "op22_tasks_shell", 0, m_op22_tasks_shell);
+        auto* logo = xr_new<CUIStatic>();
+        logo->SetAutoDelete(true);
+        m_op22_tasks_shell->AttachChild(logo);
+        xml_init.InitStatic(uiXml,"op22_tasks_shell:logo",0,logo);
+        m_op22_tasks_timer = xr_new<CUIStatic>();
+        m_op22_tasks_timer->SetAutoDelete(true);
+        m_op22_tasks_shell->AttachChild(m_op22_tasks_timer);
+        xml_init.InitStatic(uiXml,"op22_tasks_shell:timer",0,m_op22_tasks_timer);
+        m_op22_tasks_tabs = xr_new<CUITabControl>();
+        m_op22_tasks_tabs->SetAutoDelete(true);
+        m_op22_tasks_shell->AttachChild(m_op22_tasks_tabs);
+        xml_init.InitTabControl(uiXml,"op22_tasks_shell:tab",0,m_op22_tasks_tabs);
+        m_op22_tasks_tabs->SetMessageTarget(this);
+        m_op22_tasks_shell->Show(false);
+    }
     m_updatedSectionImage = xr_new<CUIStatic>();
     xml_init.InitStatic(uiXml, "updated_section_static", 0, m_updatedSectionImage);
 
@@ -177,11 +199,11 @@ void CUIPdaWnd::Init()
 
 void CUIPdaWnd::SendMessage(CUIWindow* pWnd, s16 msg, void* pData)
 {
-    if (pWnd == UITabControl)
+    if (pWnd == UITabControl || pWnd == m_op22_tasks_tabs)
     {
         if (TAB_CHANGED == msg)
         {
-            SetActiveSubdialog((EPdaTabs)UITabControl->GetActiveIndex());
+            SetActiveSubdialog((EPdaTabs)(pWnd == m_op22_tasks_tabs ? m_op22_tasks_tabs : UITabControl)->GetActiveIndex());
         }
     }
     else
@@ -339,6 +361,15 @@ void CUIPdaWnd::Hide()
 
 void CUIPdaWnd::UpdateDateTime()
 {
+    if (m_op22_tasks_timer)
+    {
+        u32 year, month, day, hours, minutes, seconds, milliseconds;
+        split_time(Level().GetGameTime(), year, month, day, hours, minutes, seconds, milliseconds);
+        string256 label;
+        // "Day" is translated through the existing string table.
+        xr_sprintf(label, "%s\\n%u\\n%%c[255,255,233,189]%02u:%02u", *CStringTable().translate("ct_tr_tasks_day"), day, hours, minutes);
+        m_op22_tasks_timer->SetText(label);
+    }
     static shared_str prevStrTime = " ";
     xr_string strTime = *InventoryUtilities::GetGameTimeAsString(InventoryUtilities::etpTimeToMinutes);
     strTime += " ";
@@ -416,10 +447,19 @@ void CUIPdaWnd::SetActiveSubdialog(EPdaTabs section)
     UIMainPdaFrame->AttachChild(m_pActiveDialog);
     m_pActiveDialog->Show(true);
 
+    m_pActiveSection = section;
     if (UITabControl->GetActiveIndex() != section)
         UITabControl->SetNewActiveTab(section);
 
     m_pActiveSection = section;
+    if (m_op22_tasks_shell)
+    {
+        m_op22_tasks_shell->Show(section == eptQuests);
+        UITabControl->Show(section != eptQuests);
+        UITimerBackground->Show(section != eptQuests);
+        if (section == eptQuests && m_op22_tasks_tabs->GetActiveIndex() != eptQuests)
+            m_op22_tasks_tabs->SetNewActiveTab(eptQuests);
+    }
     g_op22_pda_tab = (g_op22_pda_tab + 1) % 100000; // OP22
     if (section == eptSkills) op22_skills_page(true, m_op22_skills);
 }

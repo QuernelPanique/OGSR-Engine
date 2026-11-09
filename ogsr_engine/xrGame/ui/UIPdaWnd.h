@@ -43,6 +43,9 @@ protected:
     // Текущий активный диалог
     CUIWindow* m_pActiveDialog;
     CUIWindow* m_op22_skills{};
+    CUIStatic* m_op22_tasks_shell{};
+    CUIStatic* m_op22_tasks_timer{};
+    CUITabControl* m_op22_tasks_tabs{};
     xr_vector<Fvector2> m_sign_places_main;
 
 public:

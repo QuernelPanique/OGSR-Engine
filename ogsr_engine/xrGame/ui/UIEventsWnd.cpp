@@ -19,6 +19,9 @@
 #include "UITaskItem.h"
 #include "../alife_registry_wrappers.h"
 #include "../encyclopedia_article.h"
+#include "../ui.h"
+#include "../UIGameSP.h"
+#include "UIPdaWnd.h"
 
 CUIEventsWnd::CUIEventsWnd() { m_flags.zero(); }
 
@@ -37,6 +40,7 @@ void CUIEventsWnd::Init()
     CUIXmlInit xml_init;
     xml_init.InitWindow(uiXml, "main_wnd", 0, this);
     m_op22_split = !!uiXml.ReadAttribInt("main_wnd", 0, "op22_split", 0);
+    m_op22_cards = !!uiXml.ReadAttribInt("main_wnd", 0, "op22_cards", 0);
 
     m_UILeftFrame = xr_new<CUIFrameWindow>();
     m_UILeftFrame->SetAutoDelete(true);
@@ -82,6 +86,17 @@ void CUIEventsWnd::Init()
     Register(m_TaskFilter);
     AddCallback("filter_tab", TAB_CHANGED, fastdelegate::MakeDelegate(this, &CUIEventsWnd::OnFilterChanged));
 
+    if (m_op22_cards)
+    {
+        m_op22_map_button = xr_new<CUI3tButton>();
+        m_op22_map_button->SetAutoDelete(true);
+        m_UIRightWnd->AttachChild(m_op22_map_button);
+        xml_init.Init3tButton(uiXml, "main_wnd:right_frame:op22_map_button", 0, m_op22_map_button);
+        m_op22_map_button->SetWindowName("task_map");
+        Register(m_op22_map_button);
+        AddCallback("task_map", BUTTON_CLICKED, fastdelegate::MakeDelegate(this, &CUIEventsWnd::OnTaskMap));
+        m_op22_map_button->Enable(false);
+    }
     m_currFilter = eActiveTask;
     SetDescriptionMode(true);
 
@@ -104,7 +119,8 @@ void CUIEventsWnd::SendMessage(CUIWindow* pWnd, s16 msg, void* pData) { CUIWndCa
 
 void CUIEventsWnd::OnFilterChanged(CUIWindow* w, void*)
 {
-    m_currFilter = (ETaskFilters)m_TaskFilter->GetActiveIndex();
+    const int index = m_TaskFilter->GetActiveIndex();
+    m_currFilter = m_op22_cards && index == 2 ? eMaxTask : (ETaskFilters)index;
     ReloadList(false);
     if (!GetDescriptionMode())
         SetDescriptionMode(true);
@@ -114,7 +130,10 @@ void CUIEventsWnd::Reload() { m_flags.set(flNeedReload, TRUE); }
 
 void CUIEventsWnd::ReloadList(bool bClearOnly)
 {
+    const int scroll = m_ListWnd->GetCurrentScrollPos();
     m_ListWnd->Clear();
+    if (m_op22_map_button) m_op22_map_button->Enable(false);
+    m_op22_map_level = "";
     // Selection belongs to the rebuilt list; its former description is stale.
     if (m_op22_split) m_UITaskInfoWnd->ClearAll();
     if (bClearOnly)
@@ -140,6 +159,30 @@ void CUIEventsWnd::ReloadList(bool bClearOnly)
             return a->m_priority < b->m_priority;
         });
 
+    if (m_op22_cards)
+    {
+        if (m_currFilter != eActiveTask)
+            std::stable_sort(game_tasks.begin(), game_tasks.end(), [](const auto* a, const auto* b) { return a->m_ReceiveTime > b->m_ReceiveTime; });
+        CGameTask* selected = nullptr;
+        for (auto* task : game_tasks)
+        {
+            auto* item = xr_new<CUITaskRootItem>(this);
+            item->SetGameTask(task, 0);
+            m_ListWnd->AddWindow(item, true);
+            if (task->m_ID == m_op22_selected) selected = task;
+        }
+        if (!selected && !game_tasks.empty())
+        {
+            selected = game_tasks.front();
+            for (auto* task : game_tasks)
+                if (task->m_ID == g_active_task_id) { selected = task; break; }
+        }
+        if (selected) ShowDescription(selected, 0);
+        else { m_op22_selected = ""; m_UIMapWnd->Show(false); }
+        m_ListWnd->ScrollToBegin();
+        m_ListWnd->SetScrollPos(scroll);
+        return;
+    }
     for (const auto& task : game_tasks)
     {
         CUITaskItem* pTaskItem = NULL;
@@ -208,6 +251,7 @@ void CUIEventsWnd::Show(bool status)
 bool CUIEventsWnd::Filter(CGameTask* t)
 {
     ETaskState task_state = t->m_Objectives[0].TaskState();
+    if (m_op22_cards && m_currFilter == eMaxTask) return true;
     //	bool bprimary_only			= m_primary_or_all_filter_btn->GetCheck();
 
     return (false /*m_currFilter==eOwnTask && task_state==eTaskUserDefined*/) ||
@@ -242,6 +286,49 @@ bool CUIEventsWnd::GetDescriptionMode() { return !!m_flags.test(flMapMode); }
 
 void CUIEventsWnd::ShowDescription(CGameTask* t, int idx)
 {
+    if (m_op22_cards)
+    {
+        m_op22_selected = t->m_ID;
+        CMapLocation* target = nullptr;
+        const int count = int(t->m_Objectives.size());
+        for (int i = 1; i < count; ++i)
+        {
+            auto& objective = t->m_Objectives[i];
+            auto* location = objective.LinkedMapLocation();
+            if (!location || !location->SpotEnabled()) continue;
+            if (!target) target = location;
+            if (objective.TaskState() == eTaskStateInProgress) { target = location; break; }
+        }
+        if (!target) target = t->Objective(0).LinkedMapLocation();
+        m_op22_map_level = "";
+        if (target && target->SpotEnabled())
+        {
+            m_op22_map_level = target->LevelName();
+            m_op22_map_position = target->Position();
+            m_UIMapWnd->Show(true);
+            m_UIMapWnd->SetTargetMap(m_op22_map_level, m_op22_map_position, true);
+        }
+        else m_UIMapWnd->Show(false);
+        m_op22_map_button->Enable(m_op22_map_level.size() != 0);
+        for (u32 i = 0; i < m_ListWnd->GetSize(); ++i)
+        {
+            auto* item = static_cast<CUITaskItem*>(m_ListWnd->GetItem(i));
+            item->MarkSelected(item->GameTask()->m_ID == m_op22_selected);
+        }
+        m_UITaskInfoWnd->ClearAll();
+        m_UITaskInfoWnd->AddTaskSummary(t, 0);
+        // Keep real quest articles accessible below the compact objective list.
+        if (auto* articles = Actor()->encyclopedia_registry->registry().objects_ptr())
+            for (const auto& entry : *articles)
+            {
+                if (entry.article_type != ARTICLE_DATA::eTaskArticle) continue;
+                CEncyclopediaArticle article;
+                article.Load(entry.article_id);
+                if (article.data()->group == t->m_ID || (t->Objective(0).article_id.size() && entry.article_id == t->Objective(0).article_id))
+                    m_UITaskInfoWnd->AddArticle(&article);
+            }
+        return;
+    }
     if (GetDescriptionMode())
     { // map
         SGameTaskObjective& o = t->Objective(idx);
@@ -291,6 +378,20 @@ void CUIEventsWnd::ShowDescription(CGameTask* t, int idx)
                 }
             }
         }
+    }
+}
+
+void CUIEventsWnd::OnTaskMap(CUIWindow*, void*)
+{
+    if (!m_op22_map_level.size()) return;
+    // Changing the tab clears the task view: copy the destination first.
+    const shared_str level = m_op22_map_level;
+    const Fvector2 position = m_op22_map_position;
+    auto* game = smart_cast<CUIGameSP*>(HUD().GetUI()->UIGame());
+    if (game && game->PdaMenu)
+    {
+        game->PdaMenu->SetActiveSubdialog(eptMap);
+        game->PdaMenu->UIMapWnd->SetTargetMap(level, position, true);
     }
 }
 

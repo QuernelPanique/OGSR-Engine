@@ -12,11 +12,18 @@
 
 CUITaskDescrWnd::CUITaskDescrWnd() {}
 
-CUITaskDescrWnd::~CUITaskDescrWnd() {}
+CUITaskDescrWnd::~CUITaskDescrWnd() { xr_delete(m_op22_xml); }
 
 void CUITaskDescrWnd::Init(CUIXml* doc, LPCSTR start_from)
 {
     CUIXmlInit xml_init;
+    m_op22_cards = !!doc->ReadAttribInt(start_from, 0, "op22_cards", 0);
+    if (m_op22_cards)
+    {
+        m_op22_xml = xr_new<CUIXml>();
+        R_ASSERT(m_op22_xml->Init(CONFIG_PATH, UI_PATH, "pda_events.xml"));
+    }
+    m_op22_path = start_from;
 
     xml_init.InitWindow(*doc, start_from, 0, this);
 
@@ -54,6 +61,70 @@ void CUITaskDescrWnd::Init(CUIXml* doc, LPCSTR start_from)
 
 void CUITaskDescrWnd::AddTaskSummary(CGameTask* task, int objective)
 {
+    if (m_op22_cards)
+    {
+        const float kx = 1024.f / 1280.f, ky = 768.f / 720.f;
+        CUIXmlInit init;
+        const float width = m_UITaskInfoWnd->GetDesiredChildWidth() - 8.f * kx;
+        const auto append = [&](LPCSTR key, LPCSTR text, float minimum, float padding)
+        {
+            auto* line = xr_new<CUIStatic>();
+            line->SetAutoDelete(true);
+            const xr_string path = m_op22_path + ":" + key;
+            init.InitStatic(*m_op22_xml, path.c_str(), 0, line);
+            line->SetWidth(width);
+            line->SetText(text);
+            line->AdjustHeightToText();
+            line->SetHeight(_max(minimum * ky, line->GetHeight() + padding * ky));
+            m_UITaskInfoWnd->AddWindow(line, true);
+        };
+        append("card_title", *CStringTable().translate(task->m_Title), 36.f, 8.f);
+        if (task->Objective(0).description.size())
+            append("card_description", *CStringTable().translate(task->Objective(0).description), 29.f, 8.f);
+        for (size_t i = 1; i < task->m_Objectives.size(); ++i)
+        {
+            auto& objective = task->m_Objectives[i];
+            auto* row = xr_new<CUIWindow>();
+            row->SetAutoDelete(true);
+            row->Init(0.f, 0.f, width, 38.f * ky);
+            auto* label = xr_new<CUIStatic>();
+            label->SetAutoDelete(true);
+            row->AttachChild(label);
+            const xr_string path = m_op22_path + ":card_objective";
+            init.InitStatic(*m_op22_xml, path.c_str(), 0, label);
+            label->SetWndPos(32.f * kx, 8.f * ky);
+            label->SetWidth(width - 32.f * kx);
+            label->SetText(*CStringTable().translate(objective.description));
+            const auto state = objective.TaskState();
+            if (state == eTaskStateCompleted || state == eTaskStateSkiped) label->SetTextColor(color_rgba(183,154,99,255));
+            else if (state == eTaskStateFail) label->SetTextColor(color_rgba(255,90,60,255));
+            label->AdjustHeightToText();
+            row->SetHeight(_max(row->GetHeight(), label->GetHeight() + 16.f * ky));
+            auto* check = xr_new<CUIStatic>();
+            check->SetAutoDelete(true);
+            row->AttachChild(check);
+            check->Init(0.f, 8.f * ky, 22.f * kx, 22.f * ky);
+            check->InitTexture(state == eTaskStateCompleted ? "ui\\ct_tr_tasks_check_done" :
+                state == eTaskStateFail ? "ui\\ct_tr_tasks_check_failed" :
+                state == eTaskStateSkiped ? "ui\\ct_tr_tasks_check_skipped" : "ui\\ct_tr_tasks_check_open");
+            check->SetStretchTexture(true);
+            check->SetWndSize(Fvector2().set(22.f * kx,22.f * ky));
+            auto* rule = xr_new<CUIStatic>();
+            rule->SetAutoDelete(true);
+            rule->Init(0.f, 0.f, width, ky);
+            rule->InitTexture("ui\\ct_tr_tasks_line");
+            rule->SetStretchTexture(true);
+            row->AttachChild(rule);
+            m_UITaskInfoWnd->AddWindow(row, true);
+        }
+        auto* rule = xr_new<CUIStatic>();
+        rule->Init(0.f,0.f,width,ky);
+        rule->InitTexture("ui\\ct_tr_tasks_line");
+        rule->SetStretchTexture(true);
+        m_UITaskInfoWnd->AddWindow(rule, true);
+        m_UITaskInfoWnd->ScrollToBegin();
+        return;
+    }
     if (!m_op22_title_font || !m_op22_text_font) return;
     const auto append = [&](LPCSTR text, CGameFont* font, u32 color)
     {

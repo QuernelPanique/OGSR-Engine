@@ -7,12 +7,18 @@
 #include "UIEventsWnd.h"
 #include "UIEditBoxEx.h"
 #include "UIEditBox.h"
+#include "UIScrollView.h"
 #include "UIInventoryUtilities.h"
 #include "../map_location.h"
 #include "../map_manager.h"
 #include "../level.h"
 #include "../actor.h"
 #include "../gametaskmanager.h"
+#include "../../COMMON_AI/character_info.h"
+#include "../ai_space.h"
+#include "../alife_simulator.h"
+#include "../alife_object_registry.h"
+#include "../xrServer_Objects_ALife_Monsters.h"
 
 CUITaskItem::CUITaskItem(CUIEventsWnd* w) : m_GameTask(NULL), m_TaskObjectiveIdx(u16(-1)), m_EventsWnd(w) {}
 
@@ -69,6 +75,8 @@ void CUITaskRootItem::Init()
     CUIXmlInit xml_init;
     CUIXml& uiXml = m_EventsWnd->m_ui_task_item_xml;
     xml_init.InitWindow(uiXml, "task_root_item", 0, this);
+    m_op22_card = !!uiXml.ReadAttribInt("task_root_item", 0, "op22_card", 0);
+    m_op22_min_height = GetHeight();
 
     xml_init.InitStatic(uiXml, "task_root_item:image", 0, m_taskImage);
     xml_init.InitStatic(uiXml, "task_root_item:caption", 0, m_captionStatic);
@@ -76,6 +84,15 @@ void CUITaskRootItem::Init()
     xml_init.InitStatic(uiXml, "task_root_item:rem_time", 0, m_remTimeStatic);
 
     xml_init.Init3tButton(uiXml, "task_root_item:switch_description_btn", 0, m_switchDescriptionBtn);
+    if (m_op22_card)
+    {
+        m_op22_separator = xr_new<CUIStatic>();
+        m_op22_separator->SetAutoDelete(true);
+        m_op22_separator->Init(0.f, GetHeight() - 768.f / 720.f, GetWidth(), 768.f / 720.f);
+        m_op22_separator->InitTexture("ui\\ct_tr_tasks_line");
+        m_op22_separator->SetStretchTexture(true);
+        AttachChild(m_op22_separator);
+    }
     if (uiXml.ReadAttribInt("task_root_item", 0, "op22_theme", 0))
     {
         m_op22_selection = xr_new<CUIStatic>();
@@ -99,6 +116,60 @@ void CUITaskRootItem::SetGameTask(CGameTask* gt, u16 obj_idx)
     CStringTable stbl;
     auto& obj = m_GameTask->m_Objectives.at(m_TaskObjectiveIdx);
 
+    if (m_op22_card)
+    {
+        m_taskImage->Show(false);
+        m_switchDescriptionBtn->Show(false);
+        m_remTimeStatic->Show(false);
+        m_captionStatic->SetText(*stbl.translate(gt->m_Title));
+        m_captionStatic->AdjustHeightToText();
+        xr_string subtitle;
+        for (auto& objective : gt->m_Objectives)
+            if (auto* location = objective.LinkedMapLocation())
+            {
+                subtitle = *stbl.translate(location->LevelName());
+                break;
+            }
+        // The last objective commonly points to the NPC accepting the reward.
+        // Use its actual character data; never invent a giver for a generic task.
+        if (gt->m_Objectives.size() > 1)
+        {
+            const u16 id = gt->m_Objectives.back().object_id;
+            if (id != u16(-1) && ai().get_alife())
+                if (auto* trader = smart_cast<CSE_ALifeTraderAbstract*>(ai().alife().objects().object(id, true)))
+                {
+                    CCharacterInfo character;
+                    character.Init(trader);
+                    if (character.Name() && *character.Name())
+                    {
+                        if (!subtitle.empty()) subtitle += ", ";
+                        subtitle += character.Name();
+                    }
+                }
+        }
+        if (subtitle.empty())
+        {
+            subtitle = *InventoryUtilities::GetDateAsString(gt->m_ReceiveTime, InventoryUtilities::edpDateToDay);
+            subtitle += " ";
+            subtitle += *InventoryUtilities::GetTimeAsString(gt->m_ReceiveTime, InventoryUtilities::etpTimeToMinutes);
+        }
+        m_captionTime->SetText(subtitle.c_str());
+        m_captionTime->AdjustHeightToText();
+        const float ky = 768.f / 720.f;
+        m_captionTime->SetWndPos(m_captionTime->GetWndPos().x, m_captionStatic->GetWndPos().y + m_captionStatic->GetHeight() + 2.f * ky);
+        SetHeight(_max(m_op22_min_height, m_captionTime->GetWndPos().y + m_captionTime->GetHeight() + 6.f * ky));
+        const bool deadline = gt->Objective(0).TaskState() == eTaskStateInProgress && gt->m_TimeToComplete > gt->m_ReceiveTime;
+        if (deadline)
+        {
+            m_remTimeStatic->SetWndPos(m_captionTime->GetWndPos().x, GetHeight() - 4.f * ky);
+            m_remTimeStatic->SetWidth(m_captionTime->GetWidth());
+            SetHeight(GetHeight() + m_captionTime->GetHeight() + 2.f * ky);
+            m_remTimeStatic->Show(true);
+        }
+        m_op22_separator->SetWndPos(0.f, GetHeight() - ky);
+        if (m_op22_selection) m_op22_selection->SetWndSize(GetWndSize());
+        return;
+    }
     m_taskImage->InitTexture(*obj.icon_texture_name);
 
     Frect r = obj.icon_rect;
@@ -148,7 +219,7 @@ void CUITaskRootItem::Update()
     inherited::Update();
     if (m_op22_selection) m_op22_selection->SetWndSize(GetWndSize());
 
-    if (m_curr_descr_mode != m_EventsWnd->GetDescriptionMode())
+    if (!m_op22_card && m_curr_descr_mode != m_EventsWnd->GetDescriptionMode())
     {
         m_curr_descr_mode = m_EventsWnd->GetDescriptionMode();
         if (m_curr_descr_mode)
@@ -165,10 +236,33 @@ void CUITaskRootItem::Update()
         InventoryUtilities::GetTimePeriodAsString(buff, sizeof(buff), Level().GetGameTime(), GameTask()->m_TimeToComplete);
         sprintf_s(buff2, "%s %s", *CStringTable().translate("ui_st_time_remains"), buff);
         m_remTimeStatic->SetText(buff2);
+        if (m_op22_card)
+        {
+            const float previous = m_remTimeStatic->GetHeight();
+            m_remTimeStatic->AdjustHeightToText();
+            if (!fsimilar(previous, m_remTimeStatic->GetHeight()))
+            {
+                SetHeight(m_remTimeStatic->GetWndPos().y + m_remTimeStatic->GetHeight() + 6.f * (768.f / 720.f));
+                m_op22_separator->SetWndPos(0.f, GetHeight() - 768.f / 720.f);
+                // The immediate parent is the scroll pad.
+                if (GetParent() && GetParent()->GetParent())
+                    if (auto* list = smart_cast<CUIScrollView*>(GetParent()->GetParent())) list->ForceUpdate();
+            }
+        }
     }
 }
 
-bool CUITaskRootItem::OnDbClick() { return true; }
+bool CUITaskRootItem::OnDbClick()
+{
+    if (m_op22_card)
+        for (u16 i = 1; i < u16(GameTask()->m_Objectives.size()); ++i)
+            if (GameTask()->Objective(i).TaskState() == eTaskStateInProgress)
+            {
+                Actor()->GameTaskManager().SetActiveTask(GameTask()->m_ID, i);
+                break;
+            }
+    return true;
+}
 
 void CUITaskRootItem::OnSwitchDescriptionClicked(CUIWindow*, void*)
 {
@@ -182,6 +276,7 @@ void CUITaskRootItem::MarkSelected(bool b)
 {
     if (!m_op22_selection) return;
     m_op22_selection->Show(b);
+    if (m_op22_separator) m_op22_separator->Show(!b);
     m_captionStatic->SetTextColor(b ? color_rgba(23, 18, 4, 255) : m_op22_caption_color);
     m_captionTime->SetTextColor(b ? color_rgba(23, 18, 4, 255) : m_op22_time_color);
     m_remTimeStatic->SetTextColor(b ? color_rgba(23, 18, 4, 255) : m_op22_rem_color);

@@ -33,6 +33,12 @@ class CUIEventsWnd : public CUIWindow, public CUIWndCallback
     };
     Flags16 m_flags;
     bool m_op22_split{};
+    bool m_op22_cards{};
+    shared_str m_op22_selected;
+    shared_str m_op22_map_level;
+    Fvector2 m_op22_map_position{};
+    CUI3tButton* m_op22_map_button{};
+    void OnTaskMap(CUIWindow*, void*);
     ETaskFilters m_currFilter;
     CUIFrameWindow* m_UILeftFrame;
     CUIWindow* m_UIRightWnd;
@@ -48,6 +54,7 @@ class CUIEventsWnd : public CUIWindow, public CUIWndCallback
     void ReloadList(bool bClearOnly);
 
 public:
+    bool CardsLayout() const { return m_op22_cards; }
     void SetDescriptionMode(bool bMap);
     bool GetDescriptionMode();
     void ShowDescription(CGameTask* t, int idx);

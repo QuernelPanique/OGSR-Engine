@@ -47,6 +47,9 @@ protected:
     CUI3tButton* m_switchDescriptionBtn;
     bool m_curr_descr_mode;
     CUIStatic* m_op22_selection{};
+    bool m_op22_card{};
+    CUIStatic* m_op22_separator{};
+    float m_op22_min_height{};
     u32 m_op22_caption_color{}, m_op22_time_color{}, m_op22_rem_color{};
     void Init();
 

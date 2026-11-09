@@ -249,6 +249,23 @@ void CUIMapWnd::Init(LPCSTR xml_name, LPCSTR start_from)
     }
 #endif
 
+    strconcat(sizeof(pth), pth, start_from, ":main_wnd");
+    if (uiXml.ReadAttribInt(pth, 0, "op22_compact", 0))
+    {
+        m_UIMainScrollH->Show(false);
+        m_UIMainScrollH->Enable(false);
+        m_UIMainScrollV->Show(false);
+        m_UIMainScrollV->Enable(false);
+        UIMainMapHeader->Show(false);
+        m_text_hint->SetWndPos(2000.f, 0.f);
+        auto* border = xr_new<CUIStatic>();
+        border->SetAutoDelete(true);
+        border->Init(0.f,0.f,m_UIMainFrame->GetWidth(),m_UIMainFrame->GetHeight());
+        border->InitTexture("ui\\ct_tr_tasks_map_border");
+        border->SetStretchTexture(true);
+        m_UIMainFrame->AttachChild(border);
+        border->Enable(false);
+    }
     Register(m_GlobalMap);
     m_ActionPlanner = xr_new<CMapActionPlanner>();
     m_ActionPlanner->setup(this);

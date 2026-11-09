@@ -17,6 +17,9 @@ protected:
     CUIScrollView* m_UITaskInfoWnd;
     CUIFrameWindow* m_UIMainFrame;
     CUIFrameLineWnd* m_UIMainHeader;
+    bool m_op22_cards{};
+    CUIXml* m_op22_xml{};
+    xr_string m_op22_path;
     CGameFont* m_op22_title_font{};
     CGameFont* m_op22_text_font{};
     u32 m_op22_title_color{0xffffffff}, m_op22_text_color{0xffffffff};
