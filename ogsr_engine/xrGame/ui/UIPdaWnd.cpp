@@ -34,6 +34,7 @@
 #include "../ai_space.h"
 #include "../script_engine.h"
 #include "../string_table.h"
+#include "../date_time.h"
 
 static void op22_skills_page(bool open, CUIWindow* owner)
 {
