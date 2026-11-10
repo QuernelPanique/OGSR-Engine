@@ -66,6 +66,15 @@ void CUITaskDescrWnd::AddTaskSummary(CGameTask* task, int objective)
         const float kx = 1024.f / 1280.f, ky = 768.f / 720.f;
         CUIXmlInit init;
         const float width = m_UITaskInfoWnd->GetDesiredChildWidth() - 8.f * kx;
+        // OP22: размеры карточки из разметки (плотный интерфейс 10.11), по умолчанию - прежние
+        const auto attr = [&](LPCSTR key, LPCSTR name, float def)
+        {
+            const xr_string path = m_op22_path + ":" + key;
+            return m_op22_xml->ReadAttribFlt(path.c_str(), 0, name, def);
+        };
+        const float obj_row = attr("card_objective", "op22_row", 38.f), obj_pad = attr("card_objective", "op22_pad", 16.f);
+        const float obj_x = attr("card_objective", "op22_text_x", 32.f), obj_y = attr("card_objective", "op22_text_y", 8.f);
+        const float chk = attr("card_objective", "op22_check", 22.f), chk_y = attr("card_objective", "op22_check_y", 8.f);
         const auto append = [&](LPCSTR key, LPCSTR text, float minimum, float padding)
         {
             auto* line = xr_new<CUIStatic>();
@@ -78,37 +87,37 @@ void CUITaskDescrWnd::AddTaskSummary(CGameTask* task, int objective)
             line->SetHeight(_max(minimum * ky, line->GetHeight() + padding * ky));
             m_UITaskInfoWnd->AddWindow(line, true);
         };
-        append("card_title", *CStringTable().translate(task->m_Title), 36.f, 8.f);
+        append("card_title", *CStringTable().translate(task->m_Title), attr("card_title", "op22_min", 36.f), attr("card_title", "op22_pad", 8.f));
         if (task->Objective(0).description.size())
-            append("card_description", *CStringTable().translate(task->Objective(0).description), 29.f, 8.f);
+            append("card_description", *CStringTable().translate(task->Objective(0).description), attr("card_description", "op22_min", 29.f), attr("card_description", "op22_pad", 8.f));
         for (size_t i = 1; i < task->m_Objectives.size(); ++i)
         {
             auto& objective = task->m_Objectives[i];
             auto* row = xr_new<CUIWindow>();
             row->SetAutoDelete(true);
-            row->Init(0.f, 0.f, width, 38.f * ky);
+            row->Init(0.f, 0.f, width, obj_row * ky);
             auto* label = xr_new<CUIStatic>();
             label->SetAutoDelete(true);
             row->AttachChild(label);
             const xr_string path = m_op22_path + ":card_objective";
             init.InitStatic(*m_op22_xml, path.c_str(), 0, label);
-            label->SetWndPos(32.f * kx, 8.f * ky);
-            label->SetWidth(width - 32.f * kx);
+            label->SetWndPos(obj_x * kx, obj_y * ky);
+            label->SetWidth(width - obj_x * kx);
             label->SetText(*CStringTable().translate(objective.description));
             const auto state = objective.TaskState();
             if (state == eTaskStateCompleted || state == eTaskStateSkiped) label->SetTextColor(color_rgba(183,154,99,255));
             else if (state == eTaskStateFail) label->SetTextColor(color_rgba(255,90,60,255));
             label->AdjustHeightToText();
-            row->SetHeight(_max(row->GetHeight(), label->GetHeight() + 16.f * ky));
+            row->SetHeight(_max(row->GetHeight(), label->GetHeight() + obj_pad * ky));
             auto* check = xr_new<CUIStatic>();
             check->SetAutoDelete(true);
             row->AttachChild(check);
-            check->Init(0.f, 8.f * ky, 22.f * kx, 22.f * ky);
+            check->Init(0.f, chk_y * ky, chk * kx, chk * ky);
             check->InitTexture(state == eTaskStateCompleted ? "ui\\ct_tr_tasks_check_done" :
                 state == eTaskStateFail ? "ui\\ct_tr_tasks_check_failed" :
                 state == eTaskStateSkiped ? "ui\\ct_tr_tasks_check_skipped" : "ui\\ct_tr_tasks_check_open");
             check->SetStretchTexture(true);
-            check->SetWndSize(Fvector2().set(22.f * kx,22.f * ky));
+            check->SetWndSize(Fvector2().set(chk * kx, chk * ky));
             auto* rule = xr_new<CUIStatic>();
             rule->SetAutoDelete(true);
             rule->Init(0.f, 0.f, width, ky);
