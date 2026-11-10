@@ -45,6 +45,9 @@ public:
 
     void Take(CGameObject* pObj, bool bNotActivate, bool strict_placement);
     bool DropItem(CGameObject* pObj);
+    // OP22: предметы мёртвого владельца (труп) вне очереди обновления, как в ящике; что в руках и со скриптом привязки - нет
+    bool op22_corpse_sleepable(PIItem item) const;
+    void op22_sleep_corpse_items();
     void Clear();
 
     bool Slot(PIItem pIItem, bool bNotActivate = false);

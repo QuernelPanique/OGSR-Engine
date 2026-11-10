@@ -286,6 +286,7 @@ void CAI_Stalker::Die(CObject* who)
 
     //запретить использование слотов в инвенторе
     inventory().SetSlotsUseful(false);
+    inventory().op22_sleep_corpse_items(); // OP22: лут трупа вне очереди обновления до того, как его возьмут
 
 #pragma todo("KD: Поскольку весь лут непися пока обрабатывается в скриптах, в этом месте отключено удаление лута")
 #if 0

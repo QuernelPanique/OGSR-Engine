@@ -144,6 +144,8 @@ void CInventory::Take(CGameObject* pObj, bool bNotActivate, bool strict_placemen
 
     pIItem->m_pCurrentInventory = this;
     pIItem->SetDropManual(FALSE);
+    if (op22_corpse_sleepable(pIItem)) // OP22: предмет кладут в труп
+        pObj->op22_shedule_sleep(true);
 
     m_all.push_back(pIItem);
     m_allMap.emplace(pIItem->object().cNameSect(), pIItem);
@@ -226,12 +228,29 @@ void CInventory::Take(CGameObject* pObj, bool bNotActivate, bool strict_placemen
     VERIFY(pIItem->m_eItemPlace != eItemPlaceUndefined);
 }
 
+// OP22: труп - владелец не актор и не жив; предмет не в руках и без скрипта привязки (его update может быть нужен сюжету)
+bool CInventory::op22_corpse_sleepable(PIItem item) const
+{
+    if (!item || !m_pOwner || dynamic_cast<const CActor*>(m_pOwner) || item == ActiveItem())
+        return false;
+    const CEntityAlive* ea = dynamic_cast<const CEntityAlive*>(m_pOwner);
+    return ea && !ea->g_Alive() && !item->object().CScriptBinder::object();
+}
+
+void CInventory::op22_sleep_corpse_items()
+{
+    for (const PIItem item : m_all)
+        if (op22_corpse_sleepable(item))
+            item->object().op22_shedule_sleep(true);
+}
+
 bool CInventory::DropItem(CGameObject* pObj)
 {
     CInventoryItem* pIItem = smart_cast<CInventoryItem*>(pObj);
     VERIFY(pIItem);
     if (!pIItem)
         return false;
+    pObj->op22_shedule_sleep(false); // OP22: из трупа (или ящика) - снова в очереди
 
     ASSERT_FMT(pIItem->m_pCurrentInventory, "CInventory::DropItem: [%s]: pIItem->m_pCurrentInventory", pObj->cName().c_str());
     ASSERT_FMT(pIItem->m_pCurrentInventory == this, "CInventory::DropItem: [%s]: this = %s, pIItem->m_pCurrentInventory = %s", pObj->cName().c_str(),

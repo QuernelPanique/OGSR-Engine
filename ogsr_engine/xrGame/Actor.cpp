@@ -1442,13 +1442,31 @@ void CActor::ApplyArtefactEffects(ActorRestoreParams& r, CArtefact* artefact)
 // Значения живут в Lua, поэтому сумма обновляется раз в секунду, а не на каждый проход (0.1 игровой секунды)
 static float g_op22_items_radiation = 0.f;
 
-static void op22_refresh_items_radiation()
+// OP22 10.11: сумма по секциям (inventory_radiation, кэш на секцию) считается здесь; Lua (колбэк) возвращает только поправку
+// для предметов со своим значением (keyvals op22.item_radiation: контейнеры ОП, перенесённые сейвы). Раньше Lua раз в
+// секунду обходил весь инвентарь и читал секцию каждого предмета - длинный кадр раз в секунду при большом инвентаре
+static float op22_section_radiation(const shared_str& sect)
+{
+    static string_unordered_map<shared_str, float> cache;
+    if (const auto it = cache.find(sect); it != cache.end())
+        return it->second;
+    const float v = pSettings->line_exist(sect, "inventory_radiation") ? pSettings->r_float(sect, "inventory_radiation") : 0.f;
+    cache.emplace(sect, v);
+    return v;
+}
+
+static void op22_refresh_items_radiation(CInventory& inv)
 {
     if (!pSettings->line_exist("engine_callbacks", "op22_items_radiation_callback"))
         return;
+    float sum = 0.f;
+    for (const PIItem item : inv.m_all)
+        if (item)
+            sum += op22_section_radiation(item->object().cNameSect());
     luabind::functor<float> lua_function;
     if (ai().script_engine().functor(pSettings->r_string("engine_callbacks", "op22_items_radiation_callback"), lua_function))
-        g_op22_items_radiation = lua_function();
+        sum += lua_function();
+    g_op22_items_radiation = sum;
 }
 
 ActorRestoreParams CActor::ActiveArtefactsOnBelt()
@@ -1592,7 +1610,7 @@ void CActor::UpdateArtefactsOnBelt()
     if (Device.dwTimeGlobal >= op22_rad_next)
     {
         op22_rad_next = Device.dwTimeGlobal + 1000;
-        op22_refresh_items_radiation();
+        op22_refresh_items_radiation(inventory());
     }
 
     // OP22: высота прыжка от артефактов пояса (jump_speed_delta): в ОП при смене места артефакта, здесь по разнице суммы
