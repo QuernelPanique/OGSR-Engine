@@ -80,6 +80,8 @@ void CUIItemInfo::Init(LPCSTR xml_name)
         AttachChild(UIName);
         UIName->SetAutoDelete(true);
         xml_init.InitStatic(uiXml, "static_name", 0, UIName);
+        m_op22_name_auto = !!uiXml.ReadAttribInt("static_name", 0, "op22_name_auto", 0); // OP22
+        m_op22_name_h = UIName->GetHeight();
     }
     if (uiXml.NavigateToNode("static_weight", 0))
     {
@@ -173,9 +175,26 @@ void CUIItemInfo::InitItem(CInventoryItem* pInvItem)
     if (!m_pInvItem)
         return;
 
+    float op22_dy = 0.f; // OP22: на сколько имя выросло по тексту
     if (UIName)
     {
         UIName->SetText(pInvItem->Name());
+        if (m_op22_name_auto)
+        {
+            CUIWindow* below[4] = {UIWeight, UICost, UICondProgresBar, m_op22_cond_lbl};
+            if (!m_op22_base_ok)
+            {
+                for (int i = 0; i < 4; ++i)
+                    if (below[i]) m_op22_base_y[i] = below[i]->GetWndPos().y;
+                m_op22_base_ok = true;
+            }
+            UIName->SetHeight(m_op22_name_h);
+            UIName->AdjustHeightToText();
+            op22_dy = _max(0.f, UIName->GetHeight() - m_op22_name_h);
+            UIName->SetHeight(m_op22_name_h + op22_dy);
+            for (int i = 0; i < 4; ++i)
+                if (below[i]) below[i]->SetWndPos(Fvector2().set(below[i]->GetWndPos().x, m_op22_base_y[i] + op22_dy));
+        }
     }
     if (UIWeight)
     {
@@ -199,9 +218,14 @@ void CUIItemInfo::InitItem(CInventoryItem* pInvItem)
             m_op22_cond_lbl->Show(op22_show);
         if (m_op22_cond_auto && UIDesc)
         {
-            UIDesc->SetWndPos(Fvector2().set(UIDesc->GetWndPos().x, m_op22_desc_y - (op22_show ? 0.f : m_op22_cond_h)));
-            UIDesc->SetHeight(m_op22_desc_h + (op22_show ? 0.f : m_op22_cond_h));
+            UIDesc->SetWndPos(Fvector2().set(UIDesc->GetWndPos().x, m_op22_desc_y + op22_dy - (op22_show ? 0.f : m_op22_cond_h)));
+            UIDesc->SetHeight(m_op22_desc_h - op22_dy + (op22_show ? 0.f : m_op22_cond_h));
         }
+    }
+    else if (m_op22_name_auto && UIDesc) // OP22: без шкалы состояния описание тоже под именем
+    {
+        UIDesc->SetWndPos(Fvector2().set(UIDesc->GetWndPos().x, m_op22_desc_y + op22_dy));
+        UIDesc->SetHeight(m_op22_desc_h - op22_dy);
     }
 
     if (UIDesc)

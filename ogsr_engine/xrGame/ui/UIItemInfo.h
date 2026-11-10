@@ -58,5 +58,9 @@ public:
     float m_op22_cond_h{}, m_op22_desc_y{}, m_op22_desc_h{};
     CUIStatic* m_op22_cond_lbl{};
     Fvector2 m_op22_img_pos{};
+    // OP22: высота имени по тексту (static_name op22_name_auto="1"): длинное имя в две строки сдвигает вниз вес, цену,
+    // состояние и описание, а не наезжает на них
+    bool m_op22_name_auto{}, m_op22_base_ok{};
+    float m_op22_name_h{}, m_op22_base_y[4]{};
     CUIStatic* UIItemImage;
 };
