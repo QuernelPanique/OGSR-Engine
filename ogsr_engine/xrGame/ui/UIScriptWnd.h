@@ -5,6 +5,9 @@
 
 struct SCallbackInfo;
 
+// OP22: событие закрытия скриптового окна (ui_events.WINDOW_STOP_DIALOG в op22_compat.script, то же значение)
+constexpr s16 OP22_WINDOW_STOP_DIALOG = 30087;
+
 class CUIDialogWndEx : public CUIDialogWnd, public DLL_Pure
 {
     typedef CUIDialogWnd inherited;
@@ -31,6 +34,7 @@ public:
     void ClearCallbacks();
 
     virtual void Update();
+    virtual void Hide(); // OP22: колбэки WINDOW_STOP_DIALOG, как в движке ОП
     virtual bool OnKeyboard(int dik, EUIMessages keyboard_action);
     virtual bool Dispatch(int cmd, int param) { return true; }
 

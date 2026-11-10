@@ -59,6 +59,22 @@ void CUIDialogWndEx::AddCallback(LPCSTR control_id, s16 event, const luabind::fu
 bool CUIDialogWndEx::OnKeyboard(int dik, EUIMessages keyboard_action) { return inherited::OnKeyboard(dik, keyboard_action); }
 void CUIDialogWndEx::Update() { inherited::Update(); }
 
+// OP22: движок ОП при закрытии скриптового окна присылал ему WINDOW_STOP_DIALOG: окна хранилищ ОП (рюкзак, сейф) снимают
+// в этом колбэке запрет сохранения (save_prohibited). В OGSR события не было - запрет оставался навсегда (10.11).
+// Колбэк зовётся при любом закрытии через CDialogHolder::StopMenu -> Hide, имя элемента не сверяется.
+void CUIDialogWndEx::Hide()
+{
+    const bool was_shown = IsShown();
+    inherited::Hide();
+    if (!was_shown)
+        return;
+    for (size_t i = 0; i < m_callbacks.size(); ++i) // колбэк может менять список: по индексу
+    {
+        if (m_callbacks[i].m_event == OP22_WINDOW_STOP_DIALOG)
+            m_callbacks[i].m_callback();
+    }
+}
+
 void CUIDialogWndEx::ClearCallbacks()
 {
     for (auto& cb : m_callbacks)
