@@ -143,7 +143,7 @@ void CUITaskRootItem::SetGameTask(CGameTask* gt, u16 obj_idx)
                     if (character.Name() && *character.Name())
                     {
                         if (!subtitle.empty()) subtitle += ", ";
-                        subtitle += character.Name();
+                        subtitle += *stbl.translate(character.Name()); // OP22: Name() - id строки (sak_name)
                     }
                 }
         }

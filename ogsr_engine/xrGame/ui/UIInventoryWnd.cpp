@@ -486,12 +486,13 @@ void CUIInventoryWnd::op22_fly_update()
     }
     const Fvector2 c = GetUICursor()->GetCursorPosition();
     const Fvector2 sz = m_op22_fly->GetWndSize();
+    constexpr float gap = 8.f; // OP22: отступ от краёв экрана, рамка не упирается в край
     float x = c.x + 16.f, y = c.y + 16.f;
-    if (x + sz.x > 1024.f) // виртуальный экран 1024x768
+    if (x + sz.x > 1024.f - gap) // виртуальный экран 1024x768
         x = c.x - 8.f - sz.x;
-    if (y + sz.y > 768.f)
-        y = 768.f - sz.y;
-    m_op22_fly->SetWndPos(Fvector2().set(_max(x, 0.f), _max(y, 0.f)));
+    if (y + sz.y > 768.f - gap)
+        y = 768.f - gap - sz.y;
+    m_op22_fly->SetWndPos(Fvector2().set(_max(x, gap), _max(y, gap)));
     m_op22_fly->Update();
 }
 

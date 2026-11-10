@@ -369,7 +369,7 @@ void CUIPdaWnd::UpdateDateTime()
         split_time(Level().GetGameTime(), year, month, day, hours, minutes, seconds, milliseconds);
         string256 label;
         // "Day" is translated through the existing string table.
-        xr_sprintf(label, "%s\\n%u\\n%%c[255,255,233,189]%02u:%02u", *CStringTable().translate("ct_tr_tasks_day"), day, hours, minutes);
+        xr_sprintf(label, "%s %u\\n%%c[255,255,233,189]%02u:%02u" /* OP22: две строки - плотная шапка */, *CStringTable().translate("ct_tr_tasks_day"), day, hours, minutes);
         m_op22_tasks_timer->SetText(label);
     }
     static shared_str prevStrTime = " ";
