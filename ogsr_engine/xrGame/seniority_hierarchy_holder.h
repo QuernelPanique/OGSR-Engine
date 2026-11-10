@@ -17,7 +17,7 @@ class CSeniorityHierarchyHolder
 private:
     enum
     {
-        max_team_count = 64
+        max_team_count = 256 // OP22: команда - u8; в ОП у видов монстров команды до 67 (frog 64 ... ghost_wolf 67), при 64 - вылет id < count при спавне
     };
 
 private:

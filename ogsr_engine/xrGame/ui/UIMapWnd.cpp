@@ -272,15 +272,23 @@ void CUIMapWnd::Init(LPCSTR xml_name, LPCSTR start_from)
     {
         m_UIMainScrollH->Show(false); m_UIMainScrollH->Enable(false);
         m_UIMainScrollV->Show(false); m_UIMainScrollV->Enable(false);
+        // OP22: индекс в NavigateToNode относится к ПЕРВОМУ элементу пути ("map_wnd"), поэтому
+        // "map_wnd:main_wnd:auto_static" с i > 0 не находился (18 из 19 узлов). Читаем от main_wnd как от корня.
         strconcat(sizeof(pth), pth, start_from, ":main_wnd");
-        const int count=uiXml.GetNodesNum(pth,0,"auto_static");
-        strconcat(sizeof(pth), pth, start_from, ":main_wnd:auto_static");
-        for (int i=0;i<count;++i)
+        if (XML_NODE* main_node = uiXml.NavigateToNode(pth, 0))
         {
-            auto* decor=xr_new<CUIStatic>();
-            decor->SetAutoDelete(true); AttachChild(decor);
-            xml_init.InitStatic(uiXml,pth,i,decor);
-            decor->Enable(false);
+            XML_NODE* stored_root = uiXml.GetLocalRoot();
+            uiXml.SetLocalRoot(main_node);
+            const int count = uiXml.GetNodesNum(main_node, "auto_static");
+            for (int i = 0; i < count; ++i)
+            {
+                auto* decor = xr_new<CUIStatic>();
+                decor->SetAutoDelete(true);
+                AttachChild(decor);
+                xml_init.InitStatic(uiXml, "auto_static", i, decor);
+                decor->Enable(false);
+            }
+            uiXml.SetLocalRoot(stored_root);
         }
     }
     Register(m_GlobalMap);
