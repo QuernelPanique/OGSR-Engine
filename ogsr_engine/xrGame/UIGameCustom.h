@@ -18,6 +18,7 @@ struct SDrawStaticStruct : public IPureDestroyableObject
     CUIStatic* m_static;
     float m_endTime;
     int m_priority{};
+    bool m_op22_late{}; // OP22: GAMMA 2.0 - рисовать после главного окна HUD (op22_late="1": шкалы и биорадар поверх подложки и карты)
     shared_str m_name;
     void Draw();
     void Update();
@@ -69,6 +70,8 @@ public:
     virtual void Init(){};
 
     virtual void Render();
+
+    void op22_render_late(); // OP22: пользовательские окна с op22_late - после главного окна HUD
     virtual void OnFrame();
     virtual void reset_ui();
 

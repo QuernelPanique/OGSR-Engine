@@ -146,6 +146,7 @@ void CUIMainIngameWnd::Init()
 
     AttachChild(&UIStaticHealth);
     xml_init.InitStatic(uiXml, "static_health", 0, &UIStaticHealth);
+    m_op22_under = !!uiXml.ReadAttribInt("static_health", 0, "op22_under", 0); // OP22
 
     AttachChild(&UIStaticArmor);
     xml_init.InitStatic(uiXml, "static_armor", 0, &UIStaticArmor);
@@ -322,10 +323,22 @@ void CUIMainIngameWnd::Draw()
         return;
 
     UIMotionIcon.SetNoise((s16)(0xffff & iFloor(m_pActor->m_snd_noise * 100.0f)));
+    // OP22: подложка с op22_under уже нарисована в CUI::Render до пользовательских окон (шкалы и числа Lua - поверх неё)
+    const bool op22_hide = m_op22_under && UIStaticHealth.IsShown();
+    if (op22_hide)
+        UIStaticHealth.Show(false);
     CUIWindow::Draw();
+    if (op22_hide)
+        UIStaticHealth.Show(true);
     UIZoneMap->Render();
 
     RenderQuickInfos();
+}
+
+void CUIMainIngameWnd::op22_draw_under()
+{
+    if (m_pActor && m_op22_under && IsShown() && UIStaticHealth.IsShown())
+        UIStaticHealth.Draw();
 }
 
 void CUIMainIngameWnd::SetAmmoIcon(const shared_str& sect_name)

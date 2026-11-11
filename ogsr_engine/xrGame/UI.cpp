@@ -78,6 +78,10 @@ void CUI::UIOnFrame()
 #include "huditem.h"
 bool CUI::Render()
 {
+    // OP22: GAMMA 2.0 - подложка HUD под шкалами Lua (пользовательские окна рисуются раньше главного окна)
+    if (psHUD_Flags.is(HUD_DRAW | HUD_DRAW_RT) && GameIndicatorsShown() && UIMainIngameWnd)
+        UIMainIngameWnd->op22_draw_under();
+
     if (GameIndicatorsShown() /*&& psHUD_Flags.is(HUD_DRAW | HUD_DRAW_RT)*/)
     {
         if (pUIGame)
@@ -96,6 +100,8 @@ bool CUI::Render()
         if (GameIndicatorsShown())
         {
             UIMainIngameWnd->Draw();
+            if (pUIGame) // OP22: GAMMA 2.0 - шкалы Lua и биорадар поверх подложки и мини-карты
+                pUIGame->op22_render_late();
             m_pMessagesWnd->Draw();
         }
         // Оставил рендер новостей под этим условием чтобы при скриптовом скрытии ui сообщения продолжали быть видны,

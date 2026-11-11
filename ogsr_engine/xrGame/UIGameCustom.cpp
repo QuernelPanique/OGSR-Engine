@@ -75,8 +75,16 @@ void CUIGameCustom::Render()
     {
         auto it = m_custom_statics_sorted.begin();
         for (; it != m_custom_statics_sorted.end(); ++it)
-            m_custom_statics[*it].Draw();
+            if (!m_custom_statics[*it].m_op22_late) // OP22
+                m_custom_statics[*it].Draw();
     }
+}
+
+void CUIGameCustom::op22_render_late()
+{
+    for (auto idx : m_custom_statics_sorted)
+        if (m_custom_statics[idx].m_op22_late)
+            m_custom_statics[idx].Draw();
 }
 
 bool CUIGameCustom::IR_OnKeyboardPress(int dik) { return false; }
@@ -126,6 +134,7 @@ SDrawStaticStruct* CUIGameCustom::AddCustomStatic(LPCSTR id, bool bSingleInstanc
     if (ttl > 0.0f)
         sss.m_endTime = Device.fTimeGlobal + ttl;
     sss.m_priority = m_msgs_xml->ReadAttribInt(id, 0, "priority");
+    sss.m_op22_late = !!m_msgs_xml->ReadAttribInt(id, 0, "op22_late", 0); // OP22
 
     UpdateStaticPriorityIndex();
 

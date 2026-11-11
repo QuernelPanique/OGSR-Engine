@@ -35,6 +35,8 @@ public:
 
     virtual void Init();
     virtual void Draw();
+    void op22_draw_under(); // OP22: GAMMA 2.0 - подложка HUD (static_health op22_under) до пользовательских окон Lua
+    bool m_op22_under{};
     virtual void Update();
 
     bool OnKeyboardPress(int dik);

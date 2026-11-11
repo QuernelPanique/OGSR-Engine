@@ -24,6 +24,7 @@ class CUIZoneMap
     // OP22: видимость и прозрачность из скрипта (HUD Следопыт)
     bool m_op22_visible{true};
     float m_op22_alpha{1.f};
+    int m_op22_tint[3]{255, 255, 255}; // OP22: GAMMA 2.0 - цвет текстуры карты (minimap op22_tint="r,g,b": приглушить, как на макете)
     void op22_apply_alpha() const;
 
 public:

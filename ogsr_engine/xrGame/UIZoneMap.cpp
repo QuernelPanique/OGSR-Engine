@@ -67,6 +67,8 @@ void CUIZoneMap::Init()
 
     m_rounded = uiXml.ReadAttribInt("minimap", 0, "rounded", 0) == 1;
     m_alpha = uiXml.ReadAttribInt("minimap", 0, "alpha", 127);
+    if (LPCSTR t = uiXml.ReadAttrib("minimap", 0, "op22_tint", nullptr); t && t[0]) // OP22
+        sscanf(t, "%d,%d,%d", &m_op22_tint[0], &m_op22_tint[1], &m_op22_tint[2]);
 
     m_clipFrame->AttachChild(m_activeMap);
 
@@ -78,7 +80,7 @@ void CUIZoneMap::Init()
     xml_init.InitStatic(uiXml, "minimap:compass", 0, m_compass);
     // m_compass->SetAutoDelete(true);
 
-    m_activeMap->SetTextureColor(color_argb(m_alpha, 255, 255, 255));
+    m_activeMap->SetTextureColor(color_argb(m_alpha, m_op22_tint[0], m_op22_tint[1], m_op22_tint[2]));
 
     //	m_background.AttachChild(&m_compass);
 
@@ -92,7 +94,7 @@ void CUIZoneMap::Init()
 void CUIZoneMap::op22_apply_alpha() const
 {
     const u32 a = iFloor(255.f * m_op22_alpha);
-    m_activeMap->SetTextureColor(color_argb(iFloor(float(m_alpha) * m_op22_alpha), 255, 255, 255));
+    m_activeMap->SetTextureColor(color_argb(iFloor(float(m_alpha) * m_op22_alpha), m_op22_tint[0], m_op22_tint[1], m_op22_tint[2]));
     m_background->SetTextureColor(color_argb(a, 255, 255, 255));
     m_compass->SetTextureColor(color_argb(a, 255, 255, 255));
     m_center->SetTextureColor(color_argb(a, 255, 255, 255));
@@ -200,7 +202,7 @@ void CUIZoneMap::SetupCurrentMap()
     m_activeMap->Init(Level().name(), *pLtx, "hud\\default");
     m_activeMap->SetWindowName("minimap"); // имя нужно задавать позже чем Init
 
-    m_activeMap->SetTextureColor(color_argb(m_alpha, 255, 255, 255));
+    m_activeMap->SetTextureColor(color_argb(m_alpha, m_op22_tint[0], m_op22_tint[1], m_op22_tint[2]));
 
     m_clipFrame->AttachChild(m_center);
 
