@@ -303,7 +303,10 @@ void CUIItemInfo::InitItem(CInventoryItem* pInvItem)
             for (u32 i = 0; i < UIDesc->GetSize(); ++i)
                 h += UIDesc->GetItem(i)->GetHeight() + UIDesc->m_op22_vi();
             const float full = _min(m_op22_max_h, UIDesc->GetWndPos().y + h + m_op22_pad_b);
-            const float list_h = _max(0.f, full - UIDesc->GetWndPos().y - m_op22_pad_b);
+            const bool fits = UIDesc->GetWndPos().y + h + m_op22_pad_b <= m_op22_max_h + 0.5f;
+            // OP22: всё влезло - список на полединицы выше содержимого: при равной высоте погрешность float давала
+            // GetHeight() < высоты содержимого и CUIScrollView показывал полосу прокрутки (11.11, всплывающее описание)
+            const float list_h = _max(0.f, full - UIDesc->GetWndPos().y - m_op22_pad_b) + (fits ? 0.5f : 0.f);
             UIDesc->SetHeight(list_h);
             SetHeight(full);
             if (m_op22_back)
@@ -315,7 +318,7 @@ void CUIItemInfo::InitItem(CInventoryItem* pInvItem)
                 m_op22_w0 = GetWidth();
                 m_op22_desc_w0 = UIDesc->GetWidth();
             }
-            const bool overflow = UIDesc->GetWndPos().y + h + m_op22_pad_b > m_op22_max_h + 0.5f;
+            const bool overflow = !fits;
             const float sbw = overflow && UIDesc->ScrollBar() ? UIDesc->ScrollBar()->GetWidth() + 2.f : 0.f;
             UIDesc->SetWidth(m_op22_desc_w0 + sbw);
             if (UIDesc->ScrollBar()) // полоса - у нового правого края списка
