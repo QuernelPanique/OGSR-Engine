@@ -140,6 +140,35 @@ void CUIInventoryWnd::Init()
         UIProgressBack.AttachChild(m_op22_thirst);
         xml_init.InitProgressBar(uiXml, "progress_bar_thirst", 0, m_op22_thirst);
     }
+    { // OP22: GAMMA 2.0 - шкалы выносливости, бодрости, кровотечения (дети progress_background, как сытость) и числа
+        CUIProgressBar** bars[3] = {&m_op22_power, &m_op22_sleep, &m_op22_bleed};
+        static const char* bar_nodes[3] = {"progress_bar_power", "progress_bar_sleep", "progress_bar_bleeding"};
+        for (int i = 0; i < 3; ++i)
+        {
+            if (!uiXml.NavigateToNode(bar_nodes[i], 0))
+                continue;
+            *bars[i] = xr_new<CUIProgressBar>();
+            (*bars[i])->SetAutoDelete(true);
+            UIProgressBack.AttachChild(*bars[i]);
+            xml_init.InitProgressBar(uiXml, bar_nodes[i], 0, *bars[i]);
+        }
+        static const char* val_nodes[5] = {"op22_power_val", "op22_satiety_val", "op22_thirst_val", "op22_sleep_val", "op22_bleeding_val"};
+        for (int i = 0; i < 5; ++i)
+        {
+            if (!uiXml.NavigateToNode(val_nodes[i], 0))
+                continue;
+            m_op22_vals2[i] = xr_new<CUIStatic>();
+            m_op22_vals2[i]->SetAutoDelete(true);
+            AttachChild(m_op22_vals2[i]);
+            xml_init.InitStatic(uiXml, val_nodes[i], 0, m_op22_vals2[i]);
+        }
+        if (pSettings->line_exist("main_ingame_indicators_thresholds", "wounds")) // как значок HUD: предел - последний порог
+        {
+            const char* rec = pSettings->r_string("main_ingame_indicators_thresholds", "wounds");
+            string32 tmp;
+            m_op22_bleed_max = _max(0.01f, (float)atof(_GetItem(rec, _GetItemCount(rec) - 1, tmp)));
+        }
+    }
     if (uiXml.NavigateToNode("op22_weight", 0))
     {
         m_op22_weight = xr_new<CUIStatic>();
@@ -552,6 +581,25 @@ void CUIInventoryWnd::Update()
                 m_op22_satiety->SetProgressPos(op22_a->conditions().GetSatiety() * 100.0f);
             if (m_op22_thirst)
                 m_op22_thirst->SetProgressPos(op22_a->conditions().GetThirst() * 100.0f);
+            // OP22: GAMMA 2.0 - выносливость, бодрость, кровотечение и числа
+            if (m_op22_sleep && Device.dwTimeGlobal >= m_op22_sleep_next)
+            {
+                m_op22_sleep_next = Device.dwTimeGlobal + 1000;
+                luabind::functor<float> f;
+                if (ai().script_engine().functor("op22_needs.sleep", f))
+                    m_op22_sleep_v = std::clamp(f(), 0.f, 1.f);
+            }
+            const float bleed = std::clamp(op22_a->conditions().BleedingSpeed() / m_op22_bleed_max, 0.f, 1.f);
+            if (m_op22_power)
+                m_op22_power->SetProgressPos(op22_a->conditions().GetPower() * 100.0f);
+            if (m_op22_sleep)
+                m_op22_sleep->SetProgressPos(m_op22_sleep_v * 100.0f);
+            if (m_op22_bleed)
+                m_op22_bleed->SetProgressPos(bleed * 100.0f);
+            const float v2[5] = {op22_a->conditions().GetPower(), op22_a->conditions().GetSatiety(), op22_a->conditions().GetThirst(), m_op22_sleep_v, bleed};
+            for (int i = 0; i < 5; ++i)
+                if (m_op22_vals2[i])
+                    m_op22_vals2[i]->SetText(std::format("{}", iFloor(v2[i] * 100.0f + 0.5f)).c_str());
         }
 
         CInventoryOwner* pOurInvOwner = smart_cast<CInventoryOwner*>(pEntityAlive);

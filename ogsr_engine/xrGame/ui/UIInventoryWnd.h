@@ -152,7 +152,12 @@ protected:
     CUIStatic* m_op22_bat_icon{};
     CUIStatic* m_op22_bat_text{};
     CUIProgressBar* m_op22_bat_bar{};
-    CUIProgressBar* m_op22_bat_fill{}; // OP22: GAMMA 2.0 - заливка значка батарейки по заряду (dragdrop_outfit:op22_battery_fill)
+    CUIProgressBar* m_op22_bat_fill{};
+    // OP22: GAMMA 2.0 - шкалы выносливости, бодрости (op22_needs.sleep: бессонница ОП), кровотечения; числа у новых шкал
+    CUIProgressBar* m_op22_power{}, *m_op22_sleep{}, *m_op22_bleed{};
+    CUIStatic* m_op22_vals2[5]{}; // выносливость, сытость, жажда, бодрость, кровотечение
+    float m_op22_bleed_max{0.8f}, m_op22_sleep_v{1.f};
+    u32 m_op22_sleep_next{}; // OP22: GAMMA 2.0 - заливка значка батарейки по заряду (dragdrop_outfit:op22_battery_fill)
     bool m_op22_bat_pct{}, m_op22_bat_keep_icon{}; // OP22: «64 %» в battery_charge_text (op22_pct); значок - своя картинка (op22_keep_tex)
     shared_str m_op22_bat_none; // OP22: текст без аккумулятора (op22_none)
     // OP22: окно по макету - шкалы сытости и жажды, вес текстом и шкалой, подпись «имя, ранг»

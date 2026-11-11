@@ -38,6 +38,8 @@ CUIItemInfo::CUIItemInfo()
 
 CUIItemInfo::~CUIItemInfo()
 {
+    if (m_op22_wpn_fixed && UIWpnParams) // OP22: окно параметров - ребёнок описания, удаляется здесь
+        DetachChild(UIWpnParams);
     xr_delete(UIWpnParams);
     xr_delete(UIArtefactParams);
 }
@@ -140,6 +142,12 @@ void CUIItemInfo::Init(LPCSTR xml_name)
     {
         UIWpnParams = xr_new<CUIWpnParams>();
         UIWpnParams->InitFromXml(uiXml);
+        m_op22_wpn_fixed = !!uiXml.ReadAttribInt("wpn_params", 0, "op22_fixed", 0); // OP22
+        if (m_op22_wpn_fixed)
+        {
+            AttachChild(UIWpnParams);
+            UIWpnParams->Show(false);
+        }
 
         UIArtefactParams = xr_new<CUIArtefactParams>();
         UIArtefactParams->InitFromXml(uiXml);
@@ -263,6 +271,8 @@ void CUIItemInfo::InitItem(CInventoryItem* pInvItem)
     if (UIDesc)
     {
         UIDesc->Clear();
+        if (m_op22_wpn_fixed) // OP22: параметры оружия - только у оружия (TryAddWpnInfo покажет)
+            UIWpnParams->Show(false);
         VERIFY(0 == UIDesc->GetSize());
         TryAddWpnInfo(pInvItem->object());
         TryAddArtefactInfo(pInvItem->object().cNameSect());
@@ -348,6 +358,9 @@ void CUIItemInfo::TryAddWpnInfo(CPhysicsShellHolder& obj)
     if (UIWpnParams->Check(obj) && !fis_zero(UIWpnParams->GetHeight())) // OP22: wpn_params высотой 0 - окно без параметров оружия (обыск, ящик)
     {
         UIWpnParams->SetInfo(obj);
+        if (m_op22_wpn_fixed)
+            UIWpnParams->Show(true);
+        else
         UIDesc->AddWindow(UIWpnParams, false);
     }
 }

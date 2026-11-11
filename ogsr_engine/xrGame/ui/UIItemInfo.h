@@ -61,6 +61,7 @@ public:
     bool m_op22_weight_fmt{}; // OP22: GAMMA 2.0 - вес «4,9 кг» (static_weight op22_fmt)
     float m_op22_cost_gap{-1.f}; // OP22: GAMMA 2.0 - цена сразу за текстом веса (static_cost op22_after_weight)
     float m_op22_line_h{};
+    bool m_op22_wpn_fixed{}; // OP22: GAMMA 2.0 - параметры оружия своим окном в точке разметки (wpn_params op22_fixed), не в прокрутке
     float m_op22_w0{-1.f}, m_op22_desc_w0{-1.f}; // OP22: исходные ширины окна и списка (при прокрутке окно шире на полосу) // OP22: GAMMA 2.0 - высота строки описания (descr_list op22_line_h, единицы окна)
     Fvector2 m_op22_img_pos{};
     // OP22: высота имени по тексту (static_name op22_name_auto="1"): длинное имя в две строки сдвигает вниз вес, цену,
