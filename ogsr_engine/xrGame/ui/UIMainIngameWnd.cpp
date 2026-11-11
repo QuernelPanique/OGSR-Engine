@@ -378,6 +378,21 @@ void CUIMainIngameWnd::op22_qs_init(CUIXml& xml)
                 xml.ReadAttribFlt(path, 0, "height", 10.f));
         s->SetFont(UI()->Font()->pFontSmall);
         s->SetTextColor(0xffc8c8c8);
+        // OP22: GAMMA 2.0 - шрифт, цвет и выравнивание подписи из <text> узла (как у статиков), без узла - как раньше
+        string256 tp;
+        strconcat(sizeof(tp), tp, path, ":text");
+        if (xml.NavigateToNode(tp, 0))
+        {
+            u32 color = 0;
+            CGameFont* fnt = nullptr;
+            CUIXmlInit::InitFont(xml, tp, 0, color, fnt);
+            if (fnt)
+                s->SetFont(fnt);
+            if (color)
+                s->SetTextColor(color);
+            LPCSTR al = xml.ReadAttrib(tp, 0, "align", "l");
+            s->SetTextAlignment(!xr_strcmp(al, "r") ? CGameFont::alRight : (!xr_strcmp(al, "c") ? CGameFont::alCenter : CGameFont::alLeft));
+        }
         return s;
     };
 
@@ -477,7 +492,14 @@ void CUIMainIngameWnd::op22_qs_update()
             q.count->SetText(t);
         }
         LPCSTR kn = dik_to_keyname(get_action_dik(EGameActions(kUSE_QUICK_SLOT0 + i)));
-        q.key->SetText(kn && kn[0] == 'k' ? kn + 1 : kn); // kINSERT -> INSERT
+        LPCSTR kshort = kn && kn[0] == 'k' ? kn + 1 : kn; // kINSERT -> INSERT
+        // OP22: GAMMA 2.0 - короткие имена клавиш, как на макете (INS, DEL, PGUP...)
+        static const std::pair<LPCSTR, LPCSTR> abbr[] = {{"INSERT", "INS"}, {"DELETE", "DEL"}, {"PGUP", "PGUP"}, {"PRIOR", "PGUP"}, {"NEXT", "PGDN"}, {"PGDN", "PGDN"}};
+        if (kshort)
+            for (const auto& [from, to] : abbr)
+                if (!xr_strcmp(kshort, from))
+                    kshort = to;
+        q.key->SetText(kshort);
     }
 }
 
