@@ -84,6 +84,8 @@ void CUIItemInfo::Init(LPCSTR xml_name)
         UIName->SetAutoDelete(true);
         xml_init.InitStatic(uiXml, "static_name", 0, UIName);
         m_op22_name_auto = !!uiXml.ReadAttribInt("static_name", 0, "op22_name_auto", 0); // OP22
+        if (uiXml.ReadAttribInt("static_name", 0, "op22_name_auto", 0) == 2) // OP22: GAMMA 2.0 - панель описания
+            m_op22_name_shift = 2;
         m_op22_name_h = UIName->GetHeight();
     }
     if (uiXml.NavigateToNode("static_weight", 0))
@@ -211,7 +213,7 @@ void CUIItemInfo::InitItem(CInventoryItem* pInvItem)
             UIName->AdjustHeightToText();
             op22_dy = _max(0.f, UIName->GetHeight() - m_op22_name_h);
             UIName->SetHeight(m_op22_name_h + op22_dy);
-            for (int i = 0; i < 5; ++i)
+            for (int i = 0; i < m_op22_name_shift; ++i)
                 if (below[i]) below[i]->SetWndPos(Fvector2().set(below[i]->GetWndPos().x, m_op22_base_y[i] + op22_dy));
         }
     }

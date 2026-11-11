@@ -67,6 +67,7 @@ public:
     // OP22: высота имени по тексту (static_name op22_name_auto="1"): длинное имя в две строки сдвигает вниз вес, цену,
     // состояние и описание, а не наезжает на них
     bool m_op22_name_auto{}, m_op22_base_ok{};
+    int m_op22_name_shift{5}; // OP22: сколько окон под именем сдвигать (op22_name_auto="2" - только вес и цена: строка состояния в другой колонке)
     float m_op22_name_h{}, m_op22_base_y[5]{};
     CUIStatic* UIItemImage;
 };
