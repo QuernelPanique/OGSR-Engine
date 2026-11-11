@@ -89,6 +89,7 @@ void CUIItemInfo::Init(LPCSTR xml_name)
         AttachChild(UIWeight);
         UIWeight->SetAutoDelete(true);
         xml_init.InitStatic(uiXml, "static_weight", 0, UIWeight);
+        m_op22_weight_fmt = !!uiXml.ReadAttribInt("static_weight", 0, "op22_fmt", 0); // OP22
     }
 
     if (uiXml.NavigateToNode("static_cost", 0))
@@ -97,6 +98,7 @@ void CUIItemInfo::Init(LPCSTR xml_name)
         AttachChild(UICost);
         UICost->SetAutoDelete(true);
         xml_init.InitStatic(uiXml, "static_cost", 0, UICost);
+        m_op22_cost_gap = uiXml.ReadAttribFlt("static_cost", 0, "op22_after_weight", -1.f); // OP22
     }
 
     if (uiXml.NavigateToNode("static_condition", 0))
@@ -126,6 +128,13 @@ void CUIItemInfo::Init(LPCSTR xml_name)
         xml_init.InitStatic(uiXml, "op22_cond_lbl", 0, m_op22_cond_lbl);
     }
 
+    if (uiXml.NavigateToNode("op22_cond_val", 0)) // OP22: GAMMA 2.0
+    {
+        m_op22_cond_val = xr_new<CUIStatic>();
+        AttachChild(m_op22_cond_val);
+        m_op22_cond_val->SetAutoDelete(true);
+        xml_init.InitStatic(uiXml, "op22_cond_val", 0, m_op22_cond_val);
+    }
     if (uiXml.NavigateToNode("descr_list", 0))
     {
         UIWpnParams = xr_new<CUIWpnParams>();
@@ -142,6 +151,7 @@ void CUIItemInfo::Init(LPCSTR xml_name)
         m_op22_desc_h = UIDesc->GetHeight();
 
         m_desc_info.bShowDescrText = !!uiXml.ReadAttribInt("descr_list", 0, "only_text_info", 1);
+        m_op22_line_h = uiXml.ReadAttribFlt("descr_list", 0, "op22_line_h", 0.f); // OP22
         xml_init.InitFont(uiXml, "descr_list:font", 0, m_desc_info.uDescClr, m_desc_info.pDescFont);
     }
 
@@ -181,10 +191,10 @@ void CUIItemInfo::InitItem(CInventoryItem* pInvItem)
         UIName->SetText(pInvItem->Name());
         if (m_op22_name_auto)
         {
-            CUIWindow* below[4] = {UIWeight, UICost, UICondProgresBar, m_op22_cond_lbl};
+            CUIWindow* below[5] = {UIWeight, UICost, UICondProgresBar, m_op22_cond_lbl, m_op22_cond_val};
             if (!m_op22_base_ok)
             {
-                for (int i = 0; i < 4; ++i)
+                for (int i = 0; i < 5; ++i)
                     if (below[i]) m_op22_base_y[i] = below[i]->GetWndPos().y;
                 m_op22_base_ok = true;
             }
@@ -192,7 +202,7 @@ void CUIItemInfo::InitItem(CInventoryItem* pInvItem)
             UIName->AdjustHeightToText();
             op22_dy = _max(0.f, UIName->GetHeight() - m_op22_name_h);
             UIName->SetHeight(m_op22_name_h + op22_dy);
-            for (int i = 0; i < 4; ++i)
+            for (int i = 0; i < 5; ++i)
                 if (below[i]) below[i]->SetWndPos(Fvector2().set(below[i]->GetWndPos().x, m_op22_base_y[i] + op22_dy));
         }
     }
@@ -200,12 +210,28 @@ void CUIItemInfo::InitItem(CInventoryItem* pInvItem)
     {
         string256 str;
         sprintf_s(str, "%3.2f %s", pInvItem->Weight(), CStringTable().translate("st_kg").c_str()); // OP22: единица веса из строк (ОП - «кг»)
+        if (m_op22_weight_fmt) // OP22: GAMMA 2.0 - «4,9 кг»: десятые, запятая, без лишних нулей
+        {
+            xr_string w = std::format("{:.1f}", pInvItem->Weight());
+            if (w.size() > 2 && w.substr(w.size() - 2) == ".0")
+                w.resize(w.size() - 2);
+            for (auto& ch : w)
+                if (ch == '.')
+                    ch = ',';
+            sprintf_s(str, "%s %s", w.c_str(), CStringTable().translate("st_kg").c_str());
+        }
         UIWeight->SetText(str);
     }
     if (UICost)
     {
         static const char* StMoneyDescr = CStringTable().translate("ui_st_money_descr").c_str();  
         UICost->SetText(std::format("{} {}", InventoryUtilities::op22_group_digits(pInvItem->Cost()), StMoneyDescr).c_str()); // OP22: «2 800 р.»
+        if (m_op22_cost_gap >= 0.f && UIWeight && UIWeight->GetFont()) // OP22: GAMMA 2.0 - цена за весом
+        {
+            float len = UIWeight->GetFont()->SizeOf_(UIWeight->GetText());
+            UI()->ClientToScreenScaledWidth(len);
+            UICost->SetWndPos(Fvector2().set(UIWeight->GetWndPos().x + UIWeight->GetTextX() + len + m_op22_cost_gap, UIWeight->GetWndPos().y));
+        }
     }
 
     if (UICondProgresBar)
@@ -216,6 +242,11 @@ void CUIItemInfo::InitItem(CInventoryItem* pInvItem)
         UICondProgresBar->SetProgressPos(cond * 100.0f + 1.0f - EPS);
         if (m_op22_cond_lbl)
             m_op22_cond_lbl->Show(op22_show);
+        if (m_op22_cond_val) // OP22: GAMMA 2.0
+        {
+            m_op22_cond_val->Show(op22_show);
+            m_op22_cond_val->SetText(std::format("{}", iFloor(cond * 100.f + 0.5f)).c_str());
+        }
         if (m_op22_cond_auto && UIDesc)
         {
             UIDesc->SetWndPos(Fvector2().set(UIDesc->GetWndPos().x, m_op22_desc_y + op22_dy - (op22_show ? 0.f : m_op22_cond_h)));
@@ -242,6 +273,12 @@ void CUIItemInfo::InitItem(CInventoryItem* pInvItem)
             pItem->SetFont(m_desc_info.pDescFont);
             pItem->SetWidth(UIDesc->GetDesiredChildWidth());
             pItem->SetTextComplexMode(true);
+            if (m_op22_line_h > 0.f && m_desc_info.pDescFont) // OP22: высота строки по макету
+            {
+                float fh = m_desc_info.pDescFont->CurrentHeight_();
+                UI()->ClientToScreenScaledHeight(fh);
+                pItem->m_pLines->op22_SetInterval(_max(0.f, m_op22_line_h - fh));
+            }
             pItem->SetText(*pInvItem->ItemDescription());
             pItem->AdjustHeightToText();
             UIDesc->AddWindow(pItem, true);

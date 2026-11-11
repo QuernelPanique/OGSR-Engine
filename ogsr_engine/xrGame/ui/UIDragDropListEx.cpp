@@ -463,6 +463,14 @@ void CUIDragDropListEx::SetItem(CUICellItem* itm, Ivector2 cell_pos) // start at
             const Fvector2 sz{k * g.x, k * g.y};
             itm->SetWndSize(sz);
             itm->SetWndPos(Fvector2().set(itm->GetWndPos().x + (full.x - sz.x) / 2, itm->GetWndPos().y + (full.y - sz.y) / 2));
+            if (m_op22_count_at_list && itm->op22_text()) // OP22: число - от угла списка
+            {
+                CUIStatic* t = itm->op22_text();
+                if (itm->m_op22_text_pos.x < 0.f)
+                    itm->m_op22_text_pos = t->GetWndPos();
+                const Fvector2& base = itm->m_op22_text_pos;
+                t->SetWndPos(Fvector2().set(base.x - (full.x - sz.x) / 2, base.y - (full.y - sz.y) / 2));
+            }
         }
     }
 

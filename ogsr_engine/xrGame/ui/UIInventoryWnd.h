@@ -89,6 +89,7 @@ protected:
     CUIStatic UIStaticBottom;
     CUIStatic UIStaticTime;
     CUIStatic UIStaticTimeString;
+    float m_op22_time_gap{-1.f}; // OP22: GAMMA 2.0 - время слева от текста денег с этим зазором (time_static op22_left_of_money)
 
     CUIStatic UIStaticPersonal;
 

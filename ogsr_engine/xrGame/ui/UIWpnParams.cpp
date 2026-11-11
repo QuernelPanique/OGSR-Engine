@@ -7,6 +7,7 @@
 #include "../PhysicsShellHolder.h"
 #include "clsid_game.h"
 #include "script_game_object.h"
+#include <format>
 
 struct SLuaWpnParams
 {
@@ -77,6 +78,17 @@ void CUIWpnParams::InitFromXml(CUIXml& xml_doc)
     m_progressDamage.SetRange(0, 100);
     m_progressHandling.SetRange(0, 100);
     m_progressRPM.SetRange(0, 100);
+
+    static const char* op22_vals[4] = {"wpn_params:val_accuracy", "wpn_params:val_damage", "wpn_params:val_handling", "wpn_params:val_rpm"}; // OP22
+    for (int i = 0; i < 4; ++i)
+    {
+        if (m_op22_val[i] || !xml_doc.NavigateToNode(op22_vals[i], 0))
+            continue;
+        m_op22_val[i] = xr_new<CUIStatic>();
+        m_op22_val[i]->SetAutoDelete(true);
+        AttachChild(m_op22_val[i]);
+        CUIXmlInit::InitStatic(xml_doc, op22_vals[i], 0, m_op22_val[i]);
+    }
 }
 
 void CUIWpnParams::SetInfo(CPhysicsShellHolder& obj /*const shared_str& wpn_section*/)
@@ -90,6 +102,11 @@ void CUIWpnParams::SetInfo(CPhysicsShellHolder& obj /*const shared_str& wpn_sect
     m_progressAccuracy.SetProgressPos(g_lua_wpn_params->m_functorAccuracy(*wpn_section, obj.lua_game_object()));
     m_progressDamage.SetProgressPos(g_lua_wpn_params->m_functorDamage(*wpn_section, obj.lua_game_object()));
     m_progressHandling.SetProgressPos(g_lua_wpn_params->m_functorHandling(*wpn_section, obj.lua_game_object()));
+
+    CUIProgressBar* op22_bars[4] = {&m_progressAccuracy, &m_progressDamage, &m_progressHandling, &m_progressRPM}; // OP22: числа = положение шкал
+    for (int i = 0; i < 4; ++i)
+        if (m_op22_val[i])
+            m_op22_val[i]->SetText(std::format("{}", iFloor(op22_bars[i]->GetProgressPos() + 0.5f)).c_str());
 }
 
 bool CUIWpnParams::Check(CPhysicsShellHolder& obj /*const shared_str& wpn_section*/)

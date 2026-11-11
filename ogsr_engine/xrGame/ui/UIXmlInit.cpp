@@ -592,6 +592,12 @@ bool CUIXmlInit::InitDragDropListEx(CUIXml& xml_doc, const char* path, int index
         pWnd->op22_grid(g);
     pWnd->op22_frames(xml_doc.ReadAttrib(path, index, "op22_frame_on", ""), xml_doc.ReadAttrib(path, index, "op22_frame_off", ""));
     pWnd->m_op22_pad = xml_doc.ReadAttribFlt(path, index, "op22_pad", 0.f); // OP22
+    if (LPCSTR oc = xml_doc.ReadAttrib(path, index, "op22_cond", nullptr); oc && oc[0]) // OP22: GAMMA 2.0
+    {
+        Fvector4 &a = pWnd->m_op22_cond, &b = pWnd->m_op22_cond_small;
+        sscanf(oc, "%f,%f,%f,%f;%f,%f,%f,%f", &a.x, &a.y, &a.z, &a.w, &b.x, &b.y, &b.z, &b.w);
+    }
+    pWnd->m_op22_count_at_list = !!xml_doc.ReadAttribInt(path, index, "op22_count_at_list", 0); // OP22
 
     tmp = xml_doc.ReadAttribInt(path, index, "adjust_cells", 0); // OP22: как в ОП 2.2 - предмет растягивается на весь список
     pWnd->SetAdjustCells(tmp != 0);

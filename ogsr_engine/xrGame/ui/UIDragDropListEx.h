@@ -70,6 +70,9 @@ public:
     class CUIStatic* m_op22_frame_on{};
     class CUIStatic* m_op22_frame_off{};
     float m_op22_pad{}; // OP22: поле вокруг иконки в списке adjust_cells (op22_pad), как на макете
+    bool m_op22_count_at_list{}; // OP22: GAMMA 2.0 - число предметов в углу списка (adjust_cells), а не у иконки
+    Fvector4 m_op22_cond{-1.f, -1.f, -1.f, -1.f}; // OP22: GAMMA 2.0 - пунктир состояния: отступ слева, снизу, ширина, высота (op22_cond="x,b,w,h[;x,b,w,h]")
+    Fvector4 m_op22_cond_small{-1.f, -1.f, -1.f, -1.f}; // OP22: то же для предметов шириной в 1 клетку (вторая четвёрка)
     void op22_grid(LPCSTR tex);
     void op22_frames(LPCSTR on, LPCSTR off);
 

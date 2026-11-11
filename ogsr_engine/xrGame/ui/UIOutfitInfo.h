@@ -50,4 +50,6 @@ protected:
     };
     CUIStatic* m_items[_max_item_index]{};
     CUIStatic* m_op22_vals[_max_item_index][2]{}; // OP22: колонки значений: костюм, пояс
+    bool m_op22_plain{}; // OP22: GAMMA 2.0 - значения без знака и % в первой колонке
+    xr_string m_op22_good{"%c[green]"}, m_op22_bad{"%c[red]"}; // OP22: цвета пояса (val_2 op22_good / op22_bad = "r,g,b")
 };

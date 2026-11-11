@@ -27,6 +27,12 @@ protected:
     void init();
 
 public:
+    CUIStatic* op22_text() { return m_text; } // OP22: GAMMA 2.0 - счётчик в углу слота
+    Fvector2 m_op22_text_pos{-1.f, -1.f}; // OP22: исходная позиция счётчика из разметки
+
+protected:
+
+public:
     CUICellItem();
     virtual ~CUICellItem();
 

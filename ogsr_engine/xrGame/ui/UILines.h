@@ -17,6 +17,7 @@ class CUILines : public IUITextControl, public CUISimpleWindow//, public CDevice
     friend class CUICustomEdit;
 
 public:
+    void op22_SetInterval(float v) { m_interval = v; } // OP22: межстрочный интервал (единицы окна)
     CUILines();
     virtual ~CUILines();
 

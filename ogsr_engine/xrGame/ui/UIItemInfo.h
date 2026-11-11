@@ -57,10 +57,14 @@ public:
     bool m_op22_cond_auto{};
     float m_op22_cond_h{}, m_op22_desc_y{}, m_op22_desc_h{};
     CUIStatic* m_op22_cond_lbl{};
+    CUIStatic* m_op22_cond_val{}; // OP22: GAMMA 2.0 - «64» справа от пунктира
+    bool m_op22_weight_fmt{}; // OP22: GAMMA 2.0 - вес «4,9 кг» (static_weight op22_fmt)
+    float m_op22_cost_gap{-1.f}; // OP22: GAMMA 2.0 - цена сразу за текстом веса (static_cost op22_after_weight)
+    float m_op22_line_h{}; // OP22: GAMMA 2.0 - высота строки описания (descr_list op22_line_h, единицы окна)
     Fvector2 m_op22_img_pos{};
     // OP22: высота имени по тексту (static_name op22_name_auto="1"): длинное имя в две строки сдвигает вниз вес, цену,
     // состояние и описание, а не наезжает на них
     bool m_op22_name_auto{}, m_op22_base_ok{};
-    float m_op22_name_h{}, m_op22_base_y[4]{};
+    float m_op22_name_h{}, m_op22_base_y[5]{};
     CUIStatic* UIItemImage;
 };

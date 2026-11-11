@@ -7,6 +7,7 @@
 #include "../CustomOutfit.h"
 #include "../string_table.h"
 #include "../op22_options.h" // OP22
+#include <format>
 
 CUIOutfitInfo::CUIOutfitInfo() {}
 
@@ -55,6 +56,26 @@ void CUIOutfitInfo::InitFromXml(CUIXml& xml_doc)
 
     string256 _buff;
     CUIXmlInit::InitWindow(xml_doc, _base, 0, this);
+    m_op22_plain = !!xml_doc.ReadAttribInt(_base, 0, "op22_plain", 0); // OP22
+    // OP22: GAMMA 2.0 - колонки значений по узлам outfit_info:val_1 / val_2 (x и width от строки), если заданы
+    float col_x[2] = {-1.f, -1.f}, col_w[2] = {0.f, 0.f};
+    for (int c = 0; c < 2; ++c)
+    {
+        string64 vp;
+        xr_sprintf(vp, "%s:val_%d", _base, c + 1);
+        if (xml_doc.NavigateToNode(vp, 0) && xml_doc.ReadAttribInt(vp, 0, "op22_col", 0))
+        {
+            col_x[c] = xml_doc.ReadAttribFlt(vp, 0, "x", 0.f);
+            col_w[c] = xml_doc.ReadAttribFlt(vp, 0, "width", 0.f);
+            if (c == 1) // OP22: цвета знака пояса по макету
+            {
+                if (LPCSTR g = xml_doc.ReadAttrib(vp, 0, "op22_good", nullptr); g && g[0])
+                    m_op22_good = std::format("%c[255,{}]", g);
+                if (LPCSTR b = xml_doc.ReadAttrib(vp, 0, "op22_bad", nullptr); b && b[0])
+                    m_op22_bad = std::format("%c[255,{}]", b);
+            }
+        }
+    }
 
     m_listWnd = xr_new<CUIScrollView>();
     m_listWnd->SetAutoDelete(true);
@@ -78,11 +99,13 @@ void CUIOutfitInfo::InitFromXml(CUIXml& xml_doc)
             {
                 CUIStatic* v = xr_new<CUIStatic>();
                 v->SetAutoDelete(true);
-                const float left = _s->GetWidth() * (c ? 0.66f : 0.48f);
-                v->SetWndRect(Frect().set(left, 0.f, left + _s->GetWidth() * (c ? 0.24f : 0.2f), _s->GetHeight())); // lt + rb
+                const float left = col_x[c] >= 0.f ? col_x[c] : _s->GetWidth() * (c ? 0.66f : 0.48f);
+                const float wdt = col_x[c] >= 0.f ? col_w[c] : _s->GetWidth() * (c ? 0.24f : 0.2f);
+                v->SetWndRect(Frect().set(left, 0.f, left + wdt, _s->GetHeight())); // lt + rb
                 v->SetFont(_s->GetFont());
                 v->SetTextComplexMode(true);
                 v->SetTextAlignment(CGameFont::alRight);
+                v->SetTextColor(_s->GetTextColor()); // OP22: простое число костюма - цветом строки
                 _s->AttachChild(v);
                 m_op22_vals[i][c] = v;
             }
@@ -109,7 +132,7 @@ float CUIOutfitInfo::GetArtefactParam(ActorRestoreParams params, u32 i)
 #include "script_game_object.h"
 
 // OP22: значение в колонке: пусто при нуле, цвет по знаку
-static void op22_set_val(CUIStatic* st, float val, LPCSTR fmt, LPCSTR suffix, bool bad_plus)
+static void op22_set_val(CUIStatic* st, float val, LPCSTR fmt, LPCSTR suffix, bool bad_plus, LPCSTR c_good = "%c[green]", LPCSTR c_bad = "%c[red]")
 {
     if (fis_zero(val, 0.05f))
     {
@@ -118,7 +141,7 @@ static void op22_set_val(CUIStatic* st, float val, LPCSTR fmt, LPCSTR suffix, bo
     }
     const bool good = bad_plus ? val < 0.f : val > 0.f;
     string64 buf;
-    sprintf_s(buf, "%s", good ? "%c[green]" : "%c[red]");
+    sprintf_s(buf, "%s", good ? c_good : c_bad);
     const size_t len = xr_strlen(buf);
     sprintf_s(buf + len, sizeof(buf) - len, fmt, val);
     strcat_s(buf, suffix);
@@ -205,8 +228,16 @@ void CUIOutfitInfo::Update(CCustomOutfit* outfit)
             continue;
 
         _s->SetText(*CStringTable().translate(_imm_st_names[i]));
-        op22_set_val(m_op22_vals[i][0], col1, fmt, sfx, bad_plus);
-        op22_set_val(m_op22_vals[i][1], col2, fmt, sfx, bad_plus);
+        if (m_op22_plain && i != _item_jump_speed_delta) // OP22: GAMMA 2.0 - костюм «30» цветом строки, пояс «+5» цветом знака, без единиц
+        {
+            m_op22_vals[i][0]->SetText(fis_zero(col1, 0.05f) ? "" : std::format("{}", iFloor(col1 + 0.5f)).c_str());
+            op22_set_val(m_op22_vals[i][1], col2, "%+.0f", "", bad_plus, m_op22_good.c_str(), m_op22_bad.c_str());
+        }
+        else
+        {
+            op22_set_val(m_op22_vals[i][0], col1, fmt, sfx, bad_plus);
+            op22_set_val(m_op22_vals[i][1], col2, fmt, sfx, bad_plus);
+        }
 
         m_listWnd->AddWindow(_s, false);
     }

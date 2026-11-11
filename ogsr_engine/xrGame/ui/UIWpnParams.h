@@ -30,4 +30,6 @@ protected:
     CUIStatic m_textHandling;
     CUIStatic m_textDamage;
     CUIStatic m_textRPM;
+
+    CUIStatic* m_op22_val[4]{}; // OP22: GAMMA 2.0 - числа справа от шкал (узлы wpn_params:val_*): точность, урон, удобство, скорострельность
 };

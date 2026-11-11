@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../ui_base.h" // OP22: UI() для привязки времени к деньгам
 #include "UIInventoryWnd.h"
 
 #include "xrUIXmlParser.h"
@@ -342,6 +343,7 @@ void CUIInventoryWnd::Init()
 
     AttachChild(&UIStaticTime);
     xml_init.InitStatic(uiXml, "time_static", 0, &UIStaticTime);
+    m_op22_time_gap = uiXml.ReadAttribFlt("time_static", 0, "op22_left_of_money", -1.f); // OP22
 
     UIStaticTime.AttachChild(&UIStaticTimeString);
     xml_init.InitStatic(uiXml, "time_static_str", 0, &UIStaticTimeString);
@@ -545,6 +547,13 @@ void CUIInventoryWnd::Update()
         // update money
         static const char* StMoneyDescr = CStringTable().translate("ui_st_money_descr").c_str();
         UIMoneyWnd.SetText(std::format("{} {}", InventoryUtilities::op22_group_digits(pOurInvOwner->get_money()), StMoneyDescr).c_str()); // OP22: «18 420 р.»
+        if (m_op22_time_gap >= 0.f && UIMoneyWnd.GetFont()) // OP22: GAMMA 2.0 - время вплотную слева от суммы (деньги выровнены вправо)
+        {
+            float len = UIMoneyWnd.GetFont()->SizeOf_(UIMoneyWnd.GetText());
+            UI()->ClientToScreenScaledWidth(len);
+            const float right = UIMoneyWnd.GetWndPos().x + UIMoneyWnd.GetWidth() - len - m_op22_time_gap;
+            UIStaticTime.SetWndPos(Fvector2().set(right - UIStaticTime.GetWidth(), UIStaticTime.GetWndPos().y));
+        }
  
         if (m_b_need_update_stats)
         {

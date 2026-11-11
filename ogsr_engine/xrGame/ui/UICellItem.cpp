@@ -258,6 +258,25 @@ void CUICellItem::UpdateConditionProgressBar()
                 x = 2.f - p.x;
                 y = m_pParentList->GetWndSize().y - p.y - m_pConditionState->GetHeight() - 2.f;
             }
+            const bool in_slot = m_op22_grid_orig.x >= 0; // OP22: GAMMA 2.0 - размеры пунктира по макету (у предмета в 1 клетку шириной - свои)
+            const Fvector4& oc = (!in_slot && GetGridSize().x <= 1 && m_pParentList->m_op22_cond_small.z > 0.f) ? m_pParentList->m_op22_cond_small : m_pParentList->m_op22_cond;
+            if (oc.z > 0.f)
+            {
+                const Fvector2 p = GetWndPos();
+                const float area_w = in_slot ? m_pParentList->GetWndSize().x : GetWndSize().x;
+                const float area_h = in_slot ? m_pParentList->GetWndSize().y : GetWndSize().y;
+                const float w = _min(oc.z, area_w - 2.f * oc.x);
+                const float h = oc.w > 0.f ? oc.w : m_pConditionState->GetHeight();
+                m_pConditionState->SetWidth(w);
+                m_pConditionState->m_UIProgressItem.SetWidth(w);
+                m_pConditionState->m_UIBackgroundItem.SetWidth(w);
+                m_pConditionState->SetHeight(h);
+                m_pConditionState->m_UIProgressItem.SetHeight(h);
+                m_pConditionState->m_UIBackgroundItem.SetHeight(h);
+                m_condition_auto_width = false;
+                x = oc.x - (in_slot ? p.x : 0.f);
+                y = area_h - (in_slot ? p.y : 0.f) - h - oc.y;
+            }
             m_pConditionState->SetWndPos({x, y});
             m_pConditionState->SetProgressPos(itm->GetCondition() * 100.0f);
             m_pConditionState->Show(true);
