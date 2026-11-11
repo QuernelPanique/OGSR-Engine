@@ -171,6 +171,7 @@ void CUIMainIngameWnd::Init()
 
     UIWeaponBack.AttachChild(&UIWeaponIcon);
     xml_init.InitStatic(uiXml, "static_wpn_icon", 0, &UIWeaponIcon);
+    m_op22_icon_gap = uiXml.ReadAttribFlt("static_wpn_icon", 0, "op22_before_text", -1.f); // OP22
     UIWeaponIcon.SetShader(GetEquipmentIconsShader());
     UIWeaponIcon_rect = UIWeaponIcon.GetWndRect();
     //---------------------------------------------------------
@@ -1025,6 +1026,13 @@ void CUIMainIngameWnd::UpdateActiveItemInfo()
             }
         }
         SetAmmoIcon(icon_sect_name.c_str());
+        if (m_op22_icon_gap >= 0.f && UIWeaponBack.GetFont()) // OP22: GAMMA 2.0 - значок вплотную слева от названия (название - вправо)
+        {
+            float len = UIWeaponBack.GetFont()->SizeOf_(UIWeaponBack.GetText());
+            UI()->ClientToScreenScaledWidth(len);
+            const float text_left = UIWeaponBack.GetWidth() + UIWeaponBack.GetTextX() - len;
+            UIWeaponIcon.SetWndPos(Fvector2().set(text_left - m_op22_icon_gap - UIWeaponIcon.GetWidth(), UIWeaponIcon.GetWndPos().y));
+        }
 
         //-------------------
         m_pWeapon = smart_cast<CWeapon*>(item);

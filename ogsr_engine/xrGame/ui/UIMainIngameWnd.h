@@ -37,6 +37,7 @@ public:
     virtual void Draw();
     void op22_draw_under(); // OP22: GAMMA 2.0 - подложка HUD (static_health op22_under) до пользовательских окон Lua
     bool m_op22_under{};
+    float m_op22_icon_gap{-1.f}; // OP22: GAMMA 2.0 - значок патрона слева от текста названия с зазором (static_wpn_icon op22_before_text)
     virtual void Update();
 
     bool OnKeyboardPress(int dik);
