@@ -296,6 +296,21 @@ void CUIItemInfo::InitItem(CInventoryItem* pInvItem)
             SetHeight(full);
             if (m_op22_back)
                 m_op22_back->SetHeight(full);
+            // OP22: не влезло - полоса прокрутки рисуется внутри списка поверх правого края (числа шкал, текст): окно и список
+            // шире на полосу, полоса встаёт справа от содержимого, раскладка содержимого прежняя
+            if (m_op22_w0 < 0.f)
+            {
+                m_op22_w0 = GetWidth();
+                m_op22_desc_w0 = UIDesc->GetWidth();
+            }
+            const bool overflow = UIDesc->GetWndPos().y + h + m_op22_pad_b > m_op22_max_h + 0.5f;
+            const float sbw = overflow && UIDesc->ScrollBar() ? UIDesc->ScrollBar()->GetWidth() + 2.f : 0.f;
+            UIDesc->SetWidth(m_op22_desc_w0 + sbw);
+            if (UIDesc->ScrollBar()) // полоса - у нового правого края списка
+                UIDesc->ScrollBar()->SetWndPos(Fvector2().set(UIDesc->GetWidth() - UIDesc->ScrollBar()->GetWidth(), UIDesc->ScrollBar()->GetWndPos().y));
+            SetWidth(m_op22_w0 + sbw);
+            if (m_op22_back)
+                m_op22_back->SetWidth(m_op22_w0 + sbw);
         }
     }
     if (UIItemImage)
