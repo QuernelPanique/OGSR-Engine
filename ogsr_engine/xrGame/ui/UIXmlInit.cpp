@@ -517,6 +517,7 @@ bool CUIXmlInit::InitDragDropListEx(CUIXml& xml_doc, const char* path, int index
     float height = xml_doc.ReadAttribFlt(path, index, "height");
 
     InitAlignment(xml_doc, path, index, x, y, pWnd);
+    pWnd->m_op22_sb_profile = xml_doc.ReadAttrib(path, index, "scroll_profile", "default"); // OP22: до Init (там создаётся полоса)
 
     // Add by Zander |
     bool use_real_pix = (xml_doc.ReadAttribInt(path, index, "as_is", 0));
