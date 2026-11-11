@@ -14,6 +14,7 @@
 #include "../PhysicsShellHolder.h"
 #include "UIWpnParams.h"
 #include "UIFrameWindow.h" // OP22
+#include "UILines.h" // OP22: межстрочный интервал описания
 #include "ui_af_params.h"
 #include <format>
 
