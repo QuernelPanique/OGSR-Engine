@@ -104,6 +104,7 @@ void CUIItemInfo::Init(LPCSTR xml_name)
         UICost->SetAutoDelete(true);
         xml_init.InitStatic(uiXml, "static_cost", 0, UICost);
         m_op22_cost_gap = uiXml.ReadAttribFlt("static_cost", 0, "op22_after_weight", -1.f); // OP22
+        m_op22_cost_prefix = uiXml.ReadAttrib("static_cost", 0, "op22_prefix", "");
     }
 
     if (uiXml.NavigateToNode("static_condition", 0))
@@ -236,7 +237,7 @@ void CUIItemInfo::InitItem(CInventoryItem* pInvItem)
     if (UICost)
     {
         static const char* StMoneyDescr = CStringTable().translate("ui_st_money_descr").c_str();  
-        UICost->SetText(std::format("{} {}", InventoryUtilities::op22_group_digits(pInvItem->Cost()), StMoneyDescr).c_str()); // OP22: «2 800 р.»
+        UICost->SetText(std::format("{}{} {}", m_op22_cost_prefix.size() ? m_op22_cost_prefix.c_str() : "", InventoryUtilities::op22_group_digits(pInvItem->Cost()), StMoneyDescr).c_str()); // OP22: «2 800 р.», подпись op22_prefix
         if (m_op22_cost_gap >= 0.f && UIWeight && UIWeight->GetFont()) // OP22: GAMMA 2.0 - цена за весом
         {
             float len = UIWeight->GetFont()->SizeOf_(UIWeight->GetText());
