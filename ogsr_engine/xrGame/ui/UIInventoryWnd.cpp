@@ -587,7 +587,10 @@ void CUIInventoryWnd::Update()
                 m_op22_sleep_next = Device.dwTimeGlobal + 1000;
                 luabind::functor<float> f;
                 if (ai().script_engine().functor("op22_needs.sleep", f))
-                    m_op22_sleep_v = std::clamp(f(), 0.f, 1.f);
+                {
+                    const float sv = f();
+                    m_op22_sleep_v = std::clamp(sv, 0.f, 1.f);
+                }
             }
             const float bleed = std::clamp(op22_a->conditions().BleedingSpeed() / m_op22_bleed_max, 0.f, 1.f);
             if (m_op22_power)
