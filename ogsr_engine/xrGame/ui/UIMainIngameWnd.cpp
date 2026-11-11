@@ -381,6 +381,7 @@ void CUIMainIngameWnd::op22_qs_init(CUIXml& xml)
         return;
     m_op22_qs_cell.set(xml.ReadAttribFlt(P, 0, "cell_width", 26.f), xml.ReadAttribFlt(P, 0, "cell_height", 34.f));
     const float indent = xml.ReadAttribFlt(P, 0, "indent", 2.f);
+    m_op22_qs_icon_k = xml.ReadAttribFlt(P, 0, "op22_icon_k", 1.f);
     const shared_str tex = xml.Read("quickslots_panel:slot:texture", 0, "");
 
     auto label = [&](LPCSTR path, CUIWindow* parent, float def_x, float def_y) {
@@ -496,7 +497,7 @@ void CUIMainIngameWnd::op22_qs_update()
             v.x2 *= UI()->get_current_kx();
             q.icon->GetUIStaticItem().SetRect(v);
             // иконка вписывается в ячейку с сохранением пропорций
-            const float k = _min(m_op22_qs_cell.x / _max(v.width(), 1.f), m_op22_qs_cell.y / _max(v.height(), 1.f));
+            const float k = m_op22_qs_icon_k * _min(m_op22_qs_cell.x / _max(v.width(), 1.f), m_op22_qs_cell.y / _max(v.height(), 1.f)); // OP22: op22_icon_k - доля ячейки (GAMMA 2.0)
             const Fvector2 sz{v.width() * k, v.height() * k};
             q.icon->SetWndPos(Fvector2().set((m_op22_qs_cell.x - sz.x) / 2, (m_op22_qs_cell.y - sz.y) / 2));
             q.icon->SetWndSize(sz);

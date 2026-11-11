@@ -82,6 +82,7 @@ protected:
     };
     Op22QuickSlot m_op22_qs[5]{};
     CUIWindow* m_op22_qs_wnd{};
+    float m_op22_qs_icon_k{1.f};
     Fvector2 m_op22_qs_cell{};
     u32 m_op22_qs_time{};
     void op22_qs_init(CUIXml& xml);
