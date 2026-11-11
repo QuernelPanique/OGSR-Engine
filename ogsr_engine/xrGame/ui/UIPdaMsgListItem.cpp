@@ -50,6 +50,7 @@ void CUIPdaMsgListItem::Init(float x, float y, float width, float height)
         m_op22_time_color = uiXml.ReadAttrib("op22_back", 0, "time_color", "");
         m_op22_time_sep = uiXml.ReadAttrib("op22_back", 0, "time_sep", "");
         m_op22_recolor = uiXml.ReadAttrib("op22_back", 0, "recolor", "");
+        m_op22_strip = uiXml.ReadAttrib("op22_back", 0, "strip", "");
         m_op22_line_h = uiXml.ReadAttribFlt("op22_back", 0, "line_h", 0.f);
         m_op22_pad_b = uiXml.ReadAttribFlt("op22_back", 0, "pad_b", -1.f);
         m_op22 = true;
@@ -75,6 +76,9 @@ void CUIPdaMsgListItem::SetTextColor(u32 color) { UIMsgText.SetTextColor(color);
 void CUIPdaMsgListItem::op22_format()
 {
     xr_string t = UIMsgText.GetText() ? UIMsgText.GetText() : "";
+    if (!m_op22_strip.empty()) // заголовок «Сообщение» сразу после времени - как на макете: время, затем отправитель
+        if (const size_t q = t.find(m_op22_strip); q != xr_string::npos && q <= 6)
+            t.erase(q, m_op22_strip.size());
     if (!m_op22_time_color.empty() && t.size() > 6 && isdigit((u8)t[0]) && isdigit((u8)t[1]) && t[2] == ':' && isdigit((u8)t[3]) && isdigit((u8)t[4]) && t[5] == ' ')
         t = "%c[" + m_op22_time_color + "]" + t.substr(0, 5) + (m_op22_time_sep.empty() ? " " : m_op22_time_sep) + "%c[default]" + t.substr(6);
     if (!m_op22_recolor.empty())
