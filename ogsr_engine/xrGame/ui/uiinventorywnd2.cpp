@@ -623,21 +623,28 @@ void CUIInventoryWnd::op22_quick_fill()
         if (!sect || !sect[0])
             continue;
         PIItem found = nullptr;
+        int cnt = 0; // OP22: GAMMA 2.0 - сколько таких предметов (как число быстрого слота на HUD)
         for (PIItem it : m_pInv->m_ruck)
             if (it->object().cNameSect() == sect)
             {
-                found = it;
-                break;
-            }
-        if (!found)
-            for (PIItem it : m_pInv->m_belt)
-                if (it->object().cNameSect() == sect)
-                {
+                if (!found)
                     found = it;
-                    break;
-                }
+                ++cnt;
+            }
+        for (PIItem it : m_pInv->m_belt)
+            if (it->object().cNameSect() == sect)
+            {
+                if (!found)
+                    found = it;
+                ++cnt;
+            }
         if (found)
-            l->SetItem(create_cell_item(found));
+        {
+            CUICellItem* ci = create_cell_item(found);
+            ci->m_op22_count = cnt;
+            ci->UpdateItemText();
+            l->SetItem(ci);
+        }
     }
 }
 

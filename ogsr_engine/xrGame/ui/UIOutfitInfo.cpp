@@ -233,6 +233,11 @@ void CUIOutfitInfo::Update(CCustomOutfit* outfit)
             m_op22_vals[i][0]->SetText(fis_zero(col1, 0.05f) ? "" : std::format("{}", iFloor(col1 + 0.5f)).c_str());
             op22_set_val(m_op22_vals[i][1], col2, "%+.0f", "", bad_plus, m_op22_good.c_str(), m_op22_bad.c_str());
         }
+        else if (m_op22_plain) // OP22: GAMMA 2.0 - прыжок: «+1.5» без «m» (в колонку не влезало, «m» уходило строкой ниже)
+        {
+            op22_set_val(m_op22_vals[i][0], col1, fmt, "", bad_plus, m_op22_good.c_str(), m_op22_bad.c_str());
+            op22_set_val(m_op22_vals[i][1], col2, fmt, "", bad_plus, m_op22_good.c_str(), m_op22_bad.c_str());
+        }
         else
         {
             op22_set_val(m_op22_vals[i][0], col1, fmt, sfx, bad_plus);

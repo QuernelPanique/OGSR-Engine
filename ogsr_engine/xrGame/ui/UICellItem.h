@@ -29,6 +29,8 @@ protected:
 public:
     CUIStatic* op22_text() { return m_text; } // OP22: GAMMA 2.0 - счётчик в углу слота
     Fvector2 m_op22_text_pos{-1.f, -1.f}; // OP22: исходная позиция счётчика из разметки
+    int m_op22_count{}; // OP22: GAMMA 2.0 - число предметов задано снаружи (быстрый слот: все такие в рюкзаке и на поясе)
+    CUIProgressBar* op22_cond_bar() { return m_pConditionState; } // OP22: пунктир состояния (слот костюма с картинкой в полный рост)
 
 protected:
 

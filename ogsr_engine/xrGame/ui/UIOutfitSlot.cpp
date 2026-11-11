@@ -5,6 +5,8 @@
 #include "../CustomOutfit.h"
 #include "../actor.h"
 #include "UIInventoryUtilities.h"
+#include "UIScrollBar.h"
+#include "UIProgressBar.h"
 
 CUIOutfitDragDropList::CUIOutfitDragDropList()
 {
@@ -100,7 +102,17 @@ void CUIOutfitDragDropList::Draw()
     // OP22: слот по макету (op22_frame_on/off) - рамка, сетка и иконка предмета, как у остальных слотов, и дети списка
     // (панель батареи экзоскелета). Старый стиль ОП рисовал только картинку в полный рост: ни рамки, ни батареи (08.11)
     const bool op22 = m_op22_frame_on || m_op22_frame_off;
-    if (Core.Features.test(xrCore::Feature::old_outfit_slot_style) && !op22)
+    if (Core.Features.test(xrCore::Feature::old_outfit_slot_style) && m_op22_figure) // OP22: GAMMA 2.0 - картинка + батарея + пунктир
+    {
+        m_background->Draw();
+        for (CUIWindow* w : GetChildWndList())
+            if (w != m_background && w != m_container && w->IsShown() && !smart_cast<CUIScrollBar*>(w))
+                w->Draw();
+        for (CUIWindow* w : m_container->GetChildWndList())
+            if (auto* ci = smart_cast<CUICellItem*>(w); ci && ci->op22_cond_bar() && ci->op22_cond_bar()->IsShown())
+                ci->op22_cond_bar()->Draw();
+    }
+    else if (Core.Features.test(xrCore::Feature::old_outfit_slot_style) && !op22)
         m_background->Draw();
     else
     {

@@ -598,6 +598,7 @@ bool CUIXmlInit::InitDragDropListEx(CUIXml& xml_doc, const char* path, int index
         sscanf(oc, "%f,%f,%f,%f;%f,%f,%f,%f", &a.x, &a.y, &a.z, &a.w, &b.x, &b.y, &b.z, &b.w);
     }
     pWnd->m_op22_count_at_list = !!xml_doc.ReadAttribInt(path, index, "op22_count_at_list", 0); // OP22
+    pWnd->m_op22_figure = !!xml_doc.ReadAttribInt(path, index, "op22_figure", 0); // OP22
 
     tmp = xml_doc.ReadAttribInt(path, index, "adjust_cells", 0); // OP22: как в ОП 2.2 - предмет растягивается на весь список
     pWnd->SetAdjustCells(tmp != 0);

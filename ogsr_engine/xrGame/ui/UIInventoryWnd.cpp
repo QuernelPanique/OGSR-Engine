@@ -214,6 +214,18 @@ void CUIInventoryWnd::Init()
         m_op22_bat_bar->SetAutoDelete(true);
         m_pUIOutfitList->AttachChild(m_op22_bat_bar);
         xml_init.InitProgressBar(uiXml, "dragdrop_outfit:battery_charge_progress", 0, m_op22_bat_bar);
+        m_op22_bat_keep_icon = !!uiXml.ReadAttribInt("dragdrop_outfit:battery_icon", 0, "op22_keep_tex", 0); // OP22: GAMMA 2.0
+        m_op22_bat_pct = !!uiXml.ReadAttribInt("dragdrop_outfit:battery_charge_text", 0, "op22_pct", 0);
+        m_op22_bat_none = uiXml.ReadAttrib("dragdrop_outfit:battery_charge_text", 0, "op22_none", "");
+        if (m_op22_bat_keep_icon)
+            xml_init.InitStatic(uiXml, "dragdrop_outfit:battery_icon", 0, m_op22_bat_icon);
+        if (uiXml.NavigateToNode("dragdrop_outfit:op22_battery_fill", 0))
+        {
+            m_op22_bat_fill = xr_new<CUIProgressBar>();
+            m_op22_bat_fill->SetAutoDelete(true);
+            m_pUIOutfitList->AttachChild(m_op22_bat_fill);
+            xml_init.InitProgressBar(uiXml, "dragdrop_outfit:op22_battery_fill", 0, m_op22_bat_fill);
+        }
     }
     m_pUIOutfitList->SetAutoDelete(true);
     xml_init.InitDragDropListEx(uiXml, "dragdrop_outfit", 0, m_pUIOutfitList);
@@ -627,12 +639,20 @@ void CUIInventoryWnd::op22_update_battery()
     }
     const bool exo = sect && xr_strcmp(sect, "-") != 0;
     const bool has_battery = exo && sect[0];
-    m_op22_bat_icon->Show(has_battery);
+    m_op22_bat_icon->Show(m_op22_bat_keep_icon ? exo : has_battery);
     m_op22_bat_text->Show(exo);
     m_op22_bat_bar->Show(exo);
+    if (m_op22_bat_fill)
+        m_op22_bat_fill->Show(exo);
     if (!exo)
         return;
     m_op22_bat_bar->SetProgressPos(charge * 100.f);
+    if (m_op22_bat_fill)
+        m_op22_bat_fill->SetProgressPos(has_battery ? charge * 100.f : 0.f);
+    if (m_op22_bat_pct) // OP22: GAMMA 2.0 - заряд числом
+        m_op22_bat_text->SetText(has_battery ? std::format("{} %", iFloor(charge * 100.f + 0.5f)).c_str() : m_op22_bat_none.c_str());
+    if (m_op22_bat_keep_icon)
+        return;
     const shared_str battery(sect);
     if (has_battery && m_op22_bat_sect != battery)
     {
