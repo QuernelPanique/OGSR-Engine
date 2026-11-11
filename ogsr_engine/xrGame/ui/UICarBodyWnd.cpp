@@ -77,6 +77,7 @@ void CUICarBodyWnd::Init()
     m_pUIOthersIcon->SetAutoDelete(true);
     AttachChild(m_pUIOthersIcon);
     xml_init.InitStatic(uiXml, "static_icon", 1, m_pUIOthersIcon);
+    m_op22_box_name = uiXml.ReadAttrib("static_icon", 1, "op22_box_name", ""); // OP22
 
     // OP22: своя карточка персонажа, если есть (у торговли и обыска разный вид)
     string_path op22_tmp;
@@ -183,6 +184,13 @@ void CUICarBodyWnd::Init()
         AttachChild(m_op22_contents);
         xml_init.InitStatic(uiXml, "op22_contents", 0, m_op22_contents);
     }
+    if (uiXml.NavigateToNode("op22_our_name", 0)) // OP22: имя игрока над рюкзаком (GAMMA 2.0)
+    {
+        m_op22_our_name = xr_new<CUIStatic>();
+        m_op22_our_name->SetAutoDelete(true);
+        AttachChild(m_op22_our_name);
+        xml_init.InitStatic(uiXml, "op22_our_name", 0, m_op22_our_name);
+    }
     if (uiXml.NavigateToNode("op22_weight", 0))
     {
         m_op22_weight = xr_new<CUIStatic>();
@@ -245,8 +253,18 @@ void CUICarBodyWnd::InitCarBody(CInventoryOwner* pOur, IInventoryBox* pInvBox)
 
     u16 our_id = smart_cast<CGameObject*>(m_pOurObject)->ID();
     m_pUICharacterInfoLeft->InitCharacter(our_id);
-    m_pUIOthersIcon->Show(false);
-    m_pUICharacterInfoRight->ClearInfo();
+    if (m_op22_our_name) // OP22
+        m_op22_our_name->SetText(m_pOurObject->Name());
+    if (m_op22_box_name.size()) // OP22: тайник - карточка с именем, без портрета
+    {
+        m_pUIOthersIcon->Show(true);
+        m_pUICharacterInfoRight->op22_NameOnly(CStringTable().translate(m_op22_box_name).c_str());
+    }
+    else
+    {
+        m_pUIOthersIcon->Show(false);
+        m_pUICharacterInfoRight->ClearInfo();
+    }
     m_pUIPropertiesBox->Hide();
     EnableAll();
     UpdateLists();
@@ -268,7 +286,10 @@ void CUICarBodyWnd::InitCarBody(CInventoryOwner* pOur, CInventoryOwner* pOthers)
     u16 other_id = smart_cast<CGameObject*>(m_pOthersObject)->ID();
 
     m_pUICharacterInfoLeft->InitCharacter(our_id);
+    if (m_op22_our_name) // OP22
+        m_op22_our_name->SetText(m_pOurObject->Name());
     m_pUIOthersIcon->Show(true);
+    m_pUICharacterInfoRight->op22_ShowPortrait(); // OP22: после тайника
 
     CBaseMonster* monster = NULL;
     if (m_pOthersObject)

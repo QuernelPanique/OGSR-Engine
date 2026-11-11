@@ -363,6 +363,8 @@ void CUIListWnd::DrawActiveBackFrame(const Frect& rect, CUIListItem* itm)
         float w = GetWidth();
         if (m_ScrollBar->IsShown())
             w -= m_ScrollBar->GetWidth();
+        _pos.x -= m_op22_sel_pad;
+        w += 2.f * m_op22_sel_pad;
         m_op22_sel_st->SetWndPos(_pos);
         m_op22_sel_st->SetWidth(w);
         m_op22_sel_st->SetHeight(GetItemHeight());
@@ -417,7 +419,10 @@ void CUIListWnd::Draw()
                 continue;
             if (pListItem2->GetIndex() == m_iSelectedItem)
             {
-                UI()->PushScissor(rect);
+                Frect sc = rect; // OP22: подсветка шире списка (op22_sel_pad)
+                sc.left -= m_op22_sel_pad;
+                sc.right += m_op22_sel_pad;
+                UI()->PushScissor(sc);
 
                 DrawActiveBackFrame(rect, pListItem2);
 

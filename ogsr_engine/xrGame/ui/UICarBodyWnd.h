@@ -77,6 +77,8 @@ protected:
     CUIStatic* m_op22_weight{};
     CUIStatic* m_op22_contents{};
     CUIProgressBar* m_op22_weight_bar{};
+    shared_str m_op22_box_name; // OP22: static_icon[1] op22_box_name - у тайника карточка с этим именем без портрета
+    CUIStatic* m_op22_our_name{}; // OP22: имя игрока над его рюкзаком
 
 public:
     CUICellItem* m_pCurrentCellItem;

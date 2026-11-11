@@ -246,6 +246,16 @@ void CUICustomEdit::Draw()
     GetAbsolutePos(pos);
 
     m_lines.m_bDrawCursor = m_bInputFocus;
+    if (m_op22_placeholder.size() && !m_bInputFocus && m_lines.m_text.empty()) // OP22: подсказка в пустом поле
+    {
+        const u32 col = m_lines.GetTextColor();
+        m_lines.SetText(m_op22_placeholder.c_str());
+        m_lines.SetTextColor(m_op22_ph_color);
+        m_lines.Draw(pos.x + m_textPos.x, pos.y + m_textPos.y);
+        m_lines.SetText("");
+        m_lines.SetTextColor(col);
+        return;
+    }
     m_lines.Draw(pos.x + m_textPos.x, pos.y + m_textPos.y);
 }
 

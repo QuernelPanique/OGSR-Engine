@@ -61,6 +61,18 @@ void CUICustomSpin::Init(float x, float y, float width, float height)
             m_op22_bg = xr_new<CUIStatic>();
         m_op22_bg->InitTexture(m_op22_tex.c_str());
         m_op22_bg->SetStretchTexture(true);
+        if (m_op22_has_lr) // OP22: ◀ значение ▶ (макет GAMMA 2.0)
+        {
+            const Frect& r = m_op22_lr;
+            m_pBtnDown->Init(r.x1, r.y1, r.x2, r.y2);
+            m_pBtnDown->InitTexture("ui\\ct_tr_none");
+            m_pBtnUp->Init(width - r.x1 - r.x2, r.y1, r.x2, r.y2);
+            m_pBtnUp->InitTexture("ui\\ct_tr_none");
+            m_pLines->Init(0, 0, width, height);
+            m_pLines->SetTextAlignment(CGameFont::alCenter);
+            m_pLines->SetVTextAlignment(valCenter);
+            return;
+        }
         const float bw = height * 0.75f;
         m_pBtnUp->Init(width - bw, 0, bw, height / 2);
         m_pBtnUp->InitTexture("ui\\ct_tr_none");
@@ -121,10 +133,12 @@ void CUICustomSpin::Draw()
     if (m_op22_bg) // OP22: фон под текстом и стрелками
     {
         m_op22_bg->SetWndRect(pos.x, pos.y, GetWidth(), GetHeight());
+        if (m_op22_has_lr) // недоступный спин приглушён целиком (макет: opacity 0.4)
+            m_op22_bg->SetColor(IsEnabled() ? 0xffffffff : color_argb(102, 255, 255, 255));
         m_op22_bg->Draw();
     }
     CUIWindow::Draw();
-    m_pLines->Draw(pos.x + (m_op22_bg ? 8.f : 3.f), pos.y);
+    m_pLines->Draw(pos.x + (m_op22_has_lr ? 0.f : (m_op22_bg ? 8.f : 3.f)), pos.y);
 }
 
 void CUICustomSpin::Update()

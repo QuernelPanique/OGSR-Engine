@@ -293,6 +293,15 @@ bool CUIXmlInit::InitCheck(CUIXml& xml_doc, LPCSTR path, int index, CUICheckButt
 bool CUIXmlInit::InitSpin(CUIXml& xml_doc, const char* path, int index, CUICustomSpin* pWnd)
 {
     pWnd->m_op22_tex = xml_doc.ReadAttrib(path, index, "op22_tex", ""); // OP22: вид по макету
+    {
+        shared_str lr = xml_doc.ReadAttrib(path, index, "op22_lr", ""); // OP22: стрелки слева и справа
+        Frect r{};
+        if (lr.size() && 4 == sscanf(lr.c_str(), "%f,%f,%f,%f", &r.x1, &r.y1, &r.x2, &r.y2))
+        {
+            pWnd->m_op22_lr = r;
+            pWnd->m_op22_has_lr = true;
+        }
+    }
     InitWindow(xml_doc, path, index, pWnd);
     InitOptionsItem(xml_doc, path, index, pWnd);
 
@@ -677,6 +686,7 @@ bool CUIXmlInit::InitListWnd(CUIXml& xml_doc, LPCSTR path, int index, CUIListWnd
 
     pWnd->SetScrollBarProfile(xml_doc.ReadAttrib(path, index, "scroll_profile", "default"));
     pWnd->m_op22_sel = xml_doc.ReadAttrib(path, index, "op22_sel", ""); // OP22
+    pWnd->m_op22_sel_pad = xml_doc.ReadAttribFlt(path, index, "op22_sel_pad", 0.f);
     pWnd->Init(x, y, width, height, item_height);
     pWnd->EnableActiveBackground(!!active_background);
 
@@ -1073,6 +1083,11 @@ bool CUIXmlInit::InitCustomEdit(CUIXml& xml_doc, const char* path, int index, CU
         color = GetColor(xml_doc, foo, index, 0x00);
         pWnd->SetCursorColor(color);
     }
+
+    pWnd->m_op22_placeholder = xml_doc.ReadAttrib(path, index, "op22_placeholder", ""); // OP22: подсказка в пустом поле
+    strconcat(sizeof(foo), foo, path, ":text_color:ph");
+    if (xml_doc.NavigateToNode(foo, index))
+        pWnd->m_op22_ph_color = GetColor(xml_doc, foo, index, 0x00);
 
     if (xml_doc.ReadAttribInt(path, index, "db_click", 0))
         pWnd->SetDbClickMode();

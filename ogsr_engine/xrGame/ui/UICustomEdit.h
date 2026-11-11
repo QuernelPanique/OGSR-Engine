@@ -37,6 +37,9 @@ public:
     void SetPasswordMode(bool mode = true);
     void SetDbClickMode(bool mode = true) { m_bFocusByDbClick = mode; }
     void SetCursorColor(u32 color) { m_lines.SetCursorColor(color); }
+    // OP22: подсказка в пустом поле без фокуса (атрибут op22_placeholder, цвет - text_color:ph)
+    shared_str m_op22_placeholder;
+    u32 m_op22_ph_color{0xff9aa3a8};
 
     //Какой-то недодел
     void SetLightAnim(LPCSTR lanim);

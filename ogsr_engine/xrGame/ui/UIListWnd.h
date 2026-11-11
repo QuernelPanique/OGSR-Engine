@@ -141,6 +141,7 @@ protected:
 
 public:
     shared_str m_op22_sel; // OP22: своя подсветка строки на всю высоту (атрибут op22_sel у списка)
+    float m_op22_sel_pad{}; // OP22: подсветка шире списка на столько единиц слева и справа (op22_sel_pad: поля строки макета)
     class CUIStatic* m_op22_sel_st{}; // OP22: подсветка строки - текстура <op22_sel>_back, растянутая на всю строку
 
 protected:

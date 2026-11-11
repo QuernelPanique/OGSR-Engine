@@ -25,6 +25,7 @@ protected:
     CUIScrollView* pUIBio;
     bool m_bForceUpdate;
     bool m_op22_rel_over_rep{}; // OP22: у собеседника отношение на месте репутации (карточка диалога по макету)
+    xr_vector<CUIStatic*> m_op22_decor; // OP22: op22_auto_static (рамка портрета и т.п.)
     u16 m_ownerID;
 
     enum
@@ -70,6 +71,8 @@ public:
     void InitCharacter(u16 id);
     void ClearInfo();
     void op22_SetSelected(bool selected);
+    void op22_NameOnly(const char* name); // OP22: карточка без портрета и его оформления, только имя (тайник)
+    void op22_ShowPortrait(); // OP22: вернуть портрет и оформление
 
     virtual void Update();
 

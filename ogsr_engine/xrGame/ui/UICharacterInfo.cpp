@@ -159,7 +159,33 @@ void CUICharacterInfo::Init(float x, float y, float width, float height, CUIXml*
         AttachChild(pUIBio);
     }
     for (auto* decor : xml_init.InitAutoStatic(*xml_doc, "op22_auto_static", this))
+    {
         decor->Enable(false);
+        m_op22_decor.push_back(decor); // OP22
+    }
+}
+
+// OP22: тайник в окне обыска - карточка без портрета, только имя
+void CUICharacterInfo::op22_NameOnly(const char* name)
+{
+    ClearInfo();
+    if (m_icons[eUIIcon])
+        m_icons[eUIIcon]->Show(false);
+    for (auto* d : m_op22_decor)
+        d->Show(false);
+    if (m_icons[eUIName])
+    {
+        m_icons[eUIName]->SetText(name);
+        m_icons[eUIName]->Show(true);
+    }
+}
+
+void CUICharacterInfo::op22_ShowPortrait()
+{
+    if (m_icons[eUIIcon])
+        m_icons[eUIIcon]->Show(true);
+    for (auto* d : m_op22_decor)
+        d->Show(true);
 }
 
 void CUICharacterInfo::Init(float x, float y, float width, float height, const char* xml_name)

@@ -47,6 +47,8 @@ public:
     // OP22: вид по макету - фон одной текстурой (op22_tex), высота из разметки, стрелки справа
     shared_str m_op22_tex;
     class CUIStatic* m_op22_bg{};
+    Frect m_op22_lr{}; // OP22: op22_lr="x,y,w,h" - стрелка «назад» слева в этом прямоугольнике, «вперёд» - зеркально справа, текст по центру
+    bool m_op22_has_lr{};
     void op22_font(class CGameFont* f);
 
 protected:
