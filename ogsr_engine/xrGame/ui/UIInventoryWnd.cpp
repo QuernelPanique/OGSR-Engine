@@ -160,6 +160,18 @@ void CUIInventoryWnd::Init()
         AttachChild(m_op22_caption);
         xml_init.InitStatic(uiXml, "op22_caption", 0, m_op22_caption);
     }
+    {
+        static const char* g2_nodes[5] = {"op22_outfit_name", "op22_health_val", "op22_psy_val", "op22_radiation_val", "op22_belt_count"};
+        for (int i = 0; i < 5; ++i)
+        {
+            if (!uiXml.NavigateToNode(g2_nodes[i], 0))
+                continue;
+            m_op22_g2[i] = xr_new<CUIStatic>();
+            m_op22_g2[i]->SetAutoDelete(true);
+            AttachChild(m_op22_g2[i]);
+            xml_init.InitStatic(uiXml, g2_nodes[i], 0, m_op22_g2[i]);
+        }
+    }
 
     UIPersonalWnd.AttachChild(&UIStaticPersonal);
     xml_init.InitStatic(uiXml, "static_personal", 0, &UIStaticPersonal);
@@ -514,6 +526,12 @@ void CUIInventoryWnd::Update()
         v = pEntityAlive->conditions().GetRadiation() * 100.0f;
         UIProgressBarRadiation.SetProgressPos(v);
 
+        // OP22: GAMMA 2.0 - числа шкал (целые проценты)
+        const float g2_vals[3] = {pEntityAlive->conditions().GetHealth(), pEntityAlive->conditions().GetPsyHealth(), pEntityAlive->conditions().GetRadiation()};
+        for (int i = 0; i < 3; ++i)
+            if (m_op22_g2[1 + i])
+                m_op22_g2[1 + i]->SetText(std::format("{}", iFloor(g2_vals[i] * 100.0f + 0.5f)).c_str());
+
         if (CActor* op22_a = smart_cast<CActor*>(pEntityAlive)) // OP22: сытость и жажда
         {
             if (m_op22_satiety)
@@ -535,6 +553,18 @@ void CUIInventoryWnd::Update()
             UIOutfitInfo.Update(outfit);
 
             m_b_need_update_stats = false;
+        }
+
+        if (m_op22_g2[0] || m_op22_g2[4]) // OP22: GAMMA 2.0 - имя костюма и «5 / 14» пояса
+        {
+            CInventory& g2_inv = pOurInvOwner->inventory();
+            if (m_op22_g2[0])
+            {
+                PIItem g2_outfit = g2_inv.m_slots[OUTFIT_SLOT].m_pIItem;
+                m_op22_g2[0]->SetText(g2_outfit ? g2_outfit->Name() : "");
+            }
+            if (m_op22_g2[4])
+                m_op22_g2[4]->SetText(std::format("{} / {}", g2_inv.m_belt.size(), g2_inv.BeltSlotsCount()).c_str());
         }
 
         if (m_op22_bat_icon && Device.dwTimeGlobal >= m_op22_bat_next)

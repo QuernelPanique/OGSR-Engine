@@ -157,6 +157,8 @@ protected:
     CUIStatic* m_op22_weight{};
     CUIProgressBar* m_op22_weight_bar{};
     CUIStatic* m_op22_caption{};
+    // OP22: интерфейс GAMMA 2.0 - имя костюма, числа шкал здоровья/пси/облучения, счётчик пояса (узлы есть - статики есть)
+    CUIStatic* m_op22_g2[5]{};
     u32 m_op22_bat_next{};
     shared_str m_op22_bat_sect;
     void op22_update_battery();

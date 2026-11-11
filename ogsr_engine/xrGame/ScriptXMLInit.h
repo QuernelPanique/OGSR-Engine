@@ -69,6 +69,9 @@ public:
 
 protected:
     CUIXml m_xml;
+    // OP22: GAMMA 2.0 - фон окна скрипта: узлы g2_blur/g2_bg в корне xml становятся первыми детьми окна верхнего уровня
+    xr_vector<CUIWindow*> m_op22_g2_done;
+    void op22_attach(CUIWindow* child, CUIWindow* parent);
 };
 
 add_to_type_list(CScriptXmlInit)

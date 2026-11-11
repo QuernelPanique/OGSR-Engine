@@ -170,7 +170,7 @@ void CUITradeWnd::Init()
     xml_init.Init3tButton(uiXml, "button", 1, &m_uidata->UIToTalkButton);
 
     m_op22_sub_prefix = uiXml.ReadAttrib("op22_other_sub", 0, "prefix", ""); // OP22
-    for (auto [node, wnd] : {std::pair<LPCSTR, CUIStatic**>{"op22_total", &m_op22_total}, {"op22_weight", &m_op22_weight}, {"op22_other_sub", &m_op22_other_sub}}) // OP22
+    for (auto [node, wnd] : {std::pair<LPCSTR, CUIStatic**>{"op22_total", &m_op22_total}, {"op22_weight", &m_op22_weight}, {"op22_other_sub", &m_op22_other_sub}, {"op22_other_name", &m_op22_other_name}}) // OP22
     {
         if (!uiXml.NavigateToNode(node, 0))
             continue;
@@ -219,6 +219,8 @@ void CUITradeWnd::InitTrade(CInventoryOwner* pOur, CInventoryOwner* pOthers)
 
     m_uidata->UICharacterInfoLeft.InitCharacter(m_pInvOwner->object_id());
     m_uidata->UICharacterInfoRight.InitCharacter(m_pOthersInvOwner->object_id());
+    if (m_op22_other_name) // OP22: GAMMA 2.0
+        m_op22_other_name->SetText(m_pOthersInvOwner->Name());
     if (m_op22_other_sub) // OP22: «Торговец, Кордон»
         m_op22_other_sub->SetText(std::format("{}, {}", CStringTable().translate(m_op22_sub_prefix).c_str(), CStringTable().translate(Level().name()).c_str()).c_str());
 
