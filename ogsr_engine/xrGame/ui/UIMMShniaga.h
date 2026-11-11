@@ -68,6 +68,10 @@ protected:
     u32 m_op22_clr[2]{};
     CUIScrollView* m_view_new{};
     CUIStatic* m_op22_panel{};
+    // OP22: подложка списка (op22_box: рамка с тенью, CUIFrameRect) - высота по числу кнопок текущего меню + extra
+    class CUIFrameRect* m_op22_box{};
+    Fvector4 m_op22_box_r{}; // x, y, ширина, extra (поля сверху и снизу вместе)
+    float m_op22_btn_h{};
     void op22_style(xr_vector<CUIStatic*>& lst, CUIWindow* sel);
     xr_vector<CUIStatic*> m_buttons;
     xr_vector<CUIStatic*> m_buttons_new;

@@ -12,6 +12,7 @@
 #include "../Actor.h"
 #include "../saved_game_wrapper.h"
 #include "../UICursor.h" // OP22
+#include "../UIFrameRect.h" // OP22
 
 extern string_path g_last_saved_game;
 
@@ -53,6 +54,7 @@ CUIMMShniaga::CUIMMShniaga()
 CUIMMShniaga::~CUIMMShniaga()
 {
     xr_delete(m_magnifier);
+    xr_delete(m_op22_box); // OP22
     xr_delete(m_shniaga);
     xr_delete(m_anims[0]);
     xr_delete(m_anims[1]);
@@ -94,6 +96,14 @@ void CUIMMShniaga::Init(CUIXml& xml_doc, LPCSTR path)
         AttachChild(m_op22_panel);
         CUIXmlInit::InitStatic(xml_doc, _path, 0, m_op22_panel);
         m_op22_panel->Show(false);
+    }
+    strconcat(sizeof(_path), _path, path, ":op22_box");
+    if (xml_doc.NavigateToNode(_path, 0)) // OP22: подложка списка по числу кнопок
+    {
+        m_op22_box = xr_new<CUIFrameRect>();
+        m_op22_box_r.set(xml_doc.ReadAttribFlt(_path, 0, "x"), xml_doc.ReadAttribFlt(_path, 0, "y"), xml_doc.ReadAttribFlt(_path, 0, "width"),
+                         xml_doc.ReadAttribFlt(_path, 0, "extra"));
+        m_op22_box->Init(xml_doc.Read(_path, 0, ""), 0, 0, m_op22_box_r.z, 100);
     }
     strconcat(sizeof(_path), _path, path, ":buttons_region_new");
     if (xml_doc.NavigateToNode(_path, 0))
@@ -158,6 +168,7 @@ void CUIMMShniaga::CreateList(xr_vector<CUIStatic*>& lst, CUIXml& xml_doc, LPCST
     float height;
 
     height = xml_doc.ReadAttribFlt(path, 0, "btn_height");
+    m_op22_btn_h = height; // OP22
     R_ASSERT(height);
     // OP22: стиль макета - текст слева с отступом, текстура обычной и выбранной кнопки, цвет текста выбранной
     if (xml_doc.ReadAttribInt(path, 0, "op22", 0) == 1)
@@ -318,7 +329,18 @@ void CUIMMShniaga::SelectBtn(CUIWindow* btn)
     }
 }
 
-void CUIMMShniaga::Draw() { CUIWindow::Draw(); }
+void CUIMMShniaga::Draw()
+{
+    if (m_op22_box) // OP22: подложка под кнопками текущего меню
+    {
+        const size_t n = (0 == m_page || m_view_new) ? m_buttons.size() : m_buttons_new.size();
+        Fvector2 pos;
+        GetAbsolutePos(pos);
+        m_op22_box->SetWndSize(Fvector2().set(m_op22_box_r.z, n * m_op22_btn_h + m_op22_box_r.w));
+        m_op22_box->Draw(pos.x + m_op22_box_r.x, pos.y + m_op22_box_r.y);
+    }
+    CUIWindow::Draw();
+}
 
 void CUIMMShniaga::Update()
 {
