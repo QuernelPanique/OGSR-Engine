@@ -157,6 +157,17 @@ void CUIMainIngameWnd::Init()
     xml_init.InitStatic(uiXml, "static_ammo", 0, &UIWeaponSignAmmo);
     UIWeaponSignAmmo.SetElipsis(CUIStatic::eepEnd, 2);
 
+    // OP22: GAMMA 2.0 - патроны в магазине и остаток отдельно («22» и «/ 90»), узлы - дети static_weapon
+    for (auto [node, st] : {std::pair<LPCSTR, CUIStatic**>{"op22_ammo_mag", &m_op22_ammo_mag}, {"op22_ammo_rest", &m_op22_ammo_rest}})
+    {
+        if (!uiXml.NavigateToNode(node, 0))
+            continue;
+        *st = xr_new<CUIStatic>();
+        (*st)->SetAutoDelete(true);
+        UIWeaponBack.AttachChild(*st);
+        xml_init.InitStatic(uiXml, node, 0, *st);
+    }
+
     UIWeaponBack.AttachChild(&UIWeaponIcon);
     xml_init.InitStatic(uiXml, "static_wpn_icon", 0, &UIWeaponIcon);
     UIWeaponIcon.SetShader(GetEquipmentIconsShader());
@@ -203,6 +214,8 @@ void CUIMainIngameWnd::Init()
     m_UIIcons->SetAutoDelete(true);
     xml_init.InitScrollView(uiXml, "icons_scroll_view", 0, m_UIIcons);
     AttachChild(m_UIIcons);
+    m_op22_icons_horz = !!uiXml.ReadAttribInt("icons_scroll_view", 0, "op22_horz", 0); // OP22
+    m_op22_icons_gap = uiXml.ReadAttribFlt("icons_scroll_view", 0, "op22_gap", 0.f);
 
     // Загружаем иконки
     xml_init.InitStatic(uiXml, "starvation_static", 0, &UIStarvationIcon);
@@ -503,9 +516,25 @@ void CUIMainIngameWnd::op22_qs_update()
     }
 }
 
+// OP22: GAMMA 2.0 - значки состояния (и окна скриптов в том же списке) строкой слева направо с зазором
+void CUIMainIngameWnd::op22_icons_layout()
+{
+    if (!m_op22_icons_horz || !m_UIIcons)
+        return;
+    float x = 0.f;
+    for (CUIWindow* w : m_UIIcons->op22_pad()->GetChildWndList())
+    {
+        if (!w->IsShown())
+            continue;
+        w->SetWndPos(Fvector2().set(x, 0.f));
+        x += w->GetWidth() + m_op22_icons_gap;
+    }
+}
+
 void CUIMainIngameWnd::Update()
 {
     op22_qs_update(); // OP22
+    op22_icons_layout();
     m_pActor = smart_cast<CActor*>(Level().CurrentViewEntity());
     if (!m_pActor)
     {
@@ -965,6 +994,22 @@ void CUIMainIngameWnd::UpdateActiveItemInfo()
         UIWeaponSignAmmo.Show(true);
         UIWeaponBack.SetText(str_name.c_str());
         UIWeaponSignAmmo.SetText(str_count.c_str());
+        if (m_op22_ammo_mag || m_op22_ammo_rest) // OP22: «22/90» -> «22» и «/ 90»
+        {
+            const size_t sl = str_count.find('/');
+            const xr_string mag = sl == xr_string::npos ? str_count : str_count.substr(0, sl);
+            const xr_string rest = sl == xr_string::npos ? xr_string() : "/ " + str_count.substr(sl + 1);
+            if (m_op22_ammo_mag)
+            {
+                m_op22_ammo_mag->SetText(mag.c_str());
+                m_op22_ammo_mag->Show(true);
+            }
+            if (m_op22_ammo_rest)
+            {
+                m_op22_ammo_rest->SetText(rest.c_str());
+                m_op22_ammo_rest->Show(true);
+            }
+        }
         SetAmmoIcon(icon_sect_name.c_str());
 
         //-------------------
@@ -974,6 +1019,10 @@ void CUIMainIngameWnd::UpdateActiveItemInfo()
     {
         UIWeaponIcon.Show(false);
         UIWeaponSignAmmo.Show(false);
+        if (m_op22_ammo_mag)
+            m_op22_ammo_mag->Show(false);
+        if (m_op22_ammo_rest)
+            m_op22_ammo_rest->Show(false);
         UIWeaponBack.SetText("");
         m_pWeapon = item ? smart_cast<CWeapon*>(item) : nullptr;
     }

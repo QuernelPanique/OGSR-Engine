@@ -97,6 +97,12 @@ protected:
     //	CUIStatic			UIArtefactIcon;
 
     CUIScrollView* m_UIIcons{};
+    // OP22: GAMMA 2.0 - значки состояния строкой (icons_scroll_view op22_horz="1" op22_gap), патроны двумя узлами
+    bool m_op22_icons_horz{};
+    float m_op22_icons_gap{};
+    CUIStatic* m_op22_ammo_mag{};
+    CUIStatic* m_op22_ammo_rest{};
+    void op22_icons_layout();
 
 public:
     CUIScrollView* op22_icons_view() const { return m_UIIcons; } // OP22: бустеры, болезнь, бессонница
