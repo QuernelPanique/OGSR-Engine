@@ -218,6 +218,10 @@ void CUITalkDialogWnd::AddAnswer(LPCSTR SpeakerName, LPCSTR str, bool bActor)
 {
     CUIAnswerItem* itm = xr_new<CUIAnswerItem>(m_uiXml, bActor ? "actor_answer_item" : "other_answer_item");
     itm->Init(str, SpeakerName);
+    for (u32 i = 0; i < UIAnswersList->GetSize(); ++i) // OP22: GAMMA 2.0 - прежние реплики гаснут, выделена новая
+        if (auto* a = dynamic_cast<CUIAnswerItem*>(UIAnswersList->GetItem(i)))
+            a->op22_highlight(false);
+    itm->op22_highlight(true);
     UIAnswersList->AddWindow(itm, true);
     UIAnswersList->ScrollToEnd();
 
@@ -353,6 +357,36 @@ CUIAnswerItem::CUIAnswerItem(CUIXml* xml_doc, LPCSTR path)
     strconcat(sizeof(str), str, path, ":name_caption");
     xml_init.InitStatic(*xml_doc, str, 0, m_name);
     SetAutoDelete(true);
+    // OP22: GAMMA 2.0 - цвета выделенной (последней) реплики
+    auto rgb = [](LPCSTR s, u32& out) {
+        int r, g, b;
+        if (s && sscanf(s, "%d,%d,%d", &r, &g, &b) == 3)
+        {
+            out = color_argb(255, r, g, b);
+            return true;
+        }
+        return false;
+    };
+    const bool hn = rgb(xml_doc->ReadAttrib(path, 0, "op22_hi_name", nullptr), m_op22_hi_name);
+    const bool ht = rgb(xml_doc->ReadAttrib(path, 0, "op22_hi_text", nullptr), m_op22_hi_text);
+    if (hn || ht)
+    {
+        m_op22_hl = true;
+        m_op22_dim_name = m_name->GetTextColor();
+        m_op22_dim_text = m_text->GetTextColor();
+        if (!hn)
+            m_op22_hi_name = m_op22_dim_name;
+        if (!ht)
+            m_op22_hi_text = m_op22_dim_text;
+    }
+}
+
+void CUIAnswerItem::op22_highlight(bool on)
+{
+    if (!m_op22_hl)
+        return;
+    m_name->SetTextColor(on ? m_op22_hi_name : m_op22_dim_name);
+    m_text->SetTextColor(on ? m_op22_hi_text : m_op22_dim_text);
 }
 
 void CUIAnswerItem::Init(LPCSTR text, LPCSTR name)

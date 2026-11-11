@@ -25,6 +25,7 @@
 #include "UIDragDropListEx.h"
 #include "UICellItem.h"
 #include "UICellItemFactory.h"
+#include "UICellCustomItems.h" // OP22
 #include "UIPropertiesBox.h"
 #include "UIListBoxItem.h"
 
@@ -179,6 +180,7 @@ void CUITradeWnd::Init()
         AttachChild(*wnd);
         xml_init.InitStatic(uiXml, node, 0, *wnd);
     }
+    m_op22_plain = !!uiXml.ReadAttribInt("op22_total", 0, "op22_plain", 0); // OP22
 
     m_pUIPropertiesBox = xr_new<CUIPropertiesBox>();
     m_pUIPropertiesBox->SetAutoDelete(true);
@@ -605,8 +607,9 @@ void CUITradeWnd::UpdatePrices()
                 d.insert(size_t(i), " ");
             return std::string(v < 0 ? "-" : (sign && v > 0 ? "+" : "")) + d + " " + StMoneyDescr;
         };
-        m_uidata->UIOurPriceCaption.GetPhraseByIndex(2)->str = money(int(m_iOurTradePrice), true).c_str();
-        m_uidata->UIOthersPriceCaption.GetPhraseByIndex(2)->str = money(-int(m_iOthersTradePrice), true).c_str();
+        // OP22: GAMMA 2.0 (op22_plain) - «3 150 руб.» на обоих столах, без знака
+        m_uidata->UIOurPriceCaption.GetPhraseByIndex(2)->str = money(int(m_iOurTradePrice), !m_op22_plain).c_str();
+        m_uidata->UIOthersPriceCaption.GetPhraseByIndex(2)->str = money(m_op22_plain ? int(m_iOthersTradePrice) : -int(m_iOthersTradePrice), !m_op22_plain).c_str();
         m_op22_total->SetText(money(int(m_iOurTradePrice) - int(m_iOthersTradePrice), true).c_str());
         if (m_op22_weight)
             InventoryUtilities::op22_UpdateWeight(m_op22_weight, nullptr);
@@ -698,6 +701,8 @@ void CUITradeWnd::FillList(TIItemContainer& cont, CUIDragDropListEx& dragDropLis
         bool canTrade = CanMoveToOther(item, our);
         ColorizeItem(itm, canTrade, itm->m_select_equipped);
         dragDropList.SetItem(itm);
+        if (!canTrade && dragDropList.m_op22_untrad_a >= 0) // OP22: GAMMA 2.0
+            op22_mark_untradable(itm, dragDropList);
     }
 }
 
@@ -868,6 +873,26 @@ void CUITradeWnd::PlaySnd(eInventorySndAction a)
 {
     if (sounds[a]._handle() && !sounds[a]._feedback())
         sounds[a].play(nullptr, sm_2D);
+}
+
+// OP22: GAMMA 2.0 - непродаваемое (надетое) видно приглушённым, с замком в правом верхнем углу (макет Trade)
+void CUITradeWnd::op22_mark_untradable(CUICellItem* itm, CUIDragDropListEx& list)
+{
+    const u32 clr = color_argb(list.m_op22_untrad_a, 255, 255, 255);
+    itm->SetColor(clr);
+    if (auto* w = smart_cast<CUIWeaponCellItem*>(itm))
+        for (u32 i = 0; i < CUIWeaponCellItem::eMaxAddon; ++i)
+            if (CUIStatic* a = w->get_addon_static(i))
+                a->SetColor(clr);
+    if (!list.m_op22_lock.size() || list.m_op22_lock_rect.x <= 0.f)
+        return;
+    CUIStatic* lk = xr_new<CUIStatic>();
+    lk->SetAutoDelete(true);
+    itm->AttachChild(lk);
+    lk->InitTexture(list.m_op22_lock.c_str());
+    lk->SetStretchTexture(true);
+    const Fvector4& r = list.m_op22_lock_rect;
+    lk->SetWndRect(Frect().set(itm->GetWidth() - r.x - r.z, r.w, itm->GetWidth() - r.z, r.w + r.y));
 }
 
 void CUITradeWnd::ColorizeItem(CUICellItem* itm, bool canTrade, bool highlighted)

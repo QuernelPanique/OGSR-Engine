@@ -89,6 +89,8 @@ protected:
     CTrade* m_pOthersTrade;
     CUIPropertiesBox* m_pUIPropertiesBox;
     CUIStatic* m_op22_total{}; // OP22: окно по макету - итог сделки и вес
+    bool m_op22_plain{}; // OP22: GAMMA 2.0 - суммы столов без знака (op22_total op22_plain)
+    void op22_mark_untradable(CUICellItem* itm, CUIDragDropListEx& list);
     CUIStatic* m_op22_weight{};
     CUIStatic* m_op22_other_sub{};
     CUIStatic* m_op22_other_name{}; // OP22: GAMMA 2.0 - имя торговца // OP22: «Торговец, Кордон» - подпись узла (атрибут prefix) и уровень

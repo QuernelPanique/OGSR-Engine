@@ -73,7 +73,10 @@ public:
     bool m_op22_count_at_list{}; // OP22: GAMMA 2.0 - число предметов в углу списка (adjust_cells), а не у иконки
     Fvector4 m_op22_cond{-1.f, -1.f, -1.f, -1.f}; // OP22: GAMMA 2.0 - пунктир состояния: отступ слева, снизу, ширина, высота (op22_cond="x,b,w,h[;x,b,w,h]")
     Fvector4 m_op22_cond_small{-1.f, -1.f, -1.f, -1.f}; // OP22: то же для предметов шириной в 1 клетку (вторая четвёрка)
-    bool m_op22_figure{}; // OP22: GAMMA 2.0 - слот костюма: картинка в полный рост и поверх неё дети списка (батарея) и пунктир состояния
+    bool m_op22_figure{};
+    int m_op22_untrad_a{-1}; // OP22: GAMMA 2.0 - торговля: непродаваемое - прозрачность (op22_untrad_a 0..255) и замок (op22_lock, op22_lock_rect="w,h,отступ справа,сверху")
+    shared_str m_op22_lock;
+    Fvector4 m_op22_lock_rect{}; // OP22: GAMMA 2.0 - слот костюма: картинка в полный рост и поверх неё дети списка (батарея) и пунктир состояния
     void op22_grid(LPCSTR tex);
     void op22_frames(LPCSTR on, LPCSTR off);
 

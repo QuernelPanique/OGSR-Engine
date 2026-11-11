@@ -119,6 +119,10 @@ class CUIAnswerItem : public CUIWindow
 public:
     CUIAnswerItem(CUIXml* xml_doc, LPCSTR path);
     void Init(LPCSTR text, LPCSTR name);
+    // OP22: GAMMA 2.0 - последняя реплика выделена (op22_hi_name / op22_hi_text = "r,g,b" у шаблона), прежние - цветами разметки
+    bool m_op22_hl{};
+    u32 m_op22_dim_name{}, m_op22_dim_text{}, m_op22_hi_name{}, m_op22_hi_text{};
+    void op22_highlight(bool on);
 };
 
 class CUIAnswerItemIconed : public CUIAnswerItem
