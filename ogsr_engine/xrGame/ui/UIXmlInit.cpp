@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "UIXmlInit.h"
+#include "UILines.h" // OP22
 #include "../hudmanager.h"
 #include "../level.h"
 #include "../UICustomItem.h"
@@ -255,6 +256,14 @@ bool CUIXmlInit::InitStatic(CUIXml& xml_doc, LPCSTR path, int index, CUIStatic* 
     int color_alpha = xml_doc.ReadAttribInt(path, index, "color_alpha", 255);
     if (color_alpha < 255)
         pWnd->SetColor(subst_alpha(pWnd->GetColor(), color_alpha));
+
+    // OP22: GAMMA 2.0 - высота строки текста (op22_line_h, единицы окна): межстрочный интервал = высота строки - высота шрифта
+    if (const float lh = xml_doc.ReadAttribFlt(path, index, "op22_line_h", 0.f); lh > 0.f && pWnd->GetFont() && pWnd->m_pLines)
+    {
+        float fh = pWnd->GetFont()->CurrentHeight_();
+        UI()->ClientToScreenScaledHeight(fh);
+        pWnd->m_pLines->op22_SetInterval(_max(0.f, lh - fh));
+    }
 
     return true;
 }
