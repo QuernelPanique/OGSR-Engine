@@ -35,6 +35,11 @@ public:
     static TEX_INFO FindItem(LPCSTR texture_name, LPCSTR def_texture_name);
     static void WriteLog();
 
+    // OP22: текстуры описаний окон загружаются на экране загрузки уровня и держатся до выгрузки уровня - иначе окно
+    // при каждом открытии грузит их с диска (освобождаются с закрытием окна): рывки разговора/инвентаря 30-80 мс (12.11)
+    static void op22_Preload();
+    static void op22_PreloadClear();
+
 protected:
 
     //	typedef xr_string region_name;

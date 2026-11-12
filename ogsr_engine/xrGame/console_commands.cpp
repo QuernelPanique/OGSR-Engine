@@ -1702,6 +1702,10 @@ void CCC_RegisterCommands()
     CMD3(CCC_Mask, "g_ammunition_on_belt", &psActorFlags, AF_AMMO_ON_BELT);
 
     CMD3(CCC_Mask, "g_3d_scopes", &psActorFlags, AF_3D_SCOPES);
+    {
+        extern int g_op22_ui_preload; // OP22: предзагрузка текстур окон (UITextureMaster.cpp)
+        CMD4(CCC_Integer, "op22_ui_preload", &g_op22_ui_preload, 0, 1);
+    }
 
     CMD3(CCC_Mask, "g_crosshair_dbg", &psActorFlags, AF_CROSSHAIR_DBG);
     CMD3(CCC_Mask, "g_camera_collision", &psActorFlags, AF_CAM_COLLISION);

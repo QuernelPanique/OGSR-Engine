@@ -13,6 +13,33 @@
 #include "xrUIXmlParser.h"
 
 xr_map<shared_str, TEX_INFO> CUITextureMaster::m_textures;
+
+// OP22: предзагрузка текстур интерфейса (op22_ui_preload: 0 - нет, 1 - все файлы описаний окон)
+int g_op22_ui_preload = 1;
+static xr_vector<ui_shader> s_op22_preload;
+
+void CUITextureMaster::op22_Preload()
+{
+    op22_PreloadClear();
+    if (!g_op22_ui_preload)
+        return;
+    xr_set<shared_str> files;
+    for (const auto& it : m_textures)
+        if (it.second.file.size())
+            files.insert(it.second.file);
+    s_op22_preload.reserve(files.size());
+    string_path fn;
+    for (const auto& f : files)
+    {
+        if (!FS.exist(fn, "$game_textures$", f.c_str(), ".dds"))
+            continue; // нет файла - окно получит заглушку и так, не создаём лишнего
+        auto& sh = s_op22_preload.emplace_back();
+        sh->create("hud\\default", f.c_str());
+    }
+    Msg("[op22_ui] preload: %u UI textures", u32(s_op22_preload.size()));
+}
+
+void CUITextureMaster::op22_PreloadClear() { s_op22_preload.clear(); }
 #ifdef DEBUG
 u32 CUITextureMaster::m_time = 0;
 #endif

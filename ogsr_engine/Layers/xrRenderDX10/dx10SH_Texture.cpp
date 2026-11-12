@@ -331,6 +331,23 @@ void CTexture::Load(const char* Name)
     ZoneScoped;
     ZoneText(Name, strlen(Name)); // OP22: Tracy - какая текстура грузится
 
+    // OP22: загрузка текстуры во время игры (не на экране загрузки) - рывок; долгие пишем в лог
+    struct op22_tex_timer
+    {
+        const char* n;
+        CTimer t;
+        op22_tex_timer(const char* n_) : n(n_) { t.Start(); }
+        ~op22_tex_timer()
+        {
+            if (g_op22_ingame)
+            {
+                const float ms = t.GetElapsed_sec() * 1000.f;
+                if (ms > 3.f)
+                    Msg("[op22_tex] %s: %.1f ms", n, ms);
+            }
+        }
+    } op22_t(Name);
+
     Preload(Name);
 
     // Check for OGM

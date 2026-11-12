@@ -42,6 +42,22 @@ CDialogHolder::~CDialogHolder()
 
 void CDialogHolder::StartMenu(CUIDialogWnd* pDialog, bool bDoHideIndicators)
 {
+    // OP22: открытие окна дольше 8 мс - в лог (рывки окон, 12.11)
+    struct op22_open_timer
+    {
+        CUIDialogWnd* w;
+        CTimer t;
+        op22_open_timer(CUIDialogWnd* w_) : w(w_) { t.Start(); }
+        ~op22_open_timer()
+        {
+            const float ms = t.GetElapsed_sec() * 1000.f;
+            if (ms > 8.f)
+            {
+                const shared_str wn = w->WindowName();
+                Msg("[op22_ui] open %s: %.1f ms", wn.size() ? wn.c_str() : typeid(*w).name(), ms);
+            }
+        }
+    } op22_t(pDialog);
     ZoneScoped; // OP22: Tracy - открытие окна (имя окна или класс)
 #ifdef TRACY_ENABLE
     {

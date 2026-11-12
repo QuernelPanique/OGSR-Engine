@@ -103,6 +103,22 @@ bool CXml::Load(LPCSTR path, LPCSTR xml_filename, bool fatal)
 {
     ZoneScoped; // OP22: Tracy - разбор XML окон
     ZoneText(xml_filename, strlen(xml_filename));
+    // OP22: разбор XML во время игры (открытие окна) - долгий пишем в лог
+    struct op22_xml_timer
+    {
+        const char* n;
+        CTimer t;
+        op22_xml_timer(const char* n_) : n(n_) { t.Start(); }
+        ~op22_xml_timer()
+        {
+            if (g_op22_ingame)
+            {
+                const float ms = t.GetElapsed_sec() * 1000.f;
+                if (ms > 3.f)
+                    Msg("[op22_xml] %s: %.1f ms", n, ms);
+            }
+        }
+    } op22_t(xml_filename);
     // Load and parse xml file
 
     IReader* F = op22_open(path, xml_filename);

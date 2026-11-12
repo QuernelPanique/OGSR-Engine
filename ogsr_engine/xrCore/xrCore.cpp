@@ -14,6 +14,7 @@ XRCORE_API task_thread_pool::task_thread_pool* TTAPI{};
 
 // indicate that we reach WinMain, and all static variables are initialized
 XRCORE_API bool gModulesLoaded = false;
+XRCORE_API bool g_op22_ingame = false; // OP22
 
 namespace
 {

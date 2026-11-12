@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "HUDmanager.h"
+#include "ui/UITextureMaster.h" // OP22
 #include "PHdynamicdata.h"
 #include "Physics.h"
 #include "level.h"
@@ -106,10 +107,12 @@ bool CLevel::net_start_client5()
 
         // Textures
         HUD().Load();
+        CUITextureMaster::op22_Preload(); // OP22: текстуры окон - вместе с текстурами уровня (догрузка ниже)
         g_pGamePersistent->LoadTitle("st_loading_textures");
         Device.m_pRender->DeferredLoad(FALSE);
         Device.m_pRender->ResourcesDeferredUpload();
         LL_CheckTextures();
+        g_op22_ingame = true; // OP22: дальше - игра (замеры долгих загрузок в лог)
     }
     return true;
 }

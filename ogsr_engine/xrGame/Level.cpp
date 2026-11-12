@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "../xr_3da/fdemorecord.h"
+#include "ui/UITextureMaster.h" // OP22
 #include "../xr_3da/fdemoplay.h"
 #include "../xr_3da/environment.h"
 #include "../xr_3da/IGame_Persistent.h"
@@ -130,6 +131,8 @@ CLevel::CLevel()
 
 CLevel::~CLevel()
 {
+    g_op22_ingame = false; // OP22
+    CUITextureMaster::op22_PreloadClear(); // OP22: текстуры окон держались до выгрузки уровня
     xr_delete(g_player_hud);
     //	g_pGameLevel		= NULL;
     Msg("- Destroying level");
