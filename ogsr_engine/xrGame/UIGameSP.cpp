@@ -24,6 +24,9 @@
 
 #include "inventory.h"
 #include "HudItem.h"
+#include "ai_space.h" // OP22
+#include "game_graph.h" // OP22
+#include "string_table.h" // OP22
 
 CUIGameSP::CUIGameSP()
 {
@@ -323,6 +326,22 @@ bool g_block_pause = false;
 
 void CChangeLevelWnd::Show()
 {
+    // OP22: текст как в ОП (xrGame.dll, CChangeLevelWnd::Show): level_changer_invitation «Перейти на территорию '%s'?» с
+    // переведённым именем уровня вершины m_game_vertex_id; нет уровня - unknown_territory. OGSR текст не задавал (пустое окно)
+    {
+        shared_str lname = "unknown_territory";
+        if (ai().get_game_graph() && ai().game_graph().valid_vertex_id(m_game_vertex_id))
+        {
+            const auto& levels = ai().game_graph().header().levels();
+            const auto I = levels.find(ai().game_graph().vertex(m_game_vertex_id)->level_id());
+            if (I != levels.end())
+                lname = (*I).second.name();
+        }
+        CStringTable st;
+        string512 buf;
+        xr_sprintf(buf, *st.translate("level_changer_invitation"), *st.translate(lname));
+        m_messageBox->SetText(buf);
+    }
     g_block_pause = true;
     Device.Pause(TRUE, TRUE, TRUE, "CChangeLevelWnd_show");
     bShowPauseString = FALSE;

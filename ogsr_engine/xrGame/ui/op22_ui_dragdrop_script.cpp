@@ -307,8 +307,6 @@ static bool dd_HasFreeSpace(CUIDragDropListEx* l) { return l->op22_HasFreeSpace(
 static CUICellItem* dd_FindSimilar(CUIDragDropListEx*, CUICellItem*) { return nullptr; }
 static CUICellItem* dd_RemoveItem(CUIDragDropListEx* l, CUICellItem* c) { return c ? l->RemoveItem(c, false) : nullptr; }
 static void dd_noop(CUIDragDropListEx*) {}
-static void dd_SetSuitable1(CUIDragDropListEx*, LPCSTR) {}
-static void dd_SetSuitable2(CUIDragDropListEx*, const luabind::object&) {}
 static CUICellItem* dd_GetSelectedCell(CUIDragDropListEx* l) { auto s = script_list(l); return s ? s->m_script_selected : nullptr; }
 static CUICellItem* dd_GetItemIdx(CUIDragDropListEx* l, u32 idx, bool) { return idx < l->ItemsCount() ? l->GetItemIdx(idx) : nullptr; }
 static int dd_GetItemPos(CUIDragDropListEx* l, CUICellItem* c)
@@ -367,6 +365,45 @@ static LPCSTR ci_GetCellSection(CUICellItem* c)
     if (auto itm = static_cast<CInventoryItem*>(c->m_pData))
         return itm->object().cNameSect().c_str();
     return "";
+}
+// OP22: подсветка подходящих в скриптовом списке (рюкзак ui_storage_viewer): в ОП метод помечал ячейки нужных секций,
+// у нас был пустым. Ячейки списка: с секцией скрипта (CUIOP22SectionCell) или с предметом. Остальные ячейки снимаются.
+static void dd_mark_sects(CUIDragDropListEx* l, const xr_vector<shared_str>& sects)
+{
+    for (u32 i = 0, n = l->ItemsCount(); i < n; ++i)
+    {
+        CUICellItem* c = l->GetItemIdx(i);
+        const shared_str sect = ci_GetCellSection(c);
+        c->m_select_armament = sect.size() && std::find(sects.begin(), sects.end(), sect) != sects.end();
+    }
+}
+static void dd_SetSuitable1(CUIDragDropListEx* l, LPCSTR sect)
+{
+    if (l && sect)
+        dd_mark_sects(l, xr_vector<shared_str>{shared_str(sect)});
+}
+static void dd_SetSuitable2(CUIDragDropListEx* l, const luabind::object& o)
+{
+    if (!l)
+        return;
+    xr_vector<shared_str> s;
+    if (o.type() == LUA_TSTRING)
+        s.emplace_back(luabind::object_cast<LPCSTR>(o));
+    else if (o.type() == LUA_TTABLE)
+        for (auto it = o.begin(); it != o.end(); ++it)
+        {
+            luabind::object v = *it;
+            if (v.type() == LUA_TSTRING)
+                s.emplace_back(luabind::object_cast<LPCSTR>(v));
+        }
+    dd_mark_sects(l, s);
+}
+static void dd_ClearSuitables(CUIDragDropListEx* l)
+{
+    if (!l)
+        return;
+    for (u32 i = 0, n = l->ItemsCount(); i < n; ++i)
+        l->GetItemIdx(i)->m_select_armament = false;
 }
 static void ci_SetCellCondition(CUICellItem* c, float v)
 {
@@ -764,7 +801,7 @@ void op22_register_dragdrop(lua_State* L)
                   .def("HasFreeSpace", &dd_HasFreeSpace)
                   .def("FindSimilar", &dd_FindSimilar)
                   .def("RemoveItem", &dd_RemoveItem)
-                  .def("ClearAllSuitables", &dd_noop)
+                  .def("ClearAllSuitables", &dd_ClearSuitables)
                   .def("ClearAllHighLighted", &dd_noop)
                   .def("SetSuitableBySection", &dd_SetSuitable1)
                   .def("SetSuitableBySection", &dd_SetSuitable2)
