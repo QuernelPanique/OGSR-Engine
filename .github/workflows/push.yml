@@ -25,14 +25,12 @@ jobs:
       fail-fast: false
       matrix:
 #        Configuration: [Debug, Release, ReleaseTracyProfiler]
-        Configuration: [Release, ReleaseTracyProfiler]   # OP22: Release + Tracy (профилирование, отдельный артефакт)
+        Configuration: [Release]   # OP22: только Release (Tracy - 12.11 исключён решением пользователя; вернуть - добавить ReleaseTracyProfiler)
         Platform: [x64]
         include:
 #          - Configuration: Debug
 #            ConfigurationReal: Debug
           - Configuration: Release
-            ConfigurationReal: Release
-          - Configuration: ReleaseTracyProfiler
             ConfigurationReal: Release
     steps:
     - uses: actions/checkout@v7.0.1
