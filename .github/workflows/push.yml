@@ -25,12 +25,14 @@ jobs:
       fail-fast: false
       matrix:
 #        Configuration: [Debug, Release, ReleaseTracyProfiler]
-        Configuration: [Release]   # OP22: только Release
+        Configuration: [Release, ReleaseTracyProfiler]   # OP22: Release + Tracy (профилирование, отдельный артефакт)
         Platform: [x64]
         include:
 #          - Configuration: Debug
 #            ConfigurationReal: Debug
           - Configuration: Release
+            ConfigurationReal: Release
+          - Configuration: ReleaseTracyProfiler
             ConfigurationReal: Release
     steps:
     - uses: actions/checkout@v7.0.1
@@ -89,8 +91,9 @@ jobs:
           3rd_party/_TEMP
           3rd_party/_LIB
           bin_x64
-        key: build-fast-${{ matrix.Platform }}-${{ github.sha }}
-        restore-keys: build-fast-${{ matrix.Platform }}-
+        # OP22: кэш у каждой конфигурации свой - TRACY_ENABLE меняет код, объекты смешивать нельзя
+        key: build-fast-${{ matrix.Platform }}-${{ matrix.Configuration }}-${{ github.sha }}
+        restore-keys: build-fast-${{ matrix.Platform }}-${{ matrix.Configuration }}-
 
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v3
