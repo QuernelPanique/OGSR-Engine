@@ -167,7 +167,7 @@ void CKinematics::BuildBoneMatrix(const CBoneData* bd, CBoneInstance& bi, const 
 
 void CKinematics::CLBone(const CBoneData* bd, CBoneInstance& bi, const Fmatrix* parent, u8 channel_mask /*= (1<<0)*/)
 {
-    ZoneScoped;
+    ZoneScopedHot; // OP22: горячая зона
 
     const u16 SelfID = bd->GetSelfID();
 

@@ -151,7 +151,7 @@ void Fvisual::Load(const char* N, IReader* data, u32 dwFlags)
 
 void Fvisual::Render(CBackend& cmd_list, float, bool use_fast_geo)
 {
-    ZoneScoped;
+    ZoneScopedHot; // OP22: горячая зона
 
     if (m_fast && use_fast_geo && !cmd_list.is_TessEnabled())
     {

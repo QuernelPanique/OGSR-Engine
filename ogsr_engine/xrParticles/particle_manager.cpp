@@ -148,7 +148,7 @@ void CParticleManager::StopEffect(int effect_id, int alist_id, BOOL deffered)
 // update&render
 void CParticleManager::Update(int effect_id, int alist_id, float dt)
 {
-    ZoneScoped;
+    ZoneScopedHot; // OP22: горячая зона
 
     ParticleEffect* pe = GetEffectPtr(effect_id);
     ParticleActions* pa = GetActionListPtr(alist_id);

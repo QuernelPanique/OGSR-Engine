@@ -112,7 +112,7 @@ void FTreeVisual::Render(CBackend& cmd_list, float lod, bool use_fast_geo) { R_A
 
 void FTreeVisual::DoRenderInstanced(CBackend& cmd_list, const xr_vector<FloraVertData*>& data, const u32 countV, const u32 startI, const u32 PC)
 {
-    ZoneScoped;
+    ZoneScopedHot; // OP22: горячая зона
 
     u32 sizeof_vbuffer = static_cast<u32>(data.size());
     ID3DVertexBuffer* current_vbuffer = cmd_list.GetFloraVbuff(sizeof_vbuffer);

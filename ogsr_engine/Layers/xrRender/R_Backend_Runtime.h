@@ -111,7 +111,7 @@ IC void CBackend::set_Pass(SPass* P)
 
 IC void CBackend::set_Element(ShaderElement* S, u32 pass)
 {
-    ZoneScoped;
+    ZoneScopedHot;
 
     SPass& P = *(S->passes[pass]);
 

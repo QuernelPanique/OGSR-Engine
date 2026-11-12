@@ -94,6 +94,18 @@
 #define STOP_PROFILE }
 #endif
 
+// OP22: зоны во внутренних циклах (миллионы вызовов в секунду) - по умолчанию выключены: трасса в 5 минут набирала
+// 1,4 млрд зон и не помещалась в память при сохранении (12.11). Включить - определить OP22_TRACY_HOT.
+#if defined(TRACY_ENABLE) && defined(OP22_TRACY_HOT)
+#define ZoneScopedHot ZoneScoped
+#define ZoneScopedNHot(a) ZoneScopedN(a)
+#define START_PROFILE_HOT(a) { ZoneScopedN(a);
+#else
+#define ZoneScopedHot
+#define ZoneScopedNHot(a)
+#define START_PROFILE_HOT(a) {
+#endif
+
 #include "Utils/imdexlib/fast_dynamic_cast.hpp"
 #define smart_cast imdexlib::fast_dynamic_cast
 

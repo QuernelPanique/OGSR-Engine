@@ -77,7 +77,7 @@ void R_dsgraph_structure::r_dsgraph_render_graph_static(const u32 _priority, con
                     cmd_list.lod.set_lod(lod);
 
                     {
-                        ZoneScopedN("render_static_visual");
+                        ZoneScopedNHot("render_static_visual");
 
                         item.pVisual->Render(cmd_list, clampr(1.f - (1.f - lod) * ps_r__LOD_k, 0.01f, 1.f), phase != CRender::PHASE_NORMAL);
                     }
@@ -117,7 +117,7 @@ void R_dsgraph_structure::r_dsgraph_render_graph_static(const u32 _priority, con
                     for (const auto& tree : *items.trees)
                     {
                         {
-                            ZoneScopedN("render_static_visual_trees");
+                            ZoneScopedNHot("render_static_visual_trees");
 
                             if (skip_tree_branches && tree.second.pVisual->GetShaderFlags(SE_R2_SHADOW).bTreeBranch)
                                 continue;

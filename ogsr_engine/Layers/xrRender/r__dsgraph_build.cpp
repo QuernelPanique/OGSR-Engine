@@ -496,7 +496,7 @@ void R_dsgraph_structure::add_leafs_dynamic(IRenderable* root, dxRender_Visual* 
 
 void R_dsgraph_structure::add_leafs_static(dxRender_Visual* pVisual)
 {
-    ZoneScoped;
+    ZoneScopedHot;
 
     if (pVisual->getVisData().marker[context_id] == marker)
         return;
@@ -598,7 +598,7 @@ void R_dsgraph_structure::add_leafs_static(dxRender_Visual* pVisual)
 
 void R_dsgraph_structure::add_static(dxRender_Visual* pVisual, const CFrustum& view, u32 planes)
 {
-    ZoneScoped;
+    ZoneScopedHot; // OP22: горячая зона
 
     vis_data& vis = pVisual->getVisData();
     if (vis.marker[context_id] == marker)

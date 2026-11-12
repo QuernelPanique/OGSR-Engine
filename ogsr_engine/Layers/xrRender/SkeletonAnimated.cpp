@@ -889,7 +889,7 @@ void CKinematicsAnimated::LL_BoneMatrixBuild(CBoneInstance& bi, const Fmatrix* p
 
 void CKinematicsAnimated::BuildBoneMatrix(const CBoneData* bd, CBoneInstance& bi, const Fmatrix* parent, u8 channel_mask /*= (1<<0)*/)
 {
-    ZoneScoped;
+    ZoneScopedHot; // OP22: горячая зона
 
     SKeyTable keys;
     LL_BuldBoneMatrixDequatize(bd, channel_mask, keys);

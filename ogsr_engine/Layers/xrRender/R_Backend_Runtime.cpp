@@ -350,7 +350,7 @@ extern float r__dtex_range;
 
 void CBackend::apply_lmaterial()
 {
-    ZoneScoped;
+    ZoneScopedHot; // OP22: горячая зона
 
     const R_constant* C = get_c(c_sbase)._get(); // get sampler
     if (!C)

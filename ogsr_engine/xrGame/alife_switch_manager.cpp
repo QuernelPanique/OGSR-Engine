@@ -134,7 +134,7 @@ void CALifeSwitchManager::switch_offline(CSE_ALifeDynamicObject* object)
 
 bool CALifeSwitchManager::synchronize_location(CSE_ALifeDynamicObject* I)
 {
-    START_PROFILE("ALife/switch/synchronize_location")
+    START_PROFILE_HOT("ALife/switch/synchronize_location")
 #ifdef DEBUG
     VERIFY3(ai().level_graph().level_id() == ai().game_graph().vertex(I->m_tGraphID)->level_id(), *I->s_name, I->name_replace());
     if (!I->children.empty())
@@ -168,7 +168,7 @@ bool CALifeSwitchManager::synchronize_location(CSE_ALifeDynamicObject* I)
 
 void CALifeSwitchManager::try_switch_online(CSE_ALifeDynamicObject* I)
 {
-    START_PROFILE("ALife/switch/try_switch_online")
+    START_PROFILE_HOT("ALife/switch/try_switch_online")
     // so, the object is offline
     // checking if the object is not attached
     if (0xffff != I->ID_Parent)
@@ -203,7 +203,7 @@ void CALifeSwitchManager::try_switch_online(CSE_ALifeDynamicObject* I)
 
 void CALifeSwitchManager::try_switch_offline(CSE_ALifeDynamicObject* I)
 {
-    START_PROFILE("ALife/switch/try_switch_offline")
+    START_PROFILE_HOT("ALife/switch/try_switch_offline")
     // checking if the object is not attached
     if (0xffff != I->ID_Parent)
     {

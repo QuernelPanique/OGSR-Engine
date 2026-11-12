@@ -69,7 +69,7 @@ public:
 
 void ISpatial_DB::q_box(xr_vector<ISpatial*>& R, u32 _o, u32 _mask, const Fvector& _center, const Fvector& _size)
 {
-    ZoneScoped;
+    ZoneScopedHot; // OP22: горячая зона
 
     std::shared_lock lock{spatial_db_mtx};
 

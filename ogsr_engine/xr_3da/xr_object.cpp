@@ -342,7 +342,7 @@ void CObject::UpdateCL()
 
 void CObject::shedule_Update(u32 T)
 {
-    ZoneScoped;
+    ZoneScopedHot; // OP22: горячая зона
 
     ISheduled::shedule_Update(T);
     spatial_update(base_spu_epsP * 1, base_spu_epsR * 1);
