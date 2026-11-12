@@ -146,6 +146,7 @@ extern Fvector4 ps_ssfx_int_grass_params_1;
 extern ECORE_API Fvector4 ps_ssfx_grass_shadows;
 extern Fvector3 ps_ssfx_shadow_cascades;
 extern ECORE_API Fvector3 ps_ssfx_shadows;
+extern float ps_op22_sun_far_cull, ps_op22_light_shadow_dist; // OP22
 extern Fvector4 ps_ssfx_wind_grass, ps_ssfx_wind_trees;
 extern ECORE_API Fvector4 ps_ssfx_rain_1;
 extern ECORE_API Fvector4 ps_ssfx_rain_2;

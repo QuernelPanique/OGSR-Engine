@@ -1,7 +1,7 @@
 #ifndef SLB_MOTION_BLUR_SETTINGS_H
 #define SLB_MOTION_BLUR_SETTINGS_H
 
-#define SLB_MBLUR_SAMPLES int(6) /// Blur samples     /// default int(4)      /// vanilla int(6)
+#define SLB_MBLUR_SAMPLES int(4) /// Blur samples     /// default int(4)      /// vanilla int(6) /// OP22: 4 (9 выборок вместо 13)
 #define SLB_MBLUR_CLAMP float(0.012) /// Max blur length  /// default float(0.1)  /// vanilla float(0.012)
 #define SLB_MBLUR_LENGTH float(12) /// Blur length      /// default float(120)  /// vanilla float(12)
 

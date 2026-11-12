@@ -108,12 +108,20 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
             m_saved_viewproj.set(Device.mFullTransform);
         }
 
+        // OP22: ssr_setup.x > 1 - шейдер пишет результат в левую верхнюю часть (tc * x), остальное не читается:
+        // ограничиваем растеризацию этой частью, иначе пониженное разрешение ничего не экономит
+        const bool ssr_scissor = ps_ssfx_ssr_1.x > 1.01f;
+        Irect ssr_rect{0, 0, iCeil(rt_ssr2->dwWidth / ps_ssfx_ssr_1.x) + 1, iCeil(rt_ssr2->dwHeight / ps_ssfx_ssr_1.x) + 1};
         RenderScreenTriangle(cmd_list, rt_ssr2, s_ssr->E[0], [&]() {
             cmd_list.set_c("ssr_setup", ps_ssfx_ssr_1);
             cmd_list.set_c("ssfx_ssr_2", ps_ssfx_ssr_2);
             cmd_list.set_c("m_current", m_current);
             cmd_list.set_c("m_previous", m_previous);
+            if (ssr_scissor)
+                cmd_list.set_Scissor(&ssr_rect);
         });
+        if (ssr_scissor)
+            cmd_list.set_Scissor(nullptr);
 
         HW.get_context(CHW::IMM_CTX_ID)->CopyResource(rt_ssr1->pSurface, rt_ssr2->pSurface);
 

@@ -76,6 +76,9 @@ constexpr xr_token fsr3_quality_token[]{
 };
 
 float ps_r_dlss_3dss_scale_factor{1.0f};
+// OP22: производительность (12.11, по трассе Tracy); 0 - поведение прежнее
+float ps_op22_sun_far_cull{0.f}; // дальний каскад солнца: не рисовать статику с радиусом меньше N текселей карты
+float ps_op22_light_shadow_dist{0.f}; // фонари дальше N м от камеры - без теней (и объёмного света), как r2_exp_far_no_shadows
 
 u32 ps_r_sunshafts_mode = SS_SS_OGSE;
 constexpr xr_token sunshafts_mode_token[]{{"st_opt_off", SS_OFF},
@@ -899,6 +902,8 @@ void xrRender_initconsole()
     CMD1(CCC_DlssDllVersion, "r_aa_dlss_version");
 
     CMD4(CCC_Float, "r_3dss_scale_factor", &ps_r_dlss_3dss_scale_factor, 1.f, 2.5f);
+    CMD4(CCC_Float, "r_op22_sun_far_cull", &ps_op22_sun_far_cull, 0.f, 8.f); // OP22
+    CMD4(CCC_Float, "r_op22_light_shadow_dist", &ps_op22_light_shadow_dist, 0.f, 500.f); // OP22
 
     CMD4(CCC_Integer, "r__no_scale_on_fade", &ps_no_scale_on_fade, 0, 1); // Alundaio
 

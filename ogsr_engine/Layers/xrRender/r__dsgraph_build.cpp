@@ -328,6 +328,9 @@ void R_dsgraph_structure::r_dsgraph_insert_static(dxRender_Visual* pVisual)
 
     //ZoneScoped;
 
+    if (smap_min_radius > 0.f && pVisual->getVisData().sphere.R < smap_min_radius) // OP22
+        return;
+
     float dist_sqr;
     const float SSA = CalcSSA(dist_sqr, pVisual->getVisData().sphere.P, pVisual->getVisData().sphere.R /*+ 0*/);
     if (SSA <= r_ssaDISCARD)

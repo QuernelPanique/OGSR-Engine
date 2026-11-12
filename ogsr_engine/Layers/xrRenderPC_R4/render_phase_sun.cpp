@@ -234,8 +234,14 @@ void render_sun::calculate()
 
             IRender_Sector::sector_id_t id = RImplementation.get_largest_sector();
 
+            // OP22: в дальнем каскаде мелкая статика (меньше r_op22_sun_far_cull текселей) тени не даёт - не рисуем
+            dsgraph.smap_min_radius = (cascade_ind == R__NUM_SUN_CASCADES - 1 && ps_op22_sun_far_cull > 0.f) ?
+                ps_op22_sun_far_cull * m_sun_cascades[cascade_ind].size / static_cast<float>(RImplementation.o.sun_cascades_smapsize[cascade_ind]) :
+                0.f;
+
             // Fill the database
             dsgraph.build_subspace(id, cull_frustum[cascade_ind], cull_xform[cascade_ind], cull_COP[cascade_ind], TRUE);
+            dsgraph.smap_min_radius = 0.f;
         }
     };
 

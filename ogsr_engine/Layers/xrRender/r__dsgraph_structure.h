@@ -36,6 +36,7 @@ public:
 
     Fvector render_position{};
     float max_render_distance{-1.f};
+    float smap_min_radius{0.f}; // OP22: статика меньше этого радиуса не попадает в построение (дальний каскад солнца)
 
 public:
     // Dynamic scene graph

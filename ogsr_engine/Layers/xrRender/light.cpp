@@ -405,7 +405,8 @@ void light::export_to(light_Package& package)
     if (distance > (g_pGamePersistent->Environment().CurrentEnv->fog_distance))
         return;
 
-    if (ps_r2_ls_flags.test(R2FLAG_LIGHT_NO_DIST_SHADOWS) && (distance > 100.f /*|| range > 25.f*/))
+    if ((ps_r2_ls_flags.test(R2FLAG_LIGHT_NO_DIST_SHADOWS) && (distance > 100.f /*|| range > 25.f*/)) ||
+        (ps_op22_light_shadow_dist > 0.f && distance > ps_op22_light_shadow_dist)) // OP22: дистанция настраивается
     {
         flags.bShadow = false;
         flags.bVolumetric = false;
