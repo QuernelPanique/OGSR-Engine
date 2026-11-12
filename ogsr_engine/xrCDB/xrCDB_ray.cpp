@@ -272,7 +272,7 @@ public:
 
 void COLLIDER::ray_query(u32 ray_mode, const MODEL* m_def, const Fvector& r_start, const Fvector& r_dir, float r_range)
 {
-    ZoneScopedHot; // OP22: горячая зона
+    ZoneScoped;
     ZoneValue(static_cast<uint64_t>(r_range));
 
     m_def->syncronize();
