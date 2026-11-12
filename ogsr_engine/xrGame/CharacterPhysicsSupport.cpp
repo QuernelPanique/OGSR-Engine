@@ -322,7 +322,7 @@ LPSTR dbg_stalker_death_anim = sdbg_stalker_death_anim;
 BOOL b_death_anim_velocity = TRUE;
 #endif
 
-BOOL g_bCopDeathAnim = TRUE;
+BOOL g_bCopDeathAnim = FALSE; // OP22: как в ОП - анимации смерти (random_death_animations) xrGame.dll ОП загружает, но в KillHit не играет: тело - чистый рэгдолл с полным импульсом
 
 const float cmp_angle = M_PI / 10.f;
 const float cmp_ldisp = 0.1f;
