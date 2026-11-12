@@ -83,11 +83,6 @@ float3 SLB_MBlur(float2 uv, float3 pos, float3 img, float2 pixel_velocity, uint 
     pixel_velocity *= SLB_MBlur_WeaponMask(pos);
 #endif
 
-    /// OP22: смещение меньше полпикселя - размывать нечего (камера стоит или оружие/худ), выборки не нужны
-    float2 op22_px = pixel_velocity * screen_res.xy;
-    if (dot(op22_px, op22_px) < 0.25)
-        return img;
-
 #ifdef SLB_MBLUR_SIGHT_MASK
     pixel_velocity *= SLB_MBlur_SightMask(uv, img, aspect, iSample);
 #endif
