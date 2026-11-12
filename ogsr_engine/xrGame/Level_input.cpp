@@ -169,12 +169,16 @@ void CLevel::IR_OnKeyboardPress(int key)
 
     if (Actor())
     {
-        Actor()->callback(GameObject::eOnKeyPress)(key, _curr);
+        {
+            ZoneScopedN("lua on_key_press"); // OP22: Tracy - скрипты на нажатие
+            Actor()->callback(GameObject::eOnKeyPress)(key, _curr);
+        }
 
         if (g_bDisableAllInput)
             return;
     }
 
+    ZoneScopedN("CLevel key: UI/actor"); // OP22: Tracy - окна и актор по клавише
     if (b_ui_exist && HUD().GetUI()->IR_OnKeyboardPress(key))
         return;
 

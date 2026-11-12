@@ -156,16 +156,23 @@ void CInput::KeyUpdate()
             if (this->is_exclusive_mode && (key == DIK_LSHIFT || key == DIK_RSHIFT) && (this->iGetAsyncKeyState(DIK_LMENU) || this->iGetAsyncKeyState(DIK_RMENU)))
                 PostMessage(gGameWindow, WM_INPUTLANGCHANGEREQUEST, 2, 0); //Переключили язык. В эксклюзивном режиме это обязательно для правильной работы функции DikToChar
 
+            ZoneScopedN("IR_KeyPress"); // OP22: Tracy - рывки при нажатиях
+            ZoneValue(key);
             cbStack.back()->IR_OnKeyboardPress(key);
         }
         else
         {
+            ZoneScopedN("IR_KeyRelease"); // OP22: Tracy
+            ZoneValue(key);
             cbStack.back()->IR_OnKeyboardRelease(key);
         }
     }
     for (i = 0; i < COUNT_KB_BUTTONS; i++)
         if (KBState[i])
+        {
+            ZoneScopedN("IR_KeyHold"); // OP22: Tracy
             cbStack.back()->IR_OnKeyboardHold(i);
+        }
 
     if (!b_altF4 && iGetAsyncKeyState(DIK_F4) && (iGetAsyncKeyState(DIK_RMENU) || iGetAsyncKeyState(DIK_LMENU)))
     {
@@ -267,12 +274,16 @@ void CInput::MouseUpdate()
             mouseState[i] = TRUE;
             if (mouseTime[i] == 0)
                 mouseTime[i] = dwCurTime;
+            ZoneScopedN("IR_MousePress"); // OP22: Tracy
+            ZoneValue(i);
             cbStack.back()->IR_OnMousePress(i);
         }
         else
         {
             mouseState[i] = FALSE;
             mouseTime[i] = 0;
+            ZoneScopedN("IR_MouseRelease"); // OP22: Tracy
+            ZoneValue(i);
             cbStack.back()->IR_OnMouseRelease(i);
         }
     };
@@ -363,9 +374,15 @@ void CInput::MouseUpdate()
     if (dwElements)
     {
         if (offs[0] || offs[1])
+        {
+            ZoneScopedN("IR_MouseMove"); // OP22: Tracy
             cbStack.back()->IR_OnMouseMove(offs[0], offs[1]);
+        }
         if (offs[2])
+        {
+            ZoneScopedN("IR_MouseWheel"); // OP22: Tracy
             cbStack.back()->IR_OnMouseWheel(offs[2]);
+        }
     }
     else
     {

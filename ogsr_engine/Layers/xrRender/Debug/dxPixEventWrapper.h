@@ -11,8 +11,14 @@ class dxPixEventWrapper
 
     size_t idx{};
 
+    // OP22: Tracy - замер видеокарты на каждом проходе PIX_EVENT, только в основном контексте D3D11
+    // (запросы времени в отложенном контексте не означают время на видеокарте)
+    tracy::D3D11ZoneScope gpu_zone;
+
 public:
-    dxPixEventWrapper(CBackend& cmd_list_in, const char* name, const wchar_t* wname) : cmd_list(cmd_list_in)
+    dxPixEventWrapper(CBackend& cmd_list_in, const char* name, const wchar_t* wname)
+        : cmd_list(cmd_list_in), gpu_zone(HW.profiler_ctx, __LINE__, __FILE__, sizeof(__FILE__) - 1, "PIX_EVENT", 9, name, strlen(name),
+                                          cmd_list_in.context_id == CHW::IMM_CTX_ID)
     {
         cmd_list.gpu_mark_begin(wname);
 

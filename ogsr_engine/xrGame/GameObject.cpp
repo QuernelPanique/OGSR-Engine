@@ -776,6 +776,7 @@ void CGameObject::DestroyObject()
 void CGameObject::shedule_Update(u32 dt)
 {
     ZoneScoped;
+    ZoneText(cName().c_str(), cName().size()); // OP22: Tracy - какой объект
 
     CCF_Skeleton* skeleton = smart_cast<CCF_Skeleton*>(CFORM());
     if (skeleton && skeleton->NeedInitialCalculate())
@@ -793,7 +794,10 @@ void CGameObject::shedule_Update(u32 dt)
 
     inherited::shedule_Update(dt);
     FeelTouchAddonsUpdate();
-    CScriptBinder::shedule_Update(dt);
+    {
+        ZoneScopedN("CScriptBinder::shedule_Update"); // OP22: Tracy - Lua-биндер объекта
+        CScriptBinder::shedule_Update(dt);
+    }
 }
 
 BOOL CGameObject::net_SaveRelevant() { return (CScriptBinder::net_SaveRelevant()); }
