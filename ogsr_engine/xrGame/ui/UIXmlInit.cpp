@@ -893,6 +893,8 @@ CUIXmlInit::StaticsVec CUIXmlInit::InitAutoStaticGroup(CUIXml& xml_doc, LPCSTR p
         pUIStatic->SetWindowName(sname);
         pUIStatic->SetAutoDelete(true);
         pParentWnd->AttachChild(pUIStatic);
+        if (xml_doc.ReadAttribInt("auto_static", i, "op22_back", 0)) // OP22: фон окна - под всеми детьми (рисуется первым)
+            pParentWnd->BringToBottom(pUIStatic);
         tmpVec.push_back(pUIStatic);
         pUIStatic = NULL;
     }
@@ -914,6 +916,8 @@ CUIXmlInit::StaticsVec CUIXmlInit::InitAutoStatic(CUIXml& xml_doc, LPCSTR tag_na
         InitStatic(xml_doc, tag_name, i, pUIStatic);
         pUIStatic->SetAutoDelete(true);
         pParentWnd->AttachChild(pUIStatic);
+        if (xml_doc.ReadAttribInt(tag_name, i, "op22_back", 0)) // OP22: фон окна - под всеми детьми (рисуется первым)
+            pParentWnd->BringToBottom(pUIStatic);
         tmpVec.push_back(pUIStatic);
         pUIStatic = NULL;
     }

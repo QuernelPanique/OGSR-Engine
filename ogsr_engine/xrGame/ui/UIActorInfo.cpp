@@ -296,11 +296,35 @@ void CUIActorInfoWnd::FillReputationDetails(CUIXml* xml, LPCSTR path, CUIScrollV
 
         itm->m_text2->SetTextST(InventoryUtilities::GetGoodwillAsText(gw));
         itm->m_text2->SetTextColor(InventoryUtilities::GetGoodwillColor(gw));
+        // OP22: op22_colors - цвета отношения из разметки (op22_c_enemy/neutral/friend "r,g,b"), пороги - как у GetGoodwillColor
+        u32 op22_color = 0;
+        if (xml->ReadAttribInt(path, 0, "op22_colors", 0))
+        {
+            LPCSTR key = gw < -1000 ? "op22_c_enemy" : (gw > 1000 ? "op22_c_friend" : "op22_c_neutral");
+            int r = 255, g = 255, b = 255;
+            sscanf(xml->ReadAttrib(path, 0, key, "255,255,255"), "%d,%d,%d", &r, &g, &b);
+            op22_color = color_rgba(r, g, b, 255);
+            itm->m_text2->SetTextColor(op22_color);
+        }
 
         sprintf_s(buff, "%d", gw);
         itm->m_text3->SetTextST(buff);
 
-        if (itm->m_op22_bar)
+        if (itm->m_op22_bar && xml->ReadAttribInt(path, 0, "op22_bar_center", 0))
+        {
+            // OP22: полоса от середины (минус - влево, плюс - вправо); op22_bar_scale - отношение во всю половину; не меньше 1 %
+            const float scale = _max(1.f, xml->ReadAttribFlt(path, 0, "op22_bar_scale", 2500.f));
+            const float half = itm->m_op22_bar_width * .5f;
+            const float w = _max(itm->m_op22_bar_width * .01f, half * _min(1.f, _abs(float(gw)) / scale));
+            const float cx = itm->m_op22_bar_x + half;
+            itm->m_op22_bar->SetWndPos(Fvector2{gw < 0 ? cx - w : cx, itm->m_op22_bar->GetWndPos().y});
+            itm->m_op22_bar->SetWidth(w);
+            itm->m_op22_bar->Show(true);
+            itm->m_op22_bar->SetColor(op22_color ? op22_color : InventoryUtilities::GetGoodwillColor(gw));
+            itm->m_text1->op22_SetHintText(buff);
+            if (comm.id()==shared_str("stalker")) itm->m_text1->SetTextST("ct_tr_loners");
+        }
+        else if (itm->m_op22_bar)
         {
             float fraction = (float(gw)+1000.f)/2000.f;
             clamp(fraction,0.f,1.f);
@@ -399,6 +423,7 @@ void CUIActorStaticticDetail::Init(CUIXml* xml, LPCSTR path, int idx)
         m_op22_bar=xr_new<CUIStatic>(); m_op22_bar->SetAutoDelete(true); AttachChild(m_op22_bar);
         xml_init.InitStatic(*xml,"op22_bar_fill",0,m_op22_bar);
         m_op22_bar_width=m_op22_bar->GetWidth();
+        m_op22_bar_x=m_op22_bar->GetWndPos().x; // OP22: левый край полосы - для полосы от середины
     }
 
     xml_init.InitAutoStaticGroup(*xml, "auto", 0, this);

@@ -43,6 +43,7 @@ protected:
     // Текущий активный диалог
     CUIWindow* m_pActiveDialog;
     CUIWindow* m_op22_skills{};
+    CUIStatic* m_op22_overlay{}; // OP22: слой поверх всего окна (pda.xml: op22_overlay), рисуется последним
     bool m_op22_all_pages{};
     CUIStatic* m_op22_tasks_shell{};
     CUIStatic* m_op22_tasks_timer{};

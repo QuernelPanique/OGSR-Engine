@@ -71,6 +71,7 @@ public:
     CUIStatic* m_text3;
     CUIStatic* m_op22_bar{};
     float m_op22_bar_width{};
+    float m_op22_bar_x{}; // OP22
 
 public:
     void Init(CUIXml* xml, LPCSTR path, int xml_idx);
