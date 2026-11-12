@@ -101,6 +101,8 @@ bool CXml::Load(LPCSTR path_alias, LPCSTR path, LPCSTR _xml_filename, bool fatal
 // инициализация и загрузка XML файла
 bool CXml::Load(LPCSTR path, LPCSTR xml_filename, bool fatal)
 {
+    ZoneScoped; // OP22: Tracy - разбор XML окон
+    ZoneText(xml_filename, strlen(xml_filename));
     // Load and parse xml file
 
     IReader* F = op22_open(path, xml_filename);

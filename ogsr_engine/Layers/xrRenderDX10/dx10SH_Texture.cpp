@@ -329,6 +329,7 @@ void CTexture::Load(const char* Name)
     }
 
     ZoneScoped;
+    ZoneText(Name, strlen(Name)); // OP22: Tracy - какая текстура грузится
 
     Preload(Name);
 
