@@ -79,6 +79,7 @@ CUIPdaWnd::~CUIPdaWnd()
     delete_data(UIStalkersRanking);
     delete_data(UIEventsWnd);
     delete_data(m_op22_skills);
+    delete_data(m_op22_overlay);
     delete_data(m_updatedSectionImage);
     delete_data(m_oldSectionImage);
 }
@@ -184,10 +185,16 @@ void CUIPdaWnd::Init()
     {
         const auto* buttons = UITabControl->GetButtonsVector();
         m_sign_places_main.resize(buttons->size());
+        // OP22: op22_sign_x/y - знак «новое» от левого верха кнопки (GAMMA 2.0: огонёк слева от подписи); без них - под центром
+        const float sign_x = uiXml.ReadAttribFlt("tab", 0, "op22_sign_x", -1.f);
+        const float sign_y = uiXml.ReadAttribFlt("tab", 0, "op22_sign_y", 0.f);
         for (u32 i = 0; i < buttons->size(); ++i)
         {
             const auto* button = (*buttons)[i];
-            m_sign_places_main[i].set(button->GetWndPos().x + button->GetWidth() / 2.f, button->GetWndPos().y + button->GetHeight() - 2.f);
+            if (sign_x >= 0.f)
+                m_sign_places_main[i].set(button->GetWndPos().x + sign_x, button->GetWndPos().y + sign_y);
+            else
+                m_sign_places_main[i].set(button->GetWndPos().x + button->GetWidth() / 2.f, button->GetWndPos().y + button->GetHeight() - 2.f);
         }
     }
     else
@@ -196,6 +203,12 @@ void CUIPdaWnd::Init()
     {
         m_op22_skills = xr_new<CUIWindow>();
         m_op22_skills->Init(0, 0, 1024, 768);
+    }
+    // OP22: слой «стекла» экрана КПК (GAMMA 2.0) - поверх вкладок, страниц и скриптовых окон
+    if (uiXml.NavigateToNode("op22_overlay", 0))
+    {
+        m_op22_overlay = xr_new<CUIStatic>();
+        xml_init.InitStatic(uiXml, "op22_overlay", 0, m_op22_overlay);
     }
 }
 
@@ -476,6 +489,8 @@ void CUIPdaWnd::Draw()
 
     inherited::Draw();
     DrawUpdatedSections();
+    if (m_op22_overlay)
+        m_op22_overlay->Draw(); // OP22: окно КПК в начале координат - позиция слоя = его координаты в pda.xml
 }
 
 void CUIPdaWnd::PdaContentsChanged(pda_section::part type, bool flash, bool force_update)
