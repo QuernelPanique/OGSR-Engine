@@ -43,11 +43,13 @@ CDialogHolder::~CDialogHolder()
 void CDialogHolder::StartMenu(CUIDialogWnd* pDialog, bool bDoHideIndicators)
 {
     ZoneScoped; // OP22: Tracy - открытие окна (имя окна или класс)
+#ifdef TRACY_ENABLE
     {
         const shared_str wn = pDialog->WindowName();
         const char* t = wn.size() ? wn.c_str() : typeid(*pDialog).name();
         ZoneText(t, strlen(t));
     }
+#endif
     R_ASSERT(!pDialog->IsShown());
 
     if (MainInputReceiver() && GetUICursor()->IsVisible())
@@ -99,11 +101,13 @@ void CDialogHolder::StartMenu(CUIDialogWnd* pDialog, bool bDoHideIndicators)
 void CDialogHolder::StopMenu(CUIDialogWnd* pDialog)
 {
     ZoneScoped; // OP22: Tracy - закрытие окна (имя окна или класс)
+#ifdef TRACY_ENABLE
     {
         const shared_str wn = pDialog->WindowName();
         const char* t = wn.size() ? wn.c_str() : typeid(*pDialog).name();
         ZoneText(t, strlen(t));
     }
+#endif
     R_ASSERT(pDialog->IsShown());
 
     if (MainInputReceiver() == pDialog)
