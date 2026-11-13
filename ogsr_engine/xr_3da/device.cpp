@@ -13,6 +13,9 @@
 #include "XR_IOConsole.h"
 #include "xr_ioc_cmd.h"
 #include "../xrGame/embedded_editor/embedded_editor_main.h"
+#include "op22_frame_profile.h"
+
+extern int g_op22_frame_stats;
 
 //#define LOG_SECOND_THREAD_STATS
 
@@ -248,10 +251,16 @@ void CRenderDevice::on_idle()
             ImGui::NewFrame();
         }
 
+        Op22FrameProfile op22_profile(g_op22_frame_stats > 1 && g_pGameLevel);
+        const Fvector op22_previous_direction = vCameraDirection;
+        const auto op22_update_start = op22_profile.now();
+
         // if (b_is_Active)
         {
             FrameMove();
         }
+        op22_profile.sample.update = op22_profile.since(op22_update_start);
+        op22_profile.sample.precache = int(dwPrecacheFrame);
 
         if (!g_loading_events.empty()) // that is to avoid loading screen flickering
         {
@@ -260,17 +269,24 @@ void CRenderDevice::on_idle()
             return;
         }
 
+        const auto op22_camera_start = op22_profile.now();
         OnCameraUpdated(false);
+        op22_profile.sample.camera = op22_profile.since(op22_camera_start);
+        if (op22_profile.enabled)
+            op22_profile.sample.turn = rad2deg(acosf(std::clamp(op22_previous_direction.dotproduct(vCameraDirection), -1.f, 1.f)));
 
         const auto SecondThreadStartTime = std::chrono::high_resolution_clock::now();
 
         // allow secondary thread to do its job
-        auto awaiter = TTAPI->submit([this] {
+        auto awaiter = TTAPI->submit([this, &op22_profile] {
             ZoneScoped;
 
             const auto SecondThreadTasksStartTime = std::chrono::high_resolution_clock::now();
 
+            auto op22_task_start = op22_profile.now();
             g_sound_update.OnFrame();
+            op22_profile.sample.sound = op22_profile.since(op22_task_start);
+            op22_task_start = op22_profile.now();
 
             // add_to_awaiters(TTAPI->submit([]() { g_sound_render.OnFrame(); }));
 
@@ -287,17 +303,25 @@ void CRenderDevice::on_idle()
                 }
             }
 
+            op22_profile.sample.parallel = op22_profile.since(op22_task_start);
             if (g_pGameLevel && ps_lua_gc_method == gc_timeout)
             {
                 const auto GCTime = (SecondThreadFreeTimeLast.count() / 2.0) * 1000.0;
                 psLUA_GCTIMEOUT = std::max(psLUA_GCTIMEOUT_MIN, static_cast<int>(GCTime));
-                add_to_awaiters(TTAPI->submit([] { g_pGameLevel->script_gc(); }));
+                op22_profile.sample.gc_budget = psLUA_GCTIMEOUT;
+                add_to_awaiters(TTAPI->submit([&op22_profile] {
+                    const auto gc_started = op22_profile.now();
+                    g_pGameLevel->script_gc();
+                    op22_profile.sample.gc = op22_profile.since(gc_started);
+                }));
             }
 
             {
                 ZoneScopedN("seqFrameMT");
 
+                op22_task_start = op22_profile.now();
                 seqFrameMT.Process(rp_Frame); // only PHWorld and NetProcessor
+                op22_profile.sample.physics = op22_profile.since(op22_task_start);
             }
 
             const auto SecondThreadTasksEndTime = std::chrono::high_resolution_clock::now();
@@ -311,11 +335,16 @@ void CRenderDevice::on_idle()
         {
             ZoneScopedN("DoRender");
 
-            if (Begin())
+            const auto op22_begin_start = op22_profile.now();
+            const bool op22_render_ready = Begin();
+            op22_profile.sample.begin = op22_profile.since(op22_begin_start);
+            if (op22_render_ready)
             {
                 {
                     ZoneScopedN("Render process");
+                    const auto op22_draw_start = op22_profile.now();
                     seqRender.Process(rp_Render);
+                    op22_profile.sample.draw = op22_profile.since(op22_draw_start);
                 }
 
                 if (is_editor_active || CImGuiEditor::Get().IsEditorShouldOpenOnNextFrame())
@@ -325,7 +354,9 @@ void CRenderDevice::on_idle()
 
                 {
                     ZoneScopedN("DoRender End");
+                    const auto op22_end_start = op22_profile.now();
                     End();
+                    op22_profile.sample.present = op22_profile.since(op22_end_start);
                 }
             }
         }
@@ -347,6 +378,7 @@ void CRenderDevice::on_idle()
 
         {
             ZoneScopedN("WaitSecondThread");
+            const auto op22_wait_start = op22_profile.now();
 
             const auto SecondThreadEndTime = std::chrono::high_resolution_clock::now();
 
@@ -366,6 +398,8 @@ void CRenderDevice::on_idle()
                 second_tasks.pop_back();
             }
 
+            op22_profile.sample.wait = op22_profile.since(op22_wait_start);
+
             const std::chrono::duration<double, std::milli> SecondThreadElapsedTime = SecondThreadEndTime - SecondThreadStartTime;
             SecondThreadFreeTimeLast = SecondThreadElapsedTime - SecondThreadTasksElapsedTime;
 
@@ -381,6 +415,7 @@ void CRenderDevice::on_idle()
         extern void LogD3D11DebugMessages();
         LogD3D11DebugMessages();
 
+        op22_profile.finish();
         FrameMark;
     }
 

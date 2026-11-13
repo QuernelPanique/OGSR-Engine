@@ -941,7 +941,7 @@ void xrRender_initconsole()
     // B - режим виньетки (чисто трубок) 
     CMD4(CCC_Float, "r_pnv_num_tubes", &ps_pnv_params_1_2, 1.f, 4.f); //  1, 1.1, 1.2, 2, 4
     // B - Порог для размывания источника света
-    CMD4(CCC_Float, "r_pnv_washout_thresh", &ps_pnv_params_2_2, 0.1f, 0.9f);
+    CMD4(CCC_Float, "r_pnv_washout_thresh", &ps_pnv_params_2_2, 0.f, 0.9f);
     // B - тряска картинки
     CMD4(CCC_Float, "r_pnv_glitch", &ps_pnv_params_3_2, 0.f, 0.9f);
     // B - прозрачность краев виньетки  0, 1, 2, 3

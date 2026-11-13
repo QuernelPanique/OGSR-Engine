@@ -256,8 +256,19 @@ public:
         tokens = LanguagesToken.data();
     };
 
+    void Save(IWriter* file) override
+    {
+        // OP22 stores its text languages in XML tags and has no language folders.
+        // Do not serialize CCC_Token's "?" placeholder when there are no tokens.
+        if (LanguagesToken.size() > 1)
+            CCC_Token::Save(file);
+    }
+
     void Execute(LPCSTR lang) override
     {
+        if (LanguagesToken.size() == 1 && !xr_strcmp(lang, "?"))
+            return; // legacy user.ltx produced by the empty token list
+
         for (const auto& tok : LanguagesToken)
         {
             if (tok.name)
