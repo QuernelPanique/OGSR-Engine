@@ -36,8 +36,17 @@ void render_reshade_effects()
 
 bool init_reshade()
 {
-    if (!reshade::register_addon(hInstance))
+    if (!reshade::internal::get_reshade_module_handle())
+    {
+        Msg("--[ReShade]: optional integration inactive (module not installed)");
         return false;
+    }
+
+    if (!reshade::register_addon(hInstance))
+    {
+        Msg("!![ReShade]: installed module rejected the compatibility addon API");
+        return false;
+    }
 
     reshade::register_event<reshade::addon_event::reshade_begin_effects>(on_reshade_begin_effects);
     return true;

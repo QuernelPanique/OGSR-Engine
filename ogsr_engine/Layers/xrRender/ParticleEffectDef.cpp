@@ -47,6 +47,10 @@ float CPEDef::GetFStep() { return m_fStep * ps_particle_update_coeff; }
 
 void CPEDef::CreateShader()
 {
+    // Non-visual effects have no sprite data by definition (Load/Render use this flag).
+    if (!m_Flags.is(dfSprite))
+        return;
+
     if (*m_ShaderName && *m_TextureName)
     {
         m_CachedShader.create(*m_ShaderName, *m_TextureName);

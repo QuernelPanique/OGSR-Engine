@@ -233,8 +233,7 @@ void Startup()
     use_reshade = init_reshade();
     if (use_reshade)
         Msg("--[ReShade]: Loaded compatibility addon");
-    else
-        Msg("!![ReShade]: ReShade not installed or version too old - didn't load compatibility addon");
+    // init_reshade reports absent optional integration or an actual API failure.
 
     // Main cycle
     Memory.mem_usage();
