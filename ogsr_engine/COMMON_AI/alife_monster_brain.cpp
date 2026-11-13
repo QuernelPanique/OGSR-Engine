@@ -12,6 +12,7 @@
 #include "xrServer_Objects_ALife_Monsters.h"
 #ifdef XRGAME_EXPORTS
 #include "../xrGame/op22_alife_detail.h"
+#include "../xrGame/op22_alife_search_profile.h"
 #endif
 
 #ifdef XRGAME_EXPORTS
@@ -118,17 +119,27 @@ void CALifeMonsterBrain::select_task(const bool forced)
 
     m_last_search_time = current_time;
 
+    Op22ALifeSearchProfile<> profile(g_op22_frame_stats > 1 ? &object() : nullptr, g_op22_frame_stats > 1);
     float best_value = flt_min;
 
     for (const auto& [id, smart] : ai().alife().smart_terrains().objects())
     {
+        profile.visit();
         if (!smart->alife_task_candidate())
+        {
+            profile.skip();
+            continue;
+        }
+
+        const auto before_enabled = profile.begin();
+        const bool enabled = smart->enabled(&object());
+        profile.enabled(id, before_enabled);
+        if (!enabled)
             continue;
 
-        if (!smart->enabled(&object()))
-            continue;
-
+        const auto before_suitable = profile.begin();
         float value = smart->suitable(&object());
+        profile.suitable(id, before_suitable);
         if (value > best_value)
         {
             best_value = value;
@@ -136,11 +147,14 @@ void CALifeMonsterBrain::select_task(const bool forced)
         }
     }
 
-    if (object().m_smart_terrain_id != 0xffff)
+    const unsigned selected = object().m_smart_terrain_id;
+    const auto before_register = profile.begin();
+    if (selected != 0xffff)
     {
         smart_terrain().register_npc(&object());
         m_last_search_time = 0;
     }
+    profile.finish(selected, before_register);
 }
 
 void CALifeMonsterBrain::update(const bool forced)

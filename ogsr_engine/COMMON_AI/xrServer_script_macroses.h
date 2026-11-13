@@ -12,6 +12,9 @@
 #include "../xr_3da/NET_Server_Trash\NET_utils.h"
 #include "ai_space.h"
 #include "script_engine.h"
+#ifdef XRGAME_EXPORTS
+#include "op22_alife_disabled.h"
+#endif
 
 class CSE_Abstract;
 class NET_Packet;
@@ -128,6 +131,26 @@ struct CWrapperAbstractZone : public T, public luabind::wrap_base
     typedef CWrapperAbstractZone<T> self_type;
     CWrapperAbstractZone(LPCSTR section) : inherited(section) {}
     INHERIT_ZONE;
+#ifdef XRGAME_EXPORTS
+    mutable unsigned m_op22_disabled_probe_left{};
+    bool alife_task_candidate() const override
+    {
+        if (!T::alife_task_candidate())
+            return false;
+        if (!this->alife_task_disabled_guard())
+            return true;
+        // A missed optimization still executes enabled(), so negative probes
+        // may be spaced out safely. A rejection always reads the live field.
+        if (m_op22_disabled_probe_left)
+        {
+            --m_op22_disabled_probe_left;
+            return true;
+        }
+        const bool disabled = op22_alife_raw_disabled(*this);
+        m_op22_disabled_probe_left = disabled ? 0 : 63;
+        return !disabled;
+    }
+#endif
 };
 
 template <typename T>

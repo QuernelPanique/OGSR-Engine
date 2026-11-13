@@ -1178,7 +1178,8 @@ void CSE_ALifeStationaryMgun::STATE_Write(NET_Packet& tNetPacket) { inherited::S
 
 CSE_ALifeSmartZone::CSE_ALifeSmartZone(LPCSTR caSection)
     : CSE_ALifeSpaceRestrictor(caSection), CSE_ALifeSchedulable(caSection),
-      m_alife_task_candidate(pSettings->line_exist(caSection, "alife_task_candidate") ? pSettings->r_bool(caSection, "alife_task_candidate") : true)
+      m_alife_task_candidate(pSettings->line_exist(caSection, "alife_task_candidate") ? pSettings->r_bool(caSection, "alife_task_candidate") : true),
+      m_alife_task_disabled_guard(pSettings->line_exist(caSection, "alife_task_disabled_guard") ? pSettings->r_bool(caSection, "alife_task_disabled_guard") : false)
 {}
 
 CSE_ALifeSmartZone::~CSE_ALifeSmartZone() {}

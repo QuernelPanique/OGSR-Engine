@@ -307,9 +307,11 @@ virtual void smart_touch(CSE_ALifeMonsterAbstract* monster);
 virtual bool used_ai_locations() const { return true; };
 virtual CSE_ALifeSmartZone* cast_smart_zone() { return this; };
 // Persistent configuration, not serialized object state. Default true.
-bool alife_task_candidate() const { return m_alife_task_candidate; }
+virtual bool alife_task_candidate() const { return m_alife_task_candidate; }
+bool alife_task_disabled_guard() const { return m_alife_task_disabled_guard; }
 private:
 bool m_alife_task_candidate;
+bool m_alife_task_disabled_guard;
 public:
 #ifdef XRGAME_EXPORTS
 virtual bool bfActive();
