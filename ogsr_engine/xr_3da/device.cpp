@@ -14,6 +14,7 @@
 #include "xr_ioc_cmd.h"
 #include "../xrGame/embedded_editor/embedded_editor_main.h"
 #include "op22_frame_profile.h"
+#include "op22_parallel_jobs.h"
 
 extern int g_op22_frame_stats;
 
@@ -293,14 +294,27 @@ void CRenderDevice::on_idle()
             {
                 ZoneScopedN("seqParallel");
 
+                Op22ParallelJobs op22_jobs;
+                static const auto op22_image_base = reinterpret_cast<std::uintptr_t>(GetModuleHandle(nullptr));
+                static const auto op22_image_end = op22_image_base + reinterpret_cast<const IMAGE_NT_HEADERS*>(
+                    op22_image_base + reinterpret_cast<const IMAGE_DOS_HEADER*>(op22_image_base)->e_lfanew)->OptionalHeader.SizeOfImage;
                 auto size = seqParallel.size();
                 while (size > 0)
                 {
+                    const auto op22_identity = op22_profile.enabled ? Op22DelegateIdentity(seqParallel.front().GetMemento()).code() : 0;
+                    const auto op22_job_start = op22_profile.now();
                     seqParallel.front()();
+                    if (op22_profile.enabled)
+                        op22_jobs.record(op22_identity, op22_image_base, op22_image_end, op22_profile.since(op22_job_start));
                     seqParallel.pop_front();
 
                     size--;
                 }
+                const auto op22_job_worst = op22_jobs.worst();
+                op22_profile.sample.parallel_job_rva = static_cast<unsigned long long>(op22_job_worst.rva);
+                op22_profile.sample.parallel_job_ms = op22_job_worst.ms;
+                op22_profile.sample.parallel_job_calls = op22_job_worst.calls;
+                op22_profile.sample.parallel_jobs = op22_jobs.calls;
             }
 
             op22_profile.sample.parallel = op22_profile.since(op22_task_start);

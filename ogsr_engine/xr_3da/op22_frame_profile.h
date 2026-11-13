@@ -14,6 +14,9 @@ struct Op22FrameProfile
     {
         float total{}, gap{}, update{}, camera{}, begin{}, draw{}, present{}, wait{};
         float sound{}, parallel{}, physics{}, gc{}, turn{};
+        float parallel_job_ms{};
+        unsigned long long parallel_job_rva{};
+        unsigned parallel_job_calls{}, parallel_jobs{};
         int gc_budget{}, precache{};
     } sample;
 
@@ -57,9 +60,10 @@ struct Op22FrameProfile
         if (milliseconds(current - window) < 1000.f)
             return;
 
-        Msg("[op22_stage] n=%u worst work=%.2f gap=%.2f update=%.2f camera=%.2f begin=%.2f draw=%.2f present=%.2f wait=%.2f; async sound=%.2f parallel=%.2f physics=%.2f gc=%.2f budget_us=%d; turn=%.1f precache=%d",
+        Msg("[op22_stage] n=%u worst work=%.2f gap=%.2f update=%.2f camera=%.2f begin=%.2f draw=%.2f present=%.2f wait=%.2f; async sound=%.2f parallel=%.2f physics=%.2f gc=%.2f budget_us=%d; turn=%.1f precache=%d; job_rva=%llx job_ms=%.2f job_calls=%u jobs=%u",
             count, worst.total, worst.gap, worst.update, worst.camera, worst.begin, worst.draw, worst.present, worst.wait,
-            worst.sound, worst.parallel, worst.physics, worst.gc, worst.gc_budget, worst.turn, worst.precache);
+            worst.sound, worst.parallel, worst.physics, worst.gc, worst.gc_budget, worst.turn, worst.precache,
+            worst.parallel_job_rva, worst.parallel_job_ms, worst.parallel_job_calls, worst.parallel_jobs);
         window = current;
         worst = {};
         count = 0;

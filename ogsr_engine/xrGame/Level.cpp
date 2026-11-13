@@ -269,15 +269,28 @@ bool CLevel::PrefetchManySoundsLater(LPCSTR prefix)
     return true;
 }
 
+extern int g_op22_frame_stats;
+
 void CLevel::PrefetchDeferredSounds()
 {
+    // Complete queued warmup while the loading screen is still visible.
+    // During normal gameplay keep the original one-created-prefix-per-frame rule.
+    const bool op22_loading = Device.dwPrecacheFrame > 0 || load_screen_renderer.b_registered;
+    const auto op22_started = g_op22_frame_stats ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
+    const auto op22_pending = sound_registry_defer.size();
+    const auto op22_sources = sound_registry.size();
     while (!sound_registry_defer.empty())
     {
         std::string s = sound_registry_defer.front();
         sound_registry_defer.pop_front();
-        if (PrefetchManySounds(s.c_str()))
+        if (PrefetchManySounds(s.c_str()) && !op22_loading)
             break;
     }
+    if (g_op22_frame_stats && op22_loading && op22_pending)
+        Msg("[op22_prefetch] loading=1 prefixes=%u sources=%u remaining=%u ms=%.2f",
+            u32(op22_pending - sound_registry_defer.size()), u32(sound_registry.size() - op22_sources),
+            u32(sound_registry_defer.size()),
+            std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - op22_started).count());
 }
 
 void CLevel::CancelPrefetchManySounds(LPCSTR prefix)
@@ -434,10 +447,14 @@ extern void render_reshade_effects();
 
 void CLevel::OnRender()
 {
+    const auto op22_start = g_op22_frame_stats > 1 ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
     inherited::OnRender();
+    const auto op22_after_inherited = g_op22_frame_stats > 1 ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
 
     Render->Calculate();
+    const auto op22_after_calculate = g_op22_frame_stats > 1 ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
     Render->Render();
+    const auto op22_after_render = g_op22_frame_stats > 1 ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
 
     ::Render->ui_is_rendering = true;
 
@@ -613,6 +630,21 @@ void CLevel::OnRender()
 #endif
 
     ::Render->ui_is_rendering = false;
+    if (g_op22_frame_stats > 1 && !Device.dwPrecacheFrame)
+    {
+        const auto now = std::chrono::steady_clock::now();
+        const float total = std::chrono::duration<float, std::milli>(now - op22_start).count();
+        static std::chrono::steady_clock::time_point last{};
+        if (total > 10.f && (last == std::chrono::steady_clock::time_point{} || now - last >= std::chrono::seconds(1)))
+        {
+            last = now;
+            Msg("[op22_render] inherited=%.2f calculate=%.2f render=%.2f ui=%.2f total=%.2f",
+                std::chrono::duration<float, std::milli>(op22_after_inherited - op22_start).count(),
+                std::chrono::duration<float, std::milli>(op22_after_calculate - op22_after_inherited).count(),
+                std::chrono::duration<float, std::milli>(op22_after_render - op22_after_calculate).count(),
+                std::chrono::duration<float, std::milli>(now - op22_after_render).count(), total);
+        }
+    }
 }
 
 void CLevel::OnEvent(EVENT E, u64 P1, u64 /**P2/**/)
