@@ -122,6 +122,9 @@ void CALifeMonsterBrain::select_task(const bool forced)
 
     for (const auto& [id, smart] : ai().alife().smart_terrains().objects())
     {
+        if (!smart->alife_task_candidate())
+            continue;
+
         if (!smart->enabled(&object()))
             continue;
 

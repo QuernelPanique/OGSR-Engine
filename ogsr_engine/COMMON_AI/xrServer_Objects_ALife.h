@@ -306,6 +306,11 @@ virtual float detect_probability();
 virtual void smart_touch(CSE_ALifeMonsterAbstract* monster);
 virtual bool used_ai_locations() const { return true; };
 virtual CSE_ALifeSmartZone* cast_smart_zone() { return this; };
+// Persistent configuration, not serialized object state. Default true.
+bool alife_task_candidate() const { return m_alife_task_candidate; }
+private:
+bool m_alife_task_candidate;
+public:
 #ifdef XRGAME_EXPORTS
 virtual bool bfActive();
 virtual CSE_ALifeItemWeapon* tpfGetBestWeapon(ALife::EHitType& tHitType, float& fHitPower);
