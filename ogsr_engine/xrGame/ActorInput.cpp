@@ -258,6 +258,13 @@ void CActor::IR_OnMouseWheel(int direction)
     //	if (psCallbackFlags.test(CF_MOUSE_WHEEL_ROT))
     //		this->callback(GameObject::eOnMouseWheel)(direction);
 
+    // The actor Lua wheel callback has already run in CLevel. A weapon
+    // with script-owned zoom must not also execute the native fire-mode/slot
+    // fallback (including at the hip or a zoom limit). Absent key = old policy.
+    const auto* active = inventory().ActiveItem();
+    if (active && READ_IF_EXISTS(pSettings, r_bool, active->cNameSect(), "script_mouse_wheel", false))
+        return;
+
     if (inventory().Action((direction > 0) ? kWPN_ZOOM_DEC : kWPN_ZOOM_INC, CMD_START))
         return;
 
