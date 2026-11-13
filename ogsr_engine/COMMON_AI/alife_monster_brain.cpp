@@ -10,6 +10,9 @@
 #include "alife_monster_brain.h"
 #include "object_broker.h"
 #include "xrServer_Objects_ALife_Monsters.h"
+#ifdef XRGAME_EXPORTS
+#include "../xrGame/op22_alife_detail.h"
+#endif
 
 #ifdef XRGAME_EXPORTS
 #include "alife_monster_movement_manager.h"
@@ -151,14 +154,18 @@ void CALifeMonsterBrain::update(const bool forced)
 	}
 #endif
 
+    Op22ALifeDetail<> profile("brain", g_op22_frame_stats > 1 ? &object() : nullptr, g_op22_frame_stats > 1);
     select_task(forced);
+    const float after_select = profile.elapsed();
 
     if (object().m_smart_terrain_id != 0xffff)
         process_task();
     else
         default_behaviour();
+    const float after_task = profile.elapsed();
 
     movement().update();
+    profile.finish(after_select, after_task - after_select, profile.elapsed() - after_task);
 }
 
 void CALifeMonsterBrain::default_behaviour() { movement().path_type(MovementManager::ePathTypeNoPath); }

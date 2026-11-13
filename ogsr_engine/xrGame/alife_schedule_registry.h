@@ -11,6 +11,7 @@
 #include "safe_map_iterator.h"
 #include "xrServer_Objects_ALife.h"
 #include "ai_debug.h"
+#include "op22_alife_detail.h"
 
 
 class CALifeScheduleRegistry : public CSafeMapIterator<ALife::_OBJECT_ID, CSE_ALifeSchedulable, std::less<ALife::_OBJECT_ID>, false>
@@ -44,7 +45,9 @@ private:
         IC void operator()(_iterator& i, u64 cycle_count) const
         {
             START_PROFILE("ALife/scheduled/update")
+            Op22ALifeDetail<> profile("scheduled", g_op22_frame_stats > 1 ? (*i).second->base() : nullptr, g_op22_frame_stats > 1);
             (*i).second->update();
+            profile.finish();
             STOP_PROFILE
         }
     };

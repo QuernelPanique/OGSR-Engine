@@ -144,8 +144,8 @@ void CALifeUpdateManager::set_process_time(int microseconds)
     const float switch_budget_seconds = (float(microseconds) - float(microseconds) * update_monster_factor()) / 1000000.f;
     graph().set_process_time(switch_budget_seconds);
     if (g_op22_frame_stats)
-        Msg("[op22_alife] process_us=%d switch_budget_us=%.2f scheduled_per_update=%u",
-            microseconds, switch_budget_seconds * 1000000.f, scheduled().objects_per_update());
+        Msg("[op22_alife] process_us=%d switch_budget_us=%.2f scheduled_config=%u",
+            microseconds, switch_budget_seconds * 1000000.f, m_objects_per_update);
 }
 
 void CALifeUpdateManager::objects_per_update(const u32& objects_per_update) { scheduled().objects_per_update(objects_per_update); }
