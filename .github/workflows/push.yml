@@ -79,6 +79,20 @@ jobs:
       run: |
         ${{ github.workspace }}/Update_Components.cmd
 
+    - name: Identify compiler for build cache
+      id: toolchain
+      if: env.OP22_FULL != 'true'
+      shell: pwsh
+      run: |
+        $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+        $vsroot = & $vswhere -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+        if (!$vsroot) { throw "Visual C++ installation not found" }
+        $vcversion = (Get-Content "$vsroot\VC\Auxiliary\Build\Microsoft.VCToolsVersion.default.txt").Trim()
+        $compiler = "$vsroot\VC\Tools\MSVC\$vcversion\bin\Hostx64\x64\cl.exe"
+        $compilerHash = (Get-FileHash $compiler -Algorithm SHA256).Hash.ToLowerInvariant()
+        "key=$env:ImageVersion-$vcversion-$compilerHash" >> $env:GITHUB_OUTPUT
+        Write-Host "Build cache toolchain: $env:ImageVersion / $vcversion / $compilerHash"
+
     - name: Cache build
       if: env.OP22_FULL != 'true'
       uses: actions/cache@v6.1.0
@@ -90,8 +104,8 @@ jobs:
           3rd_party/_LIB
           bin_x64
         # OP22: кэш у каждой конфигурации свой - TRACY_ENABLE меняет код, объекты смешивать нельзя
-        key: build-fast-${{ matrix.Platform }}-${{ matrix.Configuration }}-${{ github.sha }}
-        restore-keys: build-fast-${{ matrix.Platform }}-${{ matrix.Configuration }}-
+        key: build-fast-v2-${{ steps.toolchain.outputs.key }}-${{ hashFiles('**/*.vcxproj', '**/*.props') }}-${{ matrix.Platform }}-${{ matrix.Configuration }}-${{ github.sha }}
+        restore-keys: build-fast-v2-${{ steps.toolchain.outputs.key }}-${{ hashFiles('**/*.vcxproj', '**/*.props') }}-${{ matrix.Platform }}-${{ matrix.Configuration }}-
 
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v3
