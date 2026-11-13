@@ -23,6 +23,9 @@
 
 #include "mt_config.h"
 #include "gamepersistent.h"
+#include <chrono>
+
+extern int g_op22_frame_stats;
 
 using namespace ALife;
 
@@ -94,8 +97,25 @@ void CALifeUpdateManager::update_scheduled(bool init_ef)
 
 void CALifeUpdateManager::update()
 {
+    const bool profile = g_op22_frame_stats > 1;
+    const auto started = profile ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
     update_switch();
+    const auto after_switch = profile ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
     update_scheduled(false);
+    if (profile)
+    {
+        const auto now = std::chrono::steady_clock::now();
+        const float total = std::chrono::duration<float, std::milli>(now - started).count();
+        static std::chrono::steady_clock::time_point last{};
+        if (total > 2.f && (last == std::chrono::steady_clock::time_point{} || now - last >= std::chrono::seconds(1)))
+        {
+            last = now;
+            Msg("[op22_alife] switch=%.2f scheduled=%.2f total=%.2f level_objects=%u scheduled_objects=%u",
+                std::chrono::duration<float, std::milli>(after_switch - started).count(),
+                std::chrono::duration<float, std::milli>(now - after_switch).count(), total,
+                u32(graph().level().objects().size()), u32(scheduled().objects().size()));
+        }
+    }
 }
 
 void CALifeUpdateManager::shedule_Update(u32 dt)
@@ -118,7 +138,15 @@ void CALifeUpdateManager::shedule_Update(u32 dt)
     STOP_PROFILE
 }
 
-void CALifeUpdateManager::set_process_time(int microseconds) { graph().set_process_time(float(microseconds) - float(microseconds) * update_monster_factor() / 1000000.f); }
+void CALifeUpdateManager::set_process_time(int microseconds)
+{
+    // Configuration/API use microseconds; CSafeMapIterator compares elapsed seconds.
+    const float switch_budget_seconds = (float(microseconds) - float(microseconds) * update_monster_factor()) / 1000000.f;
+    graph().set_process_time(switch_budget_seconds);
+    if (g_op22_frame_stats)
+        Msg("[op22_alife] process_us=%d switch_budget_us=%.2f scheduled_per_update=%u",
+            microseconds, switch_budget_seconds * 1000000.f, scheduled().objects_per_update());
+}
 
 void CALifeUpdateManager::objects_per_update(const u32& objects_per_update) { scheduled().objects_per_update(objects_per_update); }
 
