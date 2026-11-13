@@ -13,10 +13,30 @@ constexpr float psShedulerReaction = 1.f; // 0.1f;
 int g_op22_frame_stats{};
 int g_op22_sleeping{}; // объектов вне очереди: предметы в ящиках (CObject::op22_shedule_sleep)
 
+
+// Diagnostics only: keep long callbacks visible without logging every object.
+static void op22_slow_update(const char* name, float elapsed_ms, bool realtime)
+{
+    if (elapsed_ms < 4.f)
+        return;
+    using clock = std::chrono::steady_clock;
+    static clock::time_point window{};
+    static u32 messages{};
+    const auto now = clock::now();
+    if (window == clock::time_point{} || now - window >= std::chrono::seconds(10))
+    {
+        window = now;
+        messages = 0;
+    }
+    if (messages++ < 20)
+        Msg("[op22_slow] rt=%d object=[%s] %.2f ms", int(realtime), name ? name : "?", elapsed_ms);
+}
+
 static void op22_frame_stats(float sched_ms, size_t queue)
 {
     using clock = std::chrono::steady_clock;
-    constexpr float window_ms = 10000.f, late_ms = 3.f, skip_ms = 1000.f; // кадр дольше секунды - загрузка, не рывок
+    const float window_ms = g_op22_frame_stats > 1 ? 1000.f : 10000.f;
+    constexpr float late_ms = 3.f, skip_ms = 1000.f; // кадр дольше секунды - загрузка, не рывок
     static xr_vector<float> frames;
     static clock::time_point last{};
     static float window{}, sched_sum{}, sched_max{};
@@ -319,7 +339,11 @@ void CSheduler::ProcessStep()
             const u32 elapsed = dwTime - curr.dwTimeOfLastExecute;
 
             // if (!Core.DebugFlags.test(xrCore::dbg_DisableObjectsScheduler))
+            const auto op22_item_begin = g_op22_frame_stats ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
             curr.Object->shedule_Update(std::clamp(elapsed, 1u, std::max(curr.Object->shedule.t_max, 1000u)));
+            if (g_op22_frame_stats)
+                op22_slow_update(curr.scheduled_name.c_str(),
+                    std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - op22_item_begin).count(), false);
 
             if (!curr.Object)
             {
@@ -429,7 +453,11 @@ void CSheduler::Update()
             }
 
             const u32 elapsed = dwTime - curr.dwTimeOfLastExecute;
+            const auto op22_item_begin = g_op22_frame_stats ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
             curr.Object->shedule_Update(elapsed);
+            if (g_op22_frame_stats)
+                op22_slow_update(curr.scheduled_name.c_str(),
+                    std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - op22_item_begin).count(), true);
             curr.dwTimeOfLastExecute = dwTime;
         }
     }

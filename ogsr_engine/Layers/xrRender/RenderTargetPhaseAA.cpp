@@ -159,6 +159,7 @@ static class NGXWrapper
     NVSDK_NGX_Parameter* NgxParameters{};
     NVSDK_NGX_Handle* Handle{};
     bool DLSSCreated{}, DLSSInited{};
+    ID3D11Device* failedDevice{}; // retry only after device teardown
     ID3D11Resource* OutputRT{};
     NVSDK_NGX_Dimensions saved_renderSize{};
     bool resetHistory{true};
@@ -171,7 +172,7 @@ public:
 
     bool Initialize(const u64 appid)
     {
-        if (!HW.pDevice)
+        if (!HW.pDevice || failedDevice == HW.pDevice)
             return false;
 
         if (HW.FeatureLevel < D3D_FEATURE_LEVEL_11_1)
@@ -184,6 +185,7 @@ public:
             if (result != NVSDK_NGX_Result_Success)
             {
                 Msg("!![%s] failed NVSDK_NGX_D3D11_Init. result: [%d]", __FUNCTION__, result);
+                failedDevice = HW.pDevice;
                 return false;
             }
             DLSSInited = true;
@@ -195,6 +197,7 @@ public:
             if (result != NVSDK_NGX_Result_Success)
             {
                 Msg("!![%s] failed NVSDK_NGX_D3D11_GetCapabilityParameters. result: [%d]", __FUNCTION__, result);
+                failedDevice = HW.pDevice;
                 return false;
             }
 
@@ -208,6 +211,7 @@ public:
             if (!dlssAvailable)
             {
                 Msg("!![%s] DLSS NOT AVAILABLE", __FUNCTION__);
+                failedDevice = HW.pDevice;
                 NVSDK_NGX_D3D11_DestroyParameters(NgxParameters);
                 NgxParameters = nullptr;
                 return false;
@@ -229,15 +233,13 @@ public:
 
     void RefreshAvailablePresets()
     {
-        if (!HW.pDevice)
+        if (!HW.pDevice || availablePresetsResolved)
             return;
 
         if (!Initialize(20082024151405ull) || !NgxParameters)
             return;
 
         QueryLoadedDlssDllVersion();
-        if (availablePresetsResolved)
-            return;
 
         // NGX parameter Set/Get does not report whether a preset exists in the
         // loaded DLL; it just stores the hint. NVIDIA added L/M in SDK 310.5.0.
@@ -367,6 +369,9 @@ public:
     void Destroy()
     {
         DestroyFeature();
+        failedDevice = nullptr;
+        availablePresetsResolved = false;
+        availablePresetMask = ~0u;
 
         if (NgxParameters)
         {
@@ -391,6 +396,8 @@ public:
         DLSSCreated = false;
         OutputRT = nullptr;
     }
+
+    bool IsCreated() const { return DLSSCreated; }
 
     bool Draw()
     {
@@ -440,7 +447,11 @@ public:
 
 bool R_dlss_is_preset_available(const u32 preset) { return NGXWrapper.IsPresetAvailable(preset); }
 
-void R_dlss_refresh_available_presets() { NGXWrapper.RefreshAvailablePresets(); }
+void R_dlss_refresh_available_presets()
+{
+    if (ps_r_pp_aa_mode == DLSS)
+        NGXWrapper.RefreshAvailablePresets();
+}
 
 static FfxFsr3UpscalerQualityMode GetRequestedFsr3Quality()
 {
@@ -535,6 +546,9 @@ bool CRenderTarget::reset_3dss_rendertarget(const bool need_reset)
 
 void CRenderTarget::InitDLSS()
 {
+    if (ps_r_pp_aa_mode != DLSS)
+        return;
+
     const NVSDK_NGX_Dimensions renderSize{GetRenderWidth(), GetRenderHeight()};
     const NVSDK_NGX_Dimensions displaySize{GetDisplayWidth(), GetDisplayHeight()};
     const NVSDK_NGX_PerfQuality_Value requestedQuality = GetRequestedDlssQuality();
@@ -554,6 +568,14 @@ void CRenderTarget::DestroyDLSS()
 bool CRenderTarget::ProcessDLSS()
 {
     PIX_EVENT(DLSS);
+
+    // The feature is created on demand when switching from TAA/SMAA/FSR.
+    if (!NGXWrapper.IsCreated())
+    {
+        InitDLSS();
+        if (!NGXWrapper.IsCreated())
+            return false;
+    }
 
     const NVSDK_NGX_PerfQuality_Value requestedQuality = GetRequestedDlssQuality();
 

@@ -46,7 +46,7 @@ void CEngineAPI::Initialize()
     void AttachRender();
     AttachRender();
     g_current_renderer = 4;
-    Console->Execute("renderer renderer_r4");
+    // R4 is attached above; the OP22 UI renderer token is registered later.
 
     Device.ConnectToRender();
 
