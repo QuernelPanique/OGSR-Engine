@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../op22_alife_info_cache.h"
 #include "UICarBodyWnd.h"
 #include "xrUIXmlParser.h"
 #include "UIXmlInit.h"
@@ -332,6 +333,7 @@ void CUICarBodyWnd::InitCarBody(CInventoryOwner* pOur, CInventoryOwner* pOthers)
             CGameObject::u_EventSend(P);
         }
         known_info.clear();
+        op22_info_changed();
         xr_delete(known_info_registry);
     }
 }

@@ -13,6 +13,7 @@
 #ifdef XRGAME_EXPORTS
 #include "../xrGame/op22_alife_detail.h"
 #include "../xrGame/op22_alife_search_profile.h"
+#include "../xrGame/op22_alife_info_cache.h"
 #endif
 
 #ifdef XRGAME_EXPORTS
@@ -120,6 +121,8 @@ void CALifeMonsterBrain::select_task(const bool forced)
     m_last_search_time = current_time;
 
     Op22ALifeSearchProfile<> profile(g_op22_frame_stats > 1 ? &object() : nullptr, g_op22_frame_stats > 1);
+    const unsigned info_object_id = object().ID;
+    Op22ALifeInfoScope info_scope;
     float best_value = flt_min;
 
     for (const auto& [id, smart] : ai().alife().smart_terrains().objects())
@@ -154,7 +157,7 @@ void CALifeMonsterBrain::select_task(const bool forced)
         smart_terrain().register_npc(&object());
         m_last_search_time = 0;
     }
-    profile.finish(selected, before_register);
+    info_scope.report(info_object_id, profile.finish(selected, before_register));
 }
 
 void CALifeMonsterBrain::update(const bool forced)

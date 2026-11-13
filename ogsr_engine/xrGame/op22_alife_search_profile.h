@@ -65,9 +65,9 @@ public:
         }
     }
 
-    void finish(unsigned selected, Tick before_register) const
+    bool finish(unsigned selected, Tick before_register) const
     {
-        if (!sampled_) return;
+        if (!sampled_) return false;
         const auto now = Clock::now();
         static thread_local Tick window{};
         static thread_local unsigned emitted{};
@@ -76,10 +76,11 @@ public:
             window = now;
             emitted = 0;
         }
-        if (emitted++ >= 4) return;
+        if (emitted++ >= 4) return false;
         Msg("[op22_alife_search] id=%u name=%s visited=%u skipped=%u enabled_calls=%u suitable_calls=%u enabled_ms=%.3f suitable_ms=%.3f enabled_worst=%u:%.3f suitable_worst=%u:%.3f register_ms=%.3f selected=%u total_ms=%.3f sampled=1/64",
             id_, name_.c_str() ? name_.c_str() : "", visited_, skipped_, enabled_calls_, suitable_calls_,
             enabled_ms_, suitable_ms_, enabled_worst_id_, enabled_worst_ms_, suitable_worst_id_, suitable_worst_ms_,
             ms(before_register, now), selected, ms(started_, now));
+        return true;
     }
 };

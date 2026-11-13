@@ -17,6 +17,7 @@
 #include "alife_graph_registry.h"
 #include "alife_spawn_registry.h"
 #include "alife_registry_container.h"
+#include "op22_alife_info_cache.h"
 #include "xrServer.h"
 #include "level.h"
 #include "GameObject.h"
@@ -361,12 +362,16 @@ bool has_info(const CALifeSimulator* self, const ALife::_OBJECT_ID& id, LPCSTR i
 {
     const KNOWN_INFO_VECTOR* known_info = registry(self, id);
     if (!known_info)
-        return (false);
+        return false;
 
-    if (std::find_if(known_info->begin(), known_info->end(), CFindByIDPred(info_id)) == known_info->end())
-        return (false);
-
-    return (true);
+    const shared_str key(info_id);
+    const auto find = [&]()
+    {
+        return std::find_if(known_info->begin(), known_info->end(), CFindByIDPred(key)) != known_info->end();
+    };
+    // CP22's global has_info targets actor registry 0. Other objects and all
+    // calls outside select_task retain the ordinary live vector lookup.
+    return id == 0 ? Op22ALifeInfoScope::lookup(known_info, key, find) : find();
 }
 
 bool dont_has_info(const CALifeSimulator* self, const ALife::_OBJECT_ID& id, LPCSTR info_id)

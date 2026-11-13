@@ -17,6 +17,7 @@
 #include "alife_registry_wrappers.h"
 #include "script_callback_ex.h"
 #include "game_object_space.h"
+#include "op22_alife_info_cache.h"
 
 void CInventoryOwner::OnEvent(NET_Packet& P, u16 type)
 {
@@ -61,6 +62,7 @@ bool CInventoryOwner::OnReceiveInfo(shared_str info_id) const
     else
         return false;
 
+    op22_info_changed();
 #ifdef DEBUG
     if (psAI_Flags.test(aiInfoPortion))
         Msg("[%s] Received Info [%s]", Name(), *info_id);
@@ -117,6 +119,7 @@ void CInventoryOwner::OnDisableInfo(shared_str info_id) const
     if (known_info.end() == it)
         return;
     known_info.erase(it);
+    op22_info_changed();
 }
 
 void CInventoryOwner::TransferInfo(shared_str info_id, bool add_info) const
