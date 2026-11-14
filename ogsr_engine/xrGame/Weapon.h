@@ -583,6 +583,9 @@ private:
     shared_str laserdot_attach_bone;
     Fvector laserdot_world_attach_offset{};
     ref_light laser_light_render;
+    // OP22: laser dot halo - point light at the ray hit (dot_range/dot_color in laser_light_section)
+    ref_light laser_dot_render;
+    float laser_range{100.f};
     CLAItem* laser_lanim{};
     float laser_fBrightness{1.f};
 

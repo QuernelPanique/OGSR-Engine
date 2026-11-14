@@ -84,6 +84,7 @@ CWeapon::~CWeapon()
     xr_delete(m_UIScope);
 
     laser_light_render.destroy();
+    laser_dot_render.destroy();
     flashlight_render.destroy();
     flashlight_omni.destroy();
 }
@@ -548,6 +549,18 @@ void CWeapon::Load(LPCSTR section)
         laser_light_render->set_color(clr);
         const float range = READ_IF_EXISTS(pSettings, r_float, m_light_section, b_r2 ? "range_r2" : "range", 100.f);
         laser_light_render->set_range(range);
+        laser_range = range;
+
+        // OP22: optional halo light at the dot (ray hit point).
+        if (pSettings->line_exist(m_light_section, "dot_range"))
+        {
+            laser_dot_render = ::Render->light_create();
+            laser_dot_render->set_type(IRender_Light::POINT);
+            laser_dot_render->set_shadow(false);
+            laser_dot_render->set_moveable(true);
+            laser_dot_render->set_color(READ_IF_EXISTS(pSettings, r_fcolor, m_light_section, "dot_color", (Fcolor{1.0f, 0.0f, 0.0f, 1.0f})));
+            laser_dot_render->set_range(pSettings->r_float(m_light_section, "dot_range"));
+        }
         laser_light_render->set_cone(deg2rad(READ_IF_EXISTS(pSettings, r_float, m_light_section, "spot_angle", 1.f)));
         laser_light_render->set_texture(READ_IF_EXISTS(pSettings, r_string, m_light_section, "spot_texture", nullptr));
     }
@@ -1006,6 +1019,8 @@ void CWeapon::UpdateLaser()
         else if (laser_light_render->get_active() && (!IsLaserOn() || !(!H_Parent() || (io && this == io->inventory().ActiveItem()))))
         {
             laser_light_render->set_active(false);
+            if (laser_dot_render)
+                laser_dot_render->set_active(false);
             UpdateAddonsVisibility();
         }
 
@@ -1034,6 +1049,28 @@ void CWeapon::UpdateLaser()
 
             laser_light_render->set_position(laser_pos);
             laser_light_render->set_rotation(laserXForm.k, laserXForm.i);
+
+            // OP22: trace the beam to the first surface: the spot ends there (no dot through
+            // walls) and the halo light sits just in front of the hit point.
+            {
+                collide::rq_result R;
+                Fvector ray_dir = laser_dir;
+                ray_dir.normalize_safe();
+                const BOOL hit = Level().ObjectSpace.RayPick(laser_pos, ray_dir, laser_range, collide::rqtBoth, R, H_Root());
+                laser_light_render->set_range(hit ? R.range + 0.5f : laser_range);
+                if (laser_dot_render)
+                {
+                    if (hit && R.range > 0.05f)
+                    {
+                        Fvector dot;
+                        dot.mad(laser_pos, ray_dir, R.range - 0.03f);
+                        laser_dot_render->set_position(dot);
+                        laser_dot_render->set_active(true);
+                    }
+                    else
+                        laser_dot_render->set_active(false);
+                }
+            }
 
             // calc color animator
             if (laser_lanim)
