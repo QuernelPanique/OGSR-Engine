@@ -1104,6 +1104,32 @@ bool CWeaponMagazined::Action(s32 cmd, u32 flags)
     break;
     case kTORCH: {
         auto pActorTorch = smart_cast<CActor*>(H_Parent())->inventory().ItemFromSlot(TORCH_SLOT);
+        // OP22: weapon with a laser (laser_light_section) shares the torch key:
+        // tap = head lamp as before, hold >= 350 ms = laser on/off (decided on release).
+        if (has_laser)
+        {
+            if (flags & CMD_START)
+            {
+                m_op22_torch_press_time = Device.dwTimeGlobal;
+                return true;
+            }
+            if ((flags & CMD_STOP) && m_op22_torch_press_time)
+            {
+                const u32 held = Device.dwTimeGlobal - m_op22_torch_press_time;
+                m_op22_torch_press_time = 0;
+                if (GetState() == eIdle)
+                {
+                    if (held >= 350)
+                        LaserSwitch = true;
+                    else if (pActorTorch)
+                        HeadLampSwitch = true;
+                    if (LaserSwitch || HeadLampSwitch)
+                        DeviceSwitch();
+                }
+                return true;
+            }
+            break;
+        }
         if ((flags & CMD_START) && pActorTorch && GetState() == eIdle)
         {
             HeadLampSwitch = true;

@@ -195,6 +195,7 @@ protected:
     virtual void PlayAnimIdle();
 
     bool LaserSwitch{}, TorchSwitch{}, HeadLampSwitch{}, NightVisionSwitch{};
+    u32 m_op22_torch_press_time{}; // OP22: tap/hold of the torch key for weapons with a laser
     bool CartridgeInTheChamberEnabled{};
     u32 CartridgeInTheChamber{};
 
