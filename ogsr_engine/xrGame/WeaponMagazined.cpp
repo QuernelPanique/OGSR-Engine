@@ -1707,7 +1707,7 @@ void CWeaponMagazined::OnZoomIn()
         }
         R_ASSERT(S);
 
-        if (m_bVision && !m_binoc_vision)
+        if (m_bVision && !m_binoc_vision && IsScopeAttached()) // OP22: as OP 2.2 (xrGame.dll FUN_1808ba890): target vision only with a scope attached, not on iron sights
             m_binoc_vision = xr_new<CBinocularsVision>(this);
     }
 }
@@ -1725,11 +1725,8 @@ void CWeaponMagazined::OnZoomOut()
     if (pActor)
     {
         pActor->Cameras().RemoveCamEffector(eCEZoom);
-        if (m_bVision)
-        {
-            VERIFY(m_binoc_vision);
+        if (m_binoc_vision) // OP22: vision exists only with a scope attached
             xr_delete(m_binoc_vision);
-        }
     }
 }
 
