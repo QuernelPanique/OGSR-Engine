@@ -50,7 +50,16 @@ void CEncyclopediaArticle::Load(shared_str id)
 
 void CEncyclopediaArticle::load_shared(LPCSTR)
 {
-    const ITEM_DATA& item_data = *id_to_index::GetById(m_ArticleId);
+    // OP22: статьи, которой нет в XML [encyclopedia], движок ОП не показывал; OGSR падал на R_ASSERT (CP22:
+    // agr_nii_fab_mil_task, agr_nii_security_shedule, tr_escape_broken_car в инфопоршнях). Пустая статья без вылета.
+    const ITEM_DATA* item = id_to_index::GetById(m_ArticleId, true);
+    if (!item)
+    {
+        Msg("! [OP22] encyclopedia article [%s] not described in XML - skipped (as in OP 2.2)", m_ArticleId.c_str());
+        data()->articleType = ARTICLE_DATA::eEncyclopediaArticle;
+        return;
+    }
+    const ITEM_DATA& item_data = *item;
 
     CUIXml* pXML = item_data._xml;
     pXML->SetLocalRoot(pXML->GetRoot());

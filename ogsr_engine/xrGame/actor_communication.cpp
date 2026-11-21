@@ -83,6 +83,11 @@ void CActor::AddEncyclopediaArticle(const CInfoPortion* info_portion, bool rever
             const auto it = std::find_if(article_vector.begin(), article_vector.end(), [&id](const auto& it) { return it.article_id == id; });
             if (it != article_vector.end())
                 continue;
+            if (!CEncyclopediaArticle::op22_exists(id)) // OP22: нет статьи в XML - в КПК не добавляем
+            {
+                Msg("! [OP22] encyclopedia article [%s] not described in XML - skipped (as in OP 2.2)", id.c_str());
+                continue;
+            }
 
             CEncyclopediaArticle article;
             article.Load(id);
@@ -110,6 +115,11 @@ void CActor::op22_add_article(LPCSTR id)
     const shared_str sid = id;
     if (std::find_if(article_vector.begin(), article_vector.end(), [&](const auto& a) { return a.article_id == sid; }) != article_vector.end())
         return;
+    if (!CEncyclopediaArticle::op22_exists(sid)) // OP22: нет статьи в XML - в КПК не добавляем
+    {
+        Msg("! [OP22] encyclopedia article [%s] not described in XML - skipped (as in OP 2.2)", id);
+        return;
+    }
 
     CEncyclopediaArticle article;
     article.Load(sid);

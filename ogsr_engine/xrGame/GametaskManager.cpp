@@ -79,7 +79,8 @@ CGameTask* CGameTaskManager::GiveGameTaskToActor(CGameTask* t, u32 timeToComplet
         if (obj->article_id.size())
         {
             FindArticleByIDPred pred(obj->article_id);
-            if (std::find_if(article_vector.begin(), article_vector.end(), pred) == article_vector.end())
+            if (std::find_if(article_vector.begin(), article_vector.end(), pred) == article_vector.end() &&
+                CEncyclopediaArticle::op22_exists(obj->article_id)) // OP22: нет статьи в XML - не добавляем
             {
                 CEncyclopediaArticle article;
                 article.Load(obj->article_id);
