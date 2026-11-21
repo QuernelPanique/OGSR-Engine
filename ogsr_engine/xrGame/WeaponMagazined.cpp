@@ -116,6 +116,7 @@ void CWeaponMagazined::net_Destroy()
 // OP22: износ глушителя живёт в сохранении, а не в состоянии сервера: ScopeRespawn передаёт его новому стволу здесь
 static string128 op22_resp_sect{};
 static float op22_resp_sil_cond{1.f};
+static string128 op22_resp_scope{}; // OP22: надетый прицел - стволу с видом по прицелу после смены секции (старые варианты)
 
 BOOL CWeaponMagazined::net_Spawn(CSE_Abstract* DC)
 {
@@ -124,6 +125,9 @@ BOOL CWeaponMagazined::net_Spawn(CSE_Abstract* DC)
     {
         m_op22_sil_cond = op22_resp_sil_cond;
         op22_resp_sect[0] = 0;
+        if (op22_resp_scope[0] && m_op22_looks)
+            m_op22_cur_scope = op22_resp_scope;
+        op22_resp_scope[0] = 0;
     }
     const auto wpn = smart_cast<CSE_ALifeItemWeaponMagazined*>(DC);
     m_iCurFireMode = wpn->m_u8CurFireMode;
@@ -139,8 +143,9 @@ BOOL CWeaponMagazined::net_Spawn(CSE_Abstract* DC)
         }
     }
     SetQueueSize(GetCurrentFireMode());
-    if (m_op22_looks) // OP22: вид по надетому прицелу (прицел уже известен: InitAddons в CWeapon::net_Spawn)
+    if (m_op22_looks) // OP22: вид по надетому прицелу (прицел - из сохранения или от прежней секции)
     {
+        InitAddons();
         op22_ApplyLook();
         UpdateAddonsVisibility();
     }
@@ -2053,6 +2058,9 @@ bool CWeaponMagazined::ScopeRespawn(PIItem pIItem)
 
             xr_strcpy(op22_resp_sect, S); // OP22: см. net_Spawn
             op22_resp_sil_cond = m_op22_sil_cond;
+            op22_resp_scope[0] = 0;
+            if (IsScopeAttached()) // OP22: какой прицел надет - стволу с видом по прицелу
+                xr_strcpy(op22_resp_scope, smart_cast<CScope*>(pIItem) ? pIItem->object().cNameSect().c_str() : m_sScopeName.c_str());
 
             DestroyObject();
             sobj2->Spawn_Write(P, TRUE);
