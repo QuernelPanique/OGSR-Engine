@@ -630,6 +630,7 @@ void CCC_Register()
     extern int g_op22_frame_stats;
     extern int g_op22_box_sleep;
     CMD4(CCC_Integer, "op22_frame_stats", &g_op22_frame_stats, 0, 2);
+    CMD4(CCC_Integer, "op22_timing_log", &g_op22_timing_log, 0, 1); // OP22: замеры окон/текстур/XML в лог
     CMD4(CCC_Integer, "op22_box_sleep", &g_op22_box_sleep, 0, 1);
     CMD4(CCC_Integer, "lua_gctimeout", &psLUA_GCTIMEOUT_MIN, 1000, 16000);
 

@@ -231,6 +231,7 @@ extern XRCORE_API task_thread_pool::task_thread_pool* TTAPI;
 
 extern XRCORE_API bool gModulesLoaded;
 extern XRCORE_API bool g_op22_ingame; // OP22: уровень загружен (идёт игра) - для замеров долгих загрузок в лог
+extern XRCORE_API int g_op22_timing_log; // OP22: 1 - замеры [op22_ui]/[op22_tex]/[op22_xml] в лог (отладка)
 
 // Трэш
 #define BENCH_SEC_CALLCONV

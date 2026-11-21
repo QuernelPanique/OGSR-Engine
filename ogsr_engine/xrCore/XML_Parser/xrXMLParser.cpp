@@ -111,7 +111,7 @@ bool CXml::Load(LPCSTR path, LPCSTR xml_filename, bool fatal)
         op22_xml_timer(const char* n_) : n(n_) { t.Start(); }
         ~op22_xml_timer()
         {
-            if (g_op22_ingame)
+            if (g_op22_ingame && g_op22_timing_log)
             {
                 const float ms = t.GetElapsed_sec() * 1000.f;
                 if (ms > 3.f)

@@ -36,7 +36,8 @@ void CUITextureMaster::op22_Preload()
         auto& sh = s_op22_preload.emplace_back();
         sh->create("hud\\default", f.c_str());
     }
-    Msg("[op22_ui] preload: %u UI textures", u32(s_op22_preload.size()));
+    if (g_op22_timing_log)
+        Msg("[op22_ui] preload: %u UI textures", u32(s_op22_preload.size()));
 }
 
 void CUITextureMaster::op22_PreloadClear() { s_op22_preload.clear(); }

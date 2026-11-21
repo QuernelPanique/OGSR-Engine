@@ -51,7 +51,7 @@ void CDialogHolder::StartMenu(CUIDialogWnd* pDialog, bool bDoHideIndicators)
         ~op22_open_timer()
         {
             const float ms = t.GetElapsed_sec() * 1000.f;
-            if (ms > 8.f)
+            if (ms > 8.f && g_op22_timing_log)
             {
                 const shared_str wn = w->WindowName();
                 Msg("[op22_ui] open %s: %.1f ms", wn.size() ? wn.c_str() : typeid(*w).name(), ms);
