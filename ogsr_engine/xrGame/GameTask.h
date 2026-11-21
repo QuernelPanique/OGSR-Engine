@@ -121,6 +121,7 @@ protected:
     void sync_task_version();
 
 public:
+    static bool op22_exists(const TASK_ID& id); // OP22: есть ли задание в game_tasks.xml
     CGameTask(const TASK_ID& id);
     CGameTask();
 

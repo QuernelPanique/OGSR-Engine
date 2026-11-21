@@ -90,6 +90,14 @@ bool CPhraseDialogManager::AddAvailableDialog(shared_str dialog_id, CPhraseDialo
         return false;
     m_CheckedDialogs.push_back(dialog_id);
 
+    // OP22: диалог из профиля/инфопоршня, которого нет в XML [dialogs]: движок ОП его пропускал, OGSR падал на
+    // R_ASSERT «item not found» при начале разговора (bar_bar_psih_*, bar_arena_man_monster и др. в CP22)
+    if (!CPhraseDialog::op22_exists(dialog_id))
+    {
+        Msg("! [OP22] dialog [%s] not described in XML - skipped (as in OP 2.2)", dialog_id.c_str());
+        return false;
+    }
+
     DIALOG_SHARED_PTR phrase_dialog(xr_new<CPhraseDialog>());
     phrase_dialog->Load(dialog_id);
 

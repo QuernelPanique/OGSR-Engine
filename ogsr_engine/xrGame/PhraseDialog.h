@@ -49,6 +49,7 @@ private:
     friend id_to_index;
 
 public:
+    static bool op22_exists(const shared_str& id) { return id_to_index::GetById(id, true) != NULL; } // OP22
     CPhraseDialog();
     virtual ~CPhraseDialog();
 

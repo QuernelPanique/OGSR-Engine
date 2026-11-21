@@ -51,6 +51,11 @@ CGameTask* CGameTaskManager::GiveGameTaskToActor(const TASK_ID& id, u32 timeToCo
 {
     if (bCheckExisting && HasGameTask(id))
         return NULL;
+    if (!CGameTask::op22_exists(id)) // OP22: как в ОП - нет задания в XML, не выдаём (OGSR падал)
+    {
+        Msg("! [OP22] game task [%s] not described in game_tasks.xml - not given (as in OP 2.2)", id.c_str());
+        return NULL;
+    }
     CGameTask* t = xr_new<CGameTask>(id);
 
     return GiveGameTaskToActor(t, timeToComplete, bCheckExisting);

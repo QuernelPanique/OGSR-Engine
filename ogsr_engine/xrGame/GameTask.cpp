@@ -76,6 +76,21 @@ CGameTask::CGameTask()
     m_show_all_objectives = false;
 }
 
+// OP22: задание, которого нет в game_tasks.xml, движок ОП не выдавал молча; OGSR падал на THROW3 (CGameTask::Load).
+bool CGameTask::op22_exists(const TASK_ID& id)
+{
+    if (!g_gameTaskXml)
+    {
+        g_gameTaskXml = xr_new<CUIXml>();
+        g_gameTaskXml->Init(CONFIG_PATH, "gameplay", "game_tasks.xml");
+    }
+    XML_NODE* old_root = g_gameTaskXml->GetLocalRoot();
+    g_gameTaskXml->SetLocalRoot(g_gameTaskXml->GetRoot());
+    const bool ok = g_gameTaskXml->NavigateToNodeWithAttribute("game_task", "id", *id) != NULL;
+    g_gameTaskXml->SetLocalRoot(old_root);
+    return ok;
+}
+
 void CGameTask::Load(const TASK_ID& id)
 {
     m_ID = id;
