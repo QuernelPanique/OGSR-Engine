@@ -62,11 +62,21 @@ void CUIDialogWndEx::Update() { inherited::Update(); }
 // OP22: движок ОП при закрытии скриптового окна присылал ему WINDOW_STOP_DIALOG: окна хранилищ ОП (рюкзак, сейф) снимают
 // в этом колбэке запрет сохранения (save_prohibited). В OGSR события не было - запрет оставался навсегда (10.11).
 // Колбэк зовётся при любом закрытии через CDialogHolder::StopMenu -> Hide, имя элемента не сверяется.
+// 22.11: StopMenu сначала прячет окно (RemoveDialogToRender -> Show(false)), потом зовёт Hide - проверка IsShown()
+// в Hide всегда давала false, событие не приходило никогда (запрет сохранения после рюкзака/тайника/сейфа).
+// Теперь «открыто» - флаг, который ставит Show() (StartMenu) и снимает Hide().
+void CUIDialogWndEx::Show()
+{
+    m_op22_opened = true;
+    inherited::Show();
+}
+
 void CUIDialogWndEx::Hide()
 {
-    const bool was_shown = IsShown();
+    const bool was_open = m_op22_opened;
+    m_op22_opened = false;
     inherited::Hide();
-    if (!was_shown)
+    if (!was_open)
         return;
     for (size_t i = 0; i < m_callbacks.size(); ++i) // колбэк может менять список: по индексу
     {

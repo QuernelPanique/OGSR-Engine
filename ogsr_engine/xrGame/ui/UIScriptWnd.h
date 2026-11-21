@@ -16,6 +16,7 @@ class CUIDialogWndEx : public CUIDialogWnd, public DLL_Pure
 
 private:
     CALLBACKS m_callbacks;
+    bool m_op22_opened{}; // OP22: окно открыто через Show() и ещё не закрыто - для WINDOW_STOP_DIALOG
     virtual void SendMessage(CUIWindow* pWnd, s16 msg, void* pData = NULL);
     SCallbackInfo* NewCallback();
 
@@ -34,6 +35,8 @@ public:
     void ClearCallbacks();
 
     virtual void Update();
+    using inherited::Show;
+    virtual void Show(); // OP22: отметка «окно открыто» для WINDOW_STOP_DIALOG
     virtual void Hide(); // OP22: колбэки WINDOW_STOP_DIALOG, как в движке ОП
     virtual bool OnKeyboard(int dik, EUIMessages keyboard_action);
     virtual bool Dispatch(int cmd, int param) { return true; }
