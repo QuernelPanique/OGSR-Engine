@@ -20,6 +20,7 @@ public:
     virtual void Load(LPCSTR section);
     virtual void switch2_Fire();
     virtual void on_a_hud_attach();
+    void op22_ReloadHud() override; // OP22
 
     virtual void FireStart();
     virtual void SwitchState(u32 S);

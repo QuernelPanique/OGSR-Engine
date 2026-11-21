@@ -31,6 +31,13 @@ void CWeaponRPG7::Load(LPCSTR section)
     misfireConditionK = 0.0f;
 }
 
+// OP22: кость гранаты - из hud-секции, при смене hud
+void CWeaponRPG7::op22_ReloadHud()
+{
+    inherited::op22_ReloadHud();
+    m_sHudGrenadeBoneName = READ_IF_EXISTS(pSettings, r_string, hud_sect, "grenade_bone", grenade_def_bone_cop);
+}
+
 void CWeaponRPG7::UpdateMissileVisibility()
 {
     bool vis_hud, vis_weap;

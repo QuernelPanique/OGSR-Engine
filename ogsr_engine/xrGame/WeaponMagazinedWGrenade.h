@@ -87,6 +87,8 @@ public:
     //название косточки для гранаты подствольника в HUD
     shared_str grenade_bone_name;
 
+    void op22_ReloadHud() override; // OP22: кость подствольника при смене hud
+
     int GetAmmoElapsed2() const override { return iAmmoElapsed2; }
     bool IsGrenadeMode() const override { return m_bGrenadeMode; }
     virtual float Weight() const;

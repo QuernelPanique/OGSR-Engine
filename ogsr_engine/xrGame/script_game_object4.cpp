@@ -530,6 +530,7 @@ void CScriptGameObject::SetAddonFlags(u8 _flags)
         return;
     }
     k->SetAddonsState(_flags);
+    k->op22_AfterAddonsChange(); // OP22: вид по надетому прицелу (op22_scope_looks)
 }
 u32 CScriptGameObject::GetMagazineSize()
 {

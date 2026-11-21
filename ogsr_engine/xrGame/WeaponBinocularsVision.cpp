@@ -143,7 +143,8 @@ void SBinocVisibleObj::Update()
 CBinocularsVision::CBinocularsVision(CWeaponMagazined* parent)
 {
     m_parent = parent;
-    Load(m_parent->cNameSect());
+    // OP22: автозахват от прокачанного прицела (op22_vision) - параметры рамки из секции прицела, если у ствола их нет
+    Load(pSettings->line_exist(m_parent->cNameSect(), "vis_frame_speed") || !m_parent->GetScopeName().size() ? m_parent->cNameSect() : m_parent->GetScopeName());
 }
 CBinocularsVision::~CBinocularsVision()
 {

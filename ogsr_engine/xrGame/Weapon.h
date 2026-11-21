@@ -178,6 +178,8 @@ public:
 
     const shared_str& GetGrenadeLauncherName() const { return m_sGrenadeLauncherName; }
     const shared_str& GetScopeName() const { return m_sScopeName; }
+    void op22_ReloadHud() override; // OP22: параметры hud-секции оружия (кости, инерция прицеливания) - при смене hud
+    virtual void op22_AfterAddonsChange() {} // OP22: флаги обвесов выставлены скриптом (set_addon_flags)
     const shared_str& GetSilencerName() const { return m_sSilencerName; }
 
     u8 GetAddonsState() const { return m_flagsAddOnState; };

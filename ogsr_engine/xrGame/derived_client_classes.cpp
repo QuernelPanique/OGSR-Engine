@@ -340,6 +340,9 @@ void set_scope_name(CWeapon* item, LPCSTR text)
     item->m_allScopeNames.erase(std::remove(item->m_allScopeNames.begin(), item->m_allScopeNames.end(), item->m_sScopeName), item->m_allScopeNames.end());
     item->m_sScopeName = text;
     item->m_allScopeNames.push_back(item->m_sScopeName);
+    // OP22: у ствола с видом по прицелу запись имени прицела задаёт и надетый прицел
+    if (auto m = smart_cast<CWeaponMagazined*>(item); m && m->op22_Looks())
+        m->op22_SetCurScope(item->m_sScopeName);
 }
 
 LPCSTR get_silencer_name(CWeapon* I) { return I->m_sSilencerName.c_str(); }

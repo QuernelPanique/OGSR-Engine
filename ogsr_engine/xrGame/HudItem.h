@@ -174,6 +174,9 @@ public:
     virtual void on_a_hud_attach();
     virtual void on_b_hud_detach();
     const shared_str& HudSection() const { return hud_sect; }
+    // OP22: вид ствола по надетому прицелу меняет hud-секцию без смены секции предмета - параметры hud перечитываются
+    void op22_LoadHudBase();
+    virtual void op22_ReloadHud() { op22_LoadHudBase(); }
 
     BOOL GetHUDmode();
     IC void SetPending(BOOL H) { m_huditem_flags.set(fl_pending, H); }

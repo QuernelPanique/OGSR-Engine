@@ -20,6 +20,7 @@
 #include "string_table.h"
 #include "WeaponBinoculars.h"
 #include "WeaponBinocularsVision.h"
+#include "player_hud.h" // OP22: смена hud по надетому прицелу
 #include "ai_object_location.h"
 
 #include "game_object_space.h"
@@ -138,6 +139,11 @@ BOOL CWeaponMagazined::net_Spawn(CSE_Abstract* DC)
         }
     }
     SetQueueSize(GetCurrentFireMode());
+    if (m_op22_looks) // OP22: вид по надетому прицелу (прицел уже известен: InitAddons в CWeapon::net_Spawn)
+    {
+        op22_ApplyLook();
+        UpdateAddonsVisibility();
+    }
     return bRes;
 }
 
@@ -219,6 +225,7 @@ void CWeaponMagazined::Load(LPCSTR section)
         m_bHasDifferentFireModes = false;
 
     m_bVision = !!READ_IF_EXISTS(pSettings, r_bool, section, "vision_present", false);
+    m_op22_looks = !!READ_IF_EXISTS(pSettings, r_bool, section, "op22_scope_looks", false); // OP22
     m_fire_zoomout_time = READ_IF_EXISTS(pSettings, r_u32, section, "fire_zoomout_time", u32(-1));
 
     m_str_count_tmpl = READ_IF_EXISTS(pSettings, r_string, "features", "wpn_magazined_str_count_tmpl", "{AE}/{AC}");
@@ -1223,7 +1230,15 @@ bool CWeaponMagazined::Attach(PIItem pIItem, bool b_send_event)
             pIItem->object().DestroyObject();
         };
 
-        if (!ScopeRespawn(pIItem))
+        if (m_op22_looks) // OP22: без смены секции - запомнить прицел и сменить вид
+        {
+            if (pScope)
+                m_op22_cur_scope = pIItem->object().cNameSect();
+            InitAddons();
+            op22_ApplyLook();
+            UpdateAddonsVisibility();
+        }
+        else if (!ScopeRespawn(pIItem))
         {
             UpdateAddonsVisibility();
             InitAddons();
@@ -1241,7 +1256,14 @@ bool CWeaponMagazined::Detach(const char* item_section_name, bool b_spawn_item)
     {
         m_flagsAddOnState &= ~CSE_ALifeItemWeapon::eWeaponAddonScope;
 
-        if (!ScopeRespawn(nullptr))
+        if (m_op22_looks) // OP22: без смены секции - вид без прицела
+        {
+            m_op22_cur_scope = nullptr;
+            InitAddons();
+            op22_ApplyLook();
+            UpdateAddonsVisibility();
+        }
+        else if (!ScopeRespawn(nullptr))
         {
             UpdateAddonsVisibility();
             InitAddons();
@@ -1381,8 +1403,12 @@ void CWeaponMagazined::InitAddons()
         if (m_eScopeStatus == ALife::eAddonAttachable)
         {
             m_sScopeName = pSettings->r_string(cNameSect(), "scope_name");
-            m_iScopeX = pSettings->r_s32(cNameSect(), "scope_x");
-            m_iScopeY = pSettings->r_s32(cNameSect(), "scope_y");
+            // OP22: надетый прицел - из состояния ствола, место на иконке - из секции-вида (op22_scope_looks)
+            if (m_op22_looks && m_op22_cur_scope.size() && std::find(m_allScopeNames.begin(), m_allScopeNames.end(), m_op22_cur_scope) != m_allScopeNames.end())
+                m_sScopeName = m_op22_cur_scope;
+            const shared_str op22_xy = m_op22_looks ? op22_LookSection() : cNameSect();
+            m_iScopeX = pSettings->r_s32(op22_xy, "scope_x");
+            m_iScopeY = pSettings->r_s32(op22_xy, "scope_y");
 
             InitZoomParams(*m_sScopeName, !m_bIgnoreScopeTexture);
 
@@ -1408,7 +1434,9 @@ void CWeaponMagazined::InitAddons()
 
         if (IsZoomEnabled())
         {
-            InitZoomParams(cNameSect().c_str(), !!READ_IF_EXISTS(pSettings, r_bool, cNameSect(), "force_scope_texture", false));
+            // OP22: кратность мушки без прицела - из секции-вида (штатный прицел снят: op22_scope_look_none)
+            const shared_str op22_zs = m_op22_looks ? op22_LookSection() : cNameSect();
+            InitZoomParams(op22_zs.c_str(), !!READ_IF_EXISTS(pSettings, r_bool, op22_zs, "force_scope_texture", false));
 
             // for weapon without any scope - scope_zoom_factor will overrider ironsight_zoom_factor
             m_fIronSightZoomFactor = m_fScopeZoomFactor;
@@ -1707,7 +1735,9 @@ void CWeaponMagazined::OnZoomIn()
         }
         R_ASSERT(S);
 
-        if (m_bVision && !m_binoc_vision && IsScopeAttached()) // OP22: as OP 2.2 (xrGame.dll FUN_1808ba890): target vision only with a scope attached, not on iron sights
+        // OP22: прокачанный прицел (op22_vision в секции прицела) даёт автозахват любому стволу, на который надет
+        const bool op22_scope_vision = IsScopeAttached() && m_sScopeName.size() && READ_IF_EXISTS(pSettings, r_bool, m_sScopeName, "op22_vision", false);
+        if ((m_bVision || op22_scope_vision) && !m_binoc_vision && IsScopeAttached()) // OP22: as OP 2.2 (xrGame.dll FUN_1808ba890): target vision only with a scope attached, not on iron sights
             m_binoc_vision = xr_new<CBinocularsVision>(this);
     }
 }
@@ -1819,6 +1849,79 @@ void op22_set_silencer_condition(CGameObject* o, float v)
 }
 
 static constexpr u32 OP22_SIL_MAGIC = 0x4C495350; // "PSIL"
+static constexpr u32 OP22_SCOPE_MAGIC = 0x50435350; // "PSCP"
+
+// OP22: секция-вид для текущего состояния прицела (op22_scope_looks)
+shared_str CWeaponMagazined::op22_LookSection() const
+{
+    string256 key;
+    if (IsScopeAttached() && m_eScopeStatus == ALife::eAddonAttachable && m_sScopeName.size())
+        xr_sprintf(key, "op22_scope_look_%s", m_sScopeName.c_str());
+    else
+        xr_strcpy(key, "op22_scope_look_none");
+    if (pSettings->line_exist(cNameSect(), key))
+    {
+        const shared_str look = pSettings->r_string(cNameSect(), key);
+        if (pSettings->section_exist(look.c_str()))
+            return look;
+        Msg("! [%s]: %s: no look section [%s]", __FUNCTION__, cNameSect().c_str(), look.c_str());
+    }
+    return cNameSect();
+}
+
+// OP22: модель мира, hud и второй прицел - из секции-вида; сам предмет и его секция не меняются
+void CWeaponMagazined::op22_ApplyLook()
+{
+    if (!m_op22_looks)
+        return;
+    const shared_str look = op22_LookSection();
+
+    if (pSettings->line_exist(look, "visual"))
+    {
+        string_path vis;
+        xr_strcpy(vis, pSettings->r_string(look, "visual"));
+        if (strext(vis))
+            *strext(vis) = 0;
+        xr_strlwr(vis);
+        if (xr_strcmp(cNameVisual().c_str(), vis))
+        {
+            cNameVisual_set(vis);
+            if (auto se = smart_cast<CSE_ALifeItemWeapon*>(alife_object())) // модель в сохранении - та же
+                se->set_visual(vis);
+        }
+    }
+
+    if (pSettings->line_exist(look, "hud"))
+    {
+        const shared_str hud = pSettings->r_string(look, "hud");
+        if (hud != hud_sect)
+        {
+            const bool in_hands = HudItemData() != nullptr;
+            if (in_hands)
+                g_player_hud->detach_item(this);
+            hud_sect = hud;
+            op22_ReloadHud();
+            if (in_hands)
+                g_player_hud->attach_item(this);
+        }
+    }
+
+    AimAlt = READ_IF_EXISTS(pSettings, r_bool, look, "use_alt_aim_hud", false);
+    if (!AimAlt)
+        is_second_zoom_offset_enabled = false;
+}
+
+// OP22: флаги обвесов выставил скрипт (set_addon_flags) - пересчитать прицел и вид
+void CWeaponMagazined::op22_AfterAddonsChange()
+{
+    if (!m_op22_looks)
+        return;
+    if (!IsScopeAttached())
+        m_op22_cur_scope = nullptr;
+    InitAddons();
+    op22_ApplyLook();
+    UpdateAddonsVisibility();
+}
 
 void CWeaponMagazined::save(NET_Packet& output_packet)
 {
@@ -1828,6 +1931,8 @@ void CWeaponMagazined::save(NET_Packet& output_packet)
     save_data(m_iCurFireMode, output_packet);
     output_packet.w_u32(OP22_SIL_MAGIC); // OP22: метка, старые сейвы поля не содержат
     output_packet.w_float(m_op22_sil_cond);
+    output_packet.w_u32(OP22_SCOPE_MAGIC); // OP22: надетый прицел ствола с видом по прицелу
+    output_packet.w_stringZ(m_op22_cur_scope);
 }
 
 void CWeaponMagazined::load(IReader& input_packet)
@@ -1843,6 +1948,15 @@ void CWeaponMagazined::load(IReader& input_packet)
         const size_t pos = input_packet.tell();
         if (input_packet.r_u32() == OP22_SIL_MAGIC)
             m_op22_sil_cond = input_packet.r_float();
+        else
+            input_packet.seek(pos);
+    }
+    // OP22: надетый прицел; старые сейвы поля не содержат
+    if (input_packet.elapsed() >= static_cast<long>(sizeof(u32) + 1))
+    {
+        const size_t pos = input_packet.tell();
+        if (input_packet.r_u32() == OP22_SCOPE_MAGIC)
+            input_packet.r_stringZ(m_op22_cur_scope);
         else
             input_packet.seek(pos);
     }

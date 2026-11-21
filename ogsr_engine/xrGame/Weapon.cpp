@@ -674,6 +674,65 @@ void CWeapon::LoadFireParams(LPCSTR section, LPCSTR prefix)
     CShootingObject::LoadFireParams(section, prefix);
 }
 
+// OP22: то же, что CWeapon::Load читает из hud-секции; вызывается при смене hud (вид по надетому прицелу)
+void CWeapon::op22_ReloadHud()
+{
+    inherited::op22_ReloadHud();
+    if (!m_bForcedParticlesHudMode)
+        m_bParticlesHudMode = !!pSettings->line_exist(hud_sect, "item_visual");
+    m_fZoomRotateTime = READ_IF_EXISTS(pSettings, r_float, hud_sect, "zoom_rotate_time", ROTATION_TIME);
+
+    m_sHud_wpn_scope_bones.clear();
+    if (pSettings->line_exist(hud_sect, "scope_bone"))
+    {
+        const char* S = pSettings->r_string(hud_sect, "scope_bone");
+        if (S && strlen(S))
+        {
+            const int count = _GetItemCount(S);
+            string128 _scope_bone{};
+            for (int it = 0; it < count; ++it)
+            {
+                _GetItem(S, it, _scope_bone);
+                m_sHud_wpn_scope_bones.push_back(_scope_bone);
+            }
+        }
+        else
+            m_sHud_wpn_scope_bones = m_sWpn_scope_bones;
+    }
+    else
+        m_sHud_wpn_scope_bones = m_sWpn_scope_bones;
+    m_sHud_wpn_silencer_bone = READ_IF_EXISTS(pSettings, r_string, hud_sect, "silencer_bone", m_sWpn_silencer_bone);
+    m_sHud_wpn_launcher_bone = READ_IF_EXISTS(pSettings, r_string, hud_sect, "launcher_bone", m_sWpn_launcher_bone);
+    m_sHud_wpn_laser_bone = READ_IF_EXISTS(pSettings, r_string, hud_sect, "laser_ray_bones", m_sWpn_laser_bone);
+    m_sHud_wpn_flashlight_bone = READ_IF_EXISTS(pSettings, r_string, hud_sect, "torch_cone_bones", m_sWpn_flashlight_bone);
+
+    hud_hidden_bones.clear();
+    if (pSettings->line_exist(hud_sect, "hidden_bones"))
+    {
+        const char* S = pSettings->r_string(hud_sect, "hidden_bones");
+        if (S && strlen(S))
+        {
+            const int count = _GetItemCount(S);
+            string128 _hidden_bone{};
+            for (int it = 0; it < count; ++it)
+            {
+                _GetItem(S, it, _hidden_bone);
+                hud_hidden_bones.push_back(_hidden_bone);
+            }
+        }
+    }
+    else
+        hud_hidden_bones = hidden_bones;
+
+    m_bHideCrosshairInZoom = true;
+    if (pSettings->line_exist(hud_sect, "zoom_hide_crosshair"))
+        m_bHideCrosshairInZoom = !!pSettings->r_bool(hud_sect, "zoom_hide_crosshair");
+    m_bZoomInertionAllow =
+        READ_IF_EXISTS(pSettings, r_bool, hud_sect, "allow_zoom_inertion", IS_OGSR_GA ? true : READ_IF_EXISTS(pSettings, r_bool, "features", "default_allow_zoom_inertion", true));
+    m_bScopeZoomInertionAllow = READ_IF_EXISTS(pSettings, r_bool, hud_sect, "allow_scope_zoom_inertion",
+                                               IS_OGSR_GA ? true : READ_IF_EXISTS(pSettings, r_bool, "features", "default_allow_scope_zoom_inertion", true));
+}
+
 BOOL CWeapon::net_Spawn(CSE_Abstract* DC)
 {
     BOOL bResult = inherited::net_Spawn(DC);

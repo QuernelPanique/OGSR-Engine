@@ -220,6 +220,21 @@ protected:
 
     bool ScopeRespawn(PIItem);
 
+    // OP22: вид ствола по надетому прицелу без смены секции (op22_scope_looks = true). Модель, hud, место прицела на
+    // иконке и второй прицел берутся из секции-вида: op22_scope_look_<прицел> / op22_scope_look_none (иначе - своя).
+    // Ствол остаётся тем же предметом: модификации, прокачанные прицелы и квесты видят одну секцию.
+    bool m_op22_looks{};
+    shared_str m_op22_cur_scope; // надетый прицел (сохраняется вместе со стволом)
+    shared_str op22_LookSection() const;
+    void op22_ApplyLook();
+
+public:
+    bool op22_Looks() const { return m_op22_looks; }
+    void op22_SetCurScope(const shared_str& s) { m_op22_cur_scope = s; }
+    void op22_AfterAddonsChange() override;
+
+protected:
+
     virtual void OnMotionMark(u32 state, const motion_marks& M) override;
     int CheckAmmoBeforeReload(u32& v_ammoType);
 

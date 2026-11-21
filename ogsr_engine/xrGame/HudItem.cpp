@@ -180,6 +180,27 @@ void CHudItem::Load(LPCSTR section)
     //--#SM+# End--
 }
 
+// OP22: то же, что CHudItem::Load читает из hud-секции (инерция, покачивание, коэффициент пересчёта)
+void CHudItem::op22_LoadHudBase()
+{
+    if (!hud_sect.size())
+        return;
+    if (pSettings->line_exist(hud_sect, "allow_inertion"))
+        EnableHudInertion(pSettings->r_bool(hud_sect, "allow_inertion"));
+    if (pSettings->line_exist(hud_sect, "allow_bobbing"))
+        allow_bobbing = pSettings->r_bool(hud_sect, "allow_bobbing");
+    hud_recalc_koef = READ_IF_EXISTS(pSettings, r_float, hud_sect, "hud_recalc_koef", 1.35f);
+
+    inertion_data.m_pitch_offset_r = READ_IF_EXISTS(pSettings, r_float, hud_sect, "pitch_offset_right", 0.0f);
+    inertion_data.m_pitch_offset_n = READ_IF_EXISTS(pSettings, r_float, hud_sect, "pitch_offset_up", 0.0f);
+    inertion_data.m_pitch_offset_d = READ_IF_EXISTS(pSettings, r_float, hud_sect, "pitch_offset_forward", 0.02f);
+    inertion_data.m_pitch_low_limit = READ_IF_EXISTS(pSettings, r_float, hud_sect, "pitch_offset_up_low_limit", -PI);
+    inertion_data.m_origin_offset = READ_IF_EXISTS(pSettings, r_float, hud_sect, "inertion_origin_offset", -0.03f);
+    inertion_data.m_origin_offset_aim = READ_IF_EXISTS(pSettings, r_float, hud_sect, "inertion_zoom_origin_offset", -0.02f);
+    inertion_data.m_tendto_speed = READ_IF_EXISTS(pSettings, r_float, hud_sect, "inertion_tendto_speed", 5.f);
+    inertion_data.m_tendto_speed_aim = READ_IF_EXISTS(pSettings, r_float, hud_sect, "inertion_zoom_tendto_speed", 10.f);
+}
+
 void CHudItem::PlaySound(HUD_SOUND& hud_snd, const Fvector& position, bool overlap) { HUD_SOUND::PlaySound(hud_snd, position, object().H_Root(), !!GetHUDmode(), false, overlap); }
 
 void CHudItem::net_Destroy() { m_dwStateTime = 0; }

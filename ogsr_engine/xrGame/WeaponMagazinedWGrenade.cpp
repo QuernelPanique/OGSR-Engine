@@ -52,6 +52,13 @@ void CWeaponMagazinedWGrenade::StopHUDSounds()
     inherited::StopHUDSounds();
 }
 
+// OP22: кость подствольника - из hud-секции, при смене hud (вид по надетому прицелу)
+void CWeaponMagazinedWGrenade::op22_ReloadHud()
+{
+    inherited::op22_ReloadHud();
+    grenade_bone_name = READ_IF_EXISTS(pSettings, r_string, hud_sect, "grenade_bone", grenade_launcher_def_bone_cop);
+}
+
 void CWeaponMagazinedWGrenade::Load(LPCSTR section)
 {
     inherited::Load(section);
