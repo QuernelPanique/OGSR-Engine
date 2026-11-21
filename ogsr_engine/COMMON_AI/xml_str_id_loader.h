@@ -92,6 +92,8 @@ const typename ITEM_DATA* CSXML_IdToIndex::GetById(const shared_str& str_id, boo
 
     if (m_pItemDataVector->end() == it)
     {
+        if (no_assert) // OP22: мягкий поиск - без печати всего списка (6676 инфопоршней) в лог
+            return NULL;
         int i = 0;
         for (T_VECTOR::iterator it = m_pItemDataVector->begin(); m_pItemDataVector->end() != it; it++, i++)
             Msg("[%d]=[%s]", i, *(*it).id);

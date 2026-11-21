@@ -38,7 +38,21 @@ void CInfoPortion::Load(shared_str info_id)
 
 void CInfoPortion::load_shared(LPCSTR)
 {
-    const ITEM_DATA& item_data = *id_to_index::GetById(m_InfoId);
+    // OP22: инфопоршень, которого нет в XML [info_portions], движок ОП выдавал без данных; OGSR падал на R_ASSERT
+    // «item not found» (CActor::OnReceiveInfo). В CP22 таких ~20 в диалогах/логике и неизвестно сколько собранных
+    // скриптом из частей имён - выдаём как в ОП: без диалогов, статей и заданий.
+    const ITEM_DATA* item = id_to_index::GetById(m_InfoId, true);
+    if (!item)
+    {
+        Msg("! [OP22] info_portion [%s] not described in XML - given without data (as in OP 2.2)", m_InfoId.c_str());
+        info_data()->m_DialogNames.clear();
+        info_data()->m_DisableInfo.clear();
+        info_data()->m_Articles.clear();
+        info_data()->m_ArticlesDisable.clear();
+        info_data()->m_GameTasks.clear();
+        return;
+    }
+    const ITEM_DATA& item_data = *item;
 
     CUIXml* pXML = item_data._xml;
     pXML->SetLocalRoot(pXML->GetRoot());
