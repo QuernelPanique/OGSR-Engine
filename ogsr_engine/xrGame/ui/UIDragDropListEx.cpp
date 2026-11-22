@@ -1116,7 +1116,7 @@ void CUICellContainer::Draw()
         clip.x2 += L->m_op22_item_frame_pad.x, clip.y2 += L->m_op22_item_frame_pad.y;
         UI()->PushScissor(clip);
         xr_vector<CUICellItem*> seen;
-        for (const auto& c : m_cells_to_draw)
+        for (auto& c : m_cells_to_draw)
         {
             if (c.Empty() || std::find(seen.begin(), seen.end(), c.m_item) != seen.end())
                 continue;
