@@ -1264,10 +1264,10 @@ void CUIMainIngameWnd::op22_xf_update()
         const Op22XfCfg& c = m_op22_xf_cfg[id];
         g = op22_uixf_t{};
         g.on = c.on;
-        g.bx = UI()->ClientToScreenScaledX(c.r.x1);
-        g.by = UI()->ClientToScreenScaledY(c.r.y1);
-        g.w = UI()->ClientToScreenScaledX(c.r.width());
-        g.h = UI()->ClientToScreenScaledY(c.r.height());
+        Fvector2 lt{c.r.x1, c.r.y1}, rb{c.r.x2, c.r.y2};
+        UI()->ClientToScreenScaled(lt);
+        UI()->ClientToScreenScaled(rb);
+        g.bx = lt.x, g.by = lt.y, g.w = rb.x - lt.x, g.h = rb.y - lt.y;
         g.ry = c.ry, g.rx = c.rx, g.rz = c.rz;
         g.ox = c.ox * g.w, g.oy = c.oy * g.h;
         g.pox = c.pox * g.w, g.poy = c.poy * g.h;
