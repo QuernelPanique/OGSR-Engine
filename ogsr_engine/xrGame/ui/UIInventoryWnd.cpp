@@ -564,6 +564,11 @@ void CUIInventoryWnd::Update()
     if (m_b_need_reinit)
         InitInventory();
 
+    if (Actor()) // OP22: слот активного оружия - рамка (op22_active_frame)
+        for (u32 i = 0; i < SLOTS_TOTAL; ++i)
+            if (m_slots_array[i])
+                m_slots_array[i]->m_op22_active = Actor()->inventory().GetActiveSlot() == i;
+
     CEntityAlive* pEntityAlive = smart_cast<CEntityAlive*>(Level().CurrentEntity());
 
     if (pEntityAlive)

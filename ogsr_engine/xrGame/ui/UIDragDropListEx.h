@@ -96,9 +96,14 @@ public:
     // OP22: быстрый слот инвентаря (22.11): клавиша слота подписью (op22_key="0..4", узел op22_key_label), число предметов -
     // без «x» и от правого нижнего угла слота (op22_count_rb="отступ справа,снизу"), и при одном предмете
     int m_op22_key{-1};
+    // OP22: слот активного оружия - рамка вокруг слота (op22_active_frame, op22_active_pad), флаг ставит окно инвентаря
+    class CUIFrameWindow* m_op22_active_frame{};
+    Fvector2 m_op22_active_pad{};
+    bool m_op22_active{};
     class CUIStatic* m_op22_key_lbl{};
     Fvector2 m_op22_count_rb{-1.f, -1.f};
     void op22_hl(LPCSTR tex, LPCSTR pad);
+    void op22_active(LPCSTR tex, LPCSTR pad);
 
 protected:
     CUIScrollBar* m_vScrollBar;

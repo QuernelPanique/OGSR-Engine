@@ -134,7 +134,8 @@ void CUIProgressBar::Draw()
             const Fvector3& g = m_op22_cap_g; // поле x, поле y, край
             const float fw = _max(m_CurrentLength, 2.f * g.z), x = rect.left, y = rect.top, h = GetHeight();
             m_op22_cap[0]->SetWndRect(Frect().set(x - g.x, y - g.y, x + g.z, y + h + g.y));
-            m_op22_cap[1]->SetWndRect(Frect().set(x + g.z, y - g.y, x + fw - g.z, y + h + g.y));
+            const float ov = g.z * .5f; // середина заходит на края - без щели при округлении до пикселя
+            m_op22_cap[1]->SetWndRect(Frect().set(x + g.z - ov, y - g.y, x + fw - g.z + ov, y + h + g.y));
             m_op22_cap[2]->SetWndRect(Frect().set(x + fw - g.z, y - g.y, x + fw + g.x, y + h + g.y));
             for (auto c : m_op22_cap)
                 c->Draw();

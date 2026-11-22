@@ -58,6 +58,7 @@ CUIDragDropListEx::~CUIDragDropListEx()
     for (auto& f : m_op22_item_frame) // OP22
         xr_delete(f);
     xr_delete(m_op22_hl_frame);
+    xr_delete(m_op22_active_frame);
     delete_data(m_container);
 }
 
@@ -314,6 +315,15 @@ void CUIDragDropListEx::op22_item_frames(LPCSTR spec, LPCSTR pad)
     }
 }
 
+void CUIDragDropListEx::op22_active(LPCSTR tex, LPCSTR pad)
+{
+    if (!tex || !tex[0])
+        return;
+    sscanf(pad, "%f,%f", &m_op22_active_pad.x, &m_op22_active_pad.y);
+    xr_delete(m_op22_active_frame);
+    m_op22_active_frame = op22_new_frame(tex);
+}
+
 void CUIDragDropListEx::op22_hl(LPCSTR tex, LPCSTR pad)
 {
     if (!tex || !tex[0])
@@ -339,6 +349,12 @@ void CUIDragDropListEx::Draw()
 {
     if (m_op22_key_lbl && m_op22_key >= 0) // OP22
         m_op22_key_lbl->SetText(op22_quick_key(m_op22_key));
+    if (m_op22_active_frame && m_op22_active) // OP22: слот активного оружия - рамка под предметом
+    {
+        Frect r;
+        GetAbsoluteRect(r);
+        op22_draw_frame(m_op22_active_frame, r, m_op22_active_pad);
+    }
     if (m_op22_frame_on || m_op22_frame_off) // OP22: рамка слота поверх предмета
     {
         const bool has = ItemsCount() > 0;

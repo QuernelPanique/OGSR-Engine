@@ -620,6 +620,7 @@ bool CUIXmlInit::InitDragDropListEx(CUIXml& xml_doc, const char* path, int index
     pWnd->m_op22_count_at_list = !!xml_doc.ReadAttribInt(path, index, "op22_count_at_list", 0); // OP22
     pWnd->op22_item_frames(xml_doc.ReadAttrib(path, index, "op22_item_frames", ""), xml_doc.ReadAttrib(path, index, "op22_item_frame_pad", "0,0")); // OP22
     pWnd->op22_hl(xml_doc.ReadAttrib(path, index, "op22_hl_frame", ""), xml_doc.ReadAttrib(path, index, "op22_hl_pad", "0,0"));
+    pWnd->op22_active(xml_doc.ReadAttrib(path, index, "op22_active_frame", ""), xml_doc.ReadAttrib(path, index, "op22_active_pad", "0,0"));
     sscanf(xml_doc.ReadAttrib(path, index, "op22_count_rb", "-1,-1"), "%f,%f", &pWnd->m_op22_count_rb.x, &pWnd->m_op22_count_rb.y);
     if (const int k = xml_doc.ReadAttribInt(path, index, "op22_key", -1); k >= 0) // OP22: клавиша быстрого слота подписью
     {
