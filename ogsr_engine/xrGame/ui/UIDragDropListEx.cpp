@@ -1149,7 +1149,7 @@ void CUICellContainer::Draw()
                 c.m_item->GetAbsoluteRect(r);
             // под курсором - только пока курсор над предметом: флаг фокуса у предметов в слотах не всегда снимался
             // (22.11, пользователь: подсветка оставалась на нескольких слотах)
-            if (m == CellTextureTypeCursorHover && !r.in(GetUICursor()->GetCursorPosition()))
+            if (const Fvector2 cp = GetUICursor()->GetCursorPosition(); m == CellTextureTypeCursorHover && (cp.x < r.x1 || cp.x > r.x2 || cp.y < r.y1 || cp.y > r.y2))
                 continue;
             f->draw(r, L->m_op22_item_frame_pad);
         }
