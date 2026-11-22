@@ -226,6 +226,9 @@ void op22_register_console()
         extern float g_op22_wpn_recoil, g_op22_wpn_breath;
         add(xr_new<CCC_Float>("op22_wpn_recoil", &g_op22_wpn_recoil, 0.f, 3.f));
         add(xr_new<CCC_Float>("op22_wpn_breath", &g_op22_wpn_breath, 0.f, 3.f));
+        // OP22: «дыхание» сетки в 2D-оптике и задержка дыхания на левый Shift (EffectorZoomInertion.cpp), 0 - выкл
+        extern float g_op22_scope_sway;
+        add(xr_new<CCC_Float>("op22_scope_sway", &g_op22_scope_sway, 0.f, 3.f));
     }
     str("bolt_visual", "bolt");
     str("hc_unarmed", "");

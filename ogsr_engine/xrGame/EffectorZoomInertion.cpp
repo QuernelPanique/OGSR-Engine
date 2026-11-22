@@ -7,6 +7,9 @@
 
 #include "Actor.h"
 #include "ActorEffector.h"
+#include "Inventory.h" // OP22
+#include "../xr_3da/xr_input.h" // OP22
+#include <dinput.h> // OP22: DIK_LSHIFT
 
 constexpr const char* EFFECTOR_ZOOM_SECTION = "zoom_inertion_effector";
 
@@ -144,7 +147,78 @@ BOOL CEffectorZoomInertion::ProcessCam(SCamEffectorInfo& info)
 
     m_dwTimePassed += Device.dwTimeDelta;
 
+    op22_ScopeBreath(info); // OP22
+
     return TRUE;
+}
+
+// OP22 (22.11, решение пользователя): «дыхание» - плавная раскачка сетки в 2D-оптике. Меняет направление камеры,
+// а выстрел берёт направление камеры с эффектами (CActor::g_fireParams: Cameras().Direction()) - пуля идёт туда,
+// куда смотрит сетка. От выносливости не зависит (по сюжету ГГ - опытный сталкер), в приседе слабее.
+// Левый Shift: задержка дыхания до 4 с - сетка почти замирает; затем 2,5 с раскачка сильнее; снова - после
+// восстановления и отпускания клавиши. Множитель op22_scope_sway (0 - выкл).
+float g_op22_scope_sway = 1.f;
+
+void CEffectorZoomInertion::op22_ScopeBreath(SCamEffectorInfo& info)
+{
+    float dt = Device.fTimeDelta;
+    clamp(dt, 0.f, 0.05f);
+
+    CActor* pA = Actor();
+    CWeapon* W = pA ? smart_cast<CWeapon*>(pA->inventory().ActiveItem()) : nullptr;
+    if (g_op22_scope_sway <= 0.f || !W || !W->IsZoomed() || W->IsRotatingToZoom() || !W->UseScopeTexture())
+    {
+        m_op22_phase = 0;
+        m_op22_k = 1.f;
+        return;
+    }
+
+    constexpr float HOLD_MAX = 4.f, RECOVER = 2.5f;
+    const bool shift = !!pInput->iGetAsyncKeyState(DIK_LSHIFT);
+    if (!shift)
+        m_op22_need_release = false;
+    m_op22_phase_t += dt;
+    switch (m_op22_phase)
+    {
+    case 0:
+        if (shift && !m_op22_need_release)
+        {
+            m_op22_phase = 1;
+            m_op22_phase_t = 0.f;
+        }
+        break;
+    case 1:
+        if (!shift || m_op22_phase_t >= HOLD_MAX)
+        {
+            m_op22_phase = 2;
+            m_op22_phase_t = 0.f;
+            m_op22_need_release = shift;
+        }
+        break;
+    default:
+        if (m_op22_phase_t >= RECOVER)
+        {
+            m_op22_phase = 0;
+            m_op22_phase_t = 0.f;
+            m_op22_need_release = shift;
+        }
+        break;
+    }
+    const float target = m_op22_phase == 1 ? 0.1f : m_op22_phase == 2 ? 1.8f : 1.f;
+    float l = dt * (m_op22_phase == 1 ? 5.f : 2.f); // задержать дыхание - быстро, выдохнуть - плавнее
+    clamp(l, 0.f, 1.f);
+    m_op22_k += (target - m_op22_k) * l;
+
+    m_op22_t += dt;
+    float amp = deg2rad(0.09f) * g_op22_scope_sway * m_op22_k;
+    if (pA->is_crouch())
+        amp *= 0.6f;
+    const float yaw = amp * (_sin(m_op22_t * PI_MUL_2 * 0.19f) + 0.3f * _sin(m_op22_t * PI_MUL_2 * 0.53f + 0.4f));
+    const float pitch = amp * 0.8f * _sin(m_op22_t * PI_MUL_2 * 0.27f + 1.1f);
+
+    Fvector right;
+    right.crossproduct(info.n, info.d).normalize_safe();
+    info.d.mad(right, yaw).mad(info.n, pitch).normalize_safe();
 }
 
 using namespace luabind;

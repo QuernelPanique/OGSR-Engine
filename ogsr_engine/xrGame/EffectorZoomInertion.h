@@ -36,6 +36,12 @@ public:
     u32 m_dwDeltaTime;
 
     void CalcNextPoint();
+
+    // OP22: «дыхание» сетки в 2D-оптике (op22_scope_sway) и задержка дыхания на левый Shift (EffectorZoomInertion.cpp)
+    float m_op22_t{}, m_op22_k{1.f}, m_op22_phase_t{};
+    int m_op22_phase{}; // 0 - дышит, 1 - задержка дыхания, 2 - восстановление
+    bool m_op22_need_release{};
+    void op22_ScopeBreath(SCamEffectorInfo& info);
     void LoadParams(LPCSTR Section, LPCSTR Prefix);
 
 public:
