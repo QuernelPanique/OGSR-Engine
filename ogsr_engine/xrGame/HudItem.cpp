@@ -803,6 +803,85 @@ void CHudItem::UpdateCollision(Fmatrix& trans)
 
 float g_op22_hud_inertion = 100.f; // OP22: op22_console.cpp
 
+// OP22: процедурная отдача и «дыхание» модели оружия в руках (22.11, решение пользователя; отключаемо).
+// Только вид модели худа: камера, разброс и пули - как в ОП (отдача камеры on_weapon_shot_start не меняется).
+float g_op22_wpn_recoil = 1.f; // множитель отдачи модели, 0 - выкл (op22_console.cpp)
+float g_op22_wpn_breath = 1.f; // множитель «дыхания» модели, 0 - выкл
+
+namespace
+{
+constexpr float OP22_REC_W = 13.f; // собственная частота пружины возврата, рад/с (период ~0,5 с)
+constexpr float OP22_REC_K = OP22_REC_W * OP22_REC_W;
+constexpr float OP22_REC_C = 2.f * 0.55f * OP22_REC_W; // затухание 0,55: лёгкий перелёт
+
+void op22_spring(Fvector& x, Fvector& v, float dt)
+{
+    // полунеявный Эйлер с подшагами по 8 мс - устойчиво и при низком FPS
+    const int n = _max(1, iCeil(dt / 0.008f));
+    const float h = dt / n;
+    for (int i = 0; i < n; ++i)
+    {
+        Fvector a;
+        a.set(x).mul(-OP22_REC_K);
+        a.mad(v, -OP22_REC_C);
+        v.mad(a, h);
+        x.mad(v, h);
+    }
+}
+} // namespace
+
+void CHudItem::op22_HudRecoilKick(float strength)
+{
+    if (g_op22_wpn_recoil <= 0.f || strength <= 0.f)
+        return;
+    // в прицеливании слабее, чтобы прицел не уходил из глаз
+    const float s = strength * g_op22_wpn_recoil * (IsZoomed() ? 0.35f : 1.f) * OP22_REC_W * 1.6f; // пик ~ величине толчка
+    // смещение, м (оси худа: x вправо, y вверх, z вперёд): назад в плечо, чуть вверх и вбок
+    m_op22_rec_pos_v.z -= 0.012f * s;
+    m_op22_rec_pos_v.y += 0.002f * s;
+    m_op22_rec_pos_v.x += ::Random.randFs(0.0015f) * s;
+    // поворот, рад (rotateX: минус - ствол вверх), случайно вбок и с завалом
+    m_op22_rec_rot_v.x -= deg2rad(1.2f) * s;
+    m_op22_rec_rot_v.y += deg2rad(::Random.randFs(0.45f)) * s;
+    m_op22_rec_rot_v.z += deg2rad(::Random.randFs(0.9f)) * s;
+}
+
+void CHudItem::op22_UpdateProcedural(Fvector& offs, Fvector& rot, bool aiming, u32 moving_state)
+{
+    float dt = Device.fTimeDelta;
+    clamp(dt, 0.f, 0.05f);
+
+    op22_spring(m_op22_rec_pos, m_op22_rec_pos_v, dt);
+    op22_spring(m_op22_rec_rot, m_op22_rec_rot_v, dt);
+    // предел на длинную очередь из тяжёлого ствола
+    clamp(m_op22_rec_pos.x, -0.03f, 0.03f);
+    clamp(m_op22_rec_pos.y, -0.03f, 0.03f);
+    clamp(m_op22_rec_pos.z, -0.08f, 0.03f);
+    const float rmax = deg2rad(10.f);
+    clamp(m_op22_rec_rot.x, -rmax, rmax);
+    clamp(m_op22_rec_rot.y, -rmax, rmax);
+    clamp(m_op22_rec_rot.z, -rmax, rmax);
+    offs.add(m_op22_rec_pos);
+    rot.add(m_op22_rec_rot);
+
+    // «дыхание»: медленная фигура Лиссажу ~0,2-0,27 Гц; в прицеливании и на ходу слабее, при усталости сильнее
+    if (g_op22_wpn_breath > 0.f && smart_cast<CWeapon*>(this))
+    {
+        m_op22_breath_t += dt;
+        const float t = m_op22_breath_t;
+        float k = g_op22_wpn_breath * (aiming ? 0.5f : 1.f);
+        if (moving_state & mcAnyMove)
+            k *= 0.5f;
+        if (CActor* pA = Actor())
+            k *= 1.f + 1.5f * (1.f - pA->conditions().GetPower());
+        const float a = _sin(t * PI_MUL_2 * 0.19f), b = _sin(t * PI_MUL_2 * 0.27f + 1.1f);
+        offs.x += 0.0012f * k * a;
+        offs.y += 0.0010f * k * b;
+        rot.x += deg2rad(0.30f) * k * b;
+        rot.y += deg2rad(0.25f) * k * a;
+    }
+}
+
 void CHudItem::UpdateInertion(Fmatrix& trans)
 {
     if (HudInertionEnabled() && HudInertionAllowed())
@@ -1162,6 +1241,11 @@ void CHudItem::UpdateHudAdditional(Fmatrix& trans, const bool need_update_collis
         }
     }
 
+    //=============== OP22: процедурная отдача и «дыхание» ===============//
+    Fvector op22_offs{}, op22_rot{};
+    op22_UpdateProcedural(op22_offs, op22_rot, b_aiming, iMovingState);
+    summary_offset.add(op22_offs);
+
     //================ Применение эффектов ===============//
     {
         // поворот с сохранением смещения by Zander
@@ -1186,6 +1270,17 @@ void CHudItem::UpdateHudAdditional(Fmatrix& trans, const bool need_update_collis
 
         hud_rotation_part.identity();
         hud_rotation_part.rotateZ(current_difference[1].z);
+        hud_rotation.mulA_43(hud_rotation_part);
+
+        // OP22: поворот процедурной отдачи и «дыхания» - в осях худа, как поворот при прицеливании
+        hud_rotation_part.identity();
+        hud_rotation_part.rotateX(op22_rot.x);
+        hud_rotation.mulA_43(hud_rotation_part);
+        hud_rotation_part.identity();
+        hud_rotation_part.rotateY(op22_rot.y);
+        hud_rotation.mulA_43(hud_rotation_part);
+        hud_rotation_part.identity();
+        hud_rotation_part.rotateZ(op22_rot.z);
         hud_rotation.mulA_43(hud_rotation_part);
 
         //Msg("--[%s] summary_offset: [%f,%f,%f]", __FUNCTION__, summary_offset.x, summary_offset.y, summary_offset.z);

@@ -390,6 +390,7 @@ protected:
     // обработка визуализации выстрела
     virtual void OnShot(){};
     virtual void AddShotEffector();
+    float op22_RecoilStrength() const; // OP22: сила процедурной отдачи модели (WeaponDispersion.cpp)
     virtual void RemoveShotEffector();
     virtual void ClearShotEffector();
 

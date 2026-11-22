@@ -263,6 +263,7 @@ public:
     virtual u8 GetCurrentHudOffsetIdx() const { return 0; }
     virtual float GetHudFov(); // Получить HUD FOV от текущего оружия игрока
     void UpdateHudAdditional(Fmatrix&, const bool need_update_collision = false);
+    void op22_HudRecoilKick(float strength); // OP22: процедурная отдача модели оружия (op22_wpn_recoil)
     bool HudBobbingAllowed() const { return m_huditem_flags.test(fl_bobbing_allow); }
     bool AnmIdleMovingAllowed() const;
     void AllowHudBobbing(BOOL B) { m_huditem_flags.set(fl_bobbing_allow, B); }
@@ -317,6 +318,11 @@ private:
 
     Fvector m_strafe_offset[3][2]{}, m_lookout_offset[3][2]{}, m_jump_offset[3][2]{}, m_fall_offset[2][2]{}, m_landing_offset[2][2]{}, m_move_offset[3]{}, m_walk_offset[3]{};
     Fvector current_difference[2]{}, current_strafe[2]{}, current_lookout[2]{}, current_jump[2]{}, current_move[2]{}, current_walk[2]{};
+
+    // OP22: процедурная отдача и «дыхание» модели оружия (op22_wpn_recoil, op22_wpn_breath; HudItem.cpp)
+    Fvector m_op22_rec_pos{}, m_op22_rec_pos_v{}, m_op22_rec_rot{}, m_op22_rec_rot_v{};
+    float m_op22_breath_t{};
+    void op22_UpdateProcedural(Fvector& offs, Fvector& rot, bool aiming, u32 moving_state);
 
     float m_base_fov{};
 

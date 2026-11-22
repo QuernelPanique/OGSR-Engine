@@ -55,6 +55,23 @@ float CWeapon::GetFireDispersion(float cartridge_k)
 void CWeapon::AddShotEffector()
 {
     inventory_owner().on_weapon_shot_start(this);
+
+    // OP22: процедурная отдача модели оружия игрока (только вид; HudItem.cpp, op22_wpn_recoil)
+    if (ParentIsActor())
+        op22_HudRecoilKick(op22_RecoilStrength());
+}
+
+// OP22: сила толчка модели из параметров ствола ОП - подброс камеры (cam_dispersion, град.) и вес:
+// ПМ ~0,4, АК-74 ~0,8, СВД и обрез - до 2,5; поправка ствола - op22_recoil_k в секции (по умолчанию 1)
+float CWeapon::op22_RecoilStrength() const
+{
+    float s = _sqrt(rad2deg(camDispersion) / 0.5f);
+    clamp(s, 0.35f, 2.5f);
+    float w = 0.6f + Weight() / 5.f;
+    clamp(w, 0.7f, 1.6f);
+    s *= w * READ_IF_EXISTS(pSettings, r_float, cNameSect(), "op22_recoil_k", 1.f);
+    clamp(s, 0.f, 3.f);
+    return s;
 }
 
 void CWeapon::RemoveShotEffector()
