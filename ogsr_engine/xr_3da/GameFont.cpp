@@ -6,6 +6,8 @@
 extern ENGINE_API BOOL g_bRendering;
 
 ENGINE_API Fvector2 g_current_font_scale = {1.f, 1.f};
+ENGINE_API op22_uixf_t g_op22_uixf; // OP22: op22_uixf.h
+ENGINE_API op22_uixf_t g_op22_uixf_group[4];
 
 ENGINE_API float g_fontWidthScale = 1.f;
 ENGINE_API float g_fontHeightScale = 1.f;
@@ -327,6 +329,7 @@ void CGameFont::MasterOut(BOOL bCheckDevice, BOOL bUseCoords, BOOL bScaleCoords,
     rs.color = dwCurrentColor;
     rs.height = fCurrentHeight;
     rs.align = eCurrentAlignment;
+    rs.xf = g_op22_uixf; // OP22
 
     int vs_sz = vsprintf_s(rs.string, fmt, p);
     // VERIFY( ( vs_sz != -1 ) && ( rs.string[ vs_sz ] == '\0' ) );

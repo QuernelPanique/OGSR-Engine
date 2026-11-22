@@ -106,6 +106,28 @@ protected:
     float m_op22_icons_gap{};
     CUIStatic* m_op22_ammo_mag{};
     CUIStatic* m_op22_ammo_rest{};
+    // OP22: HUD GAMMA 2.0 (22.11, макет design/gamma2/hud_float_20261122): группы перспективы op22_uixf.h -
+    // 1 - панель слева внизу (наклон и тряска от движения ГГ), 2 - счётчик патронов у оружия (3 с при доставании и перезарядке)
+    struct Op22XfCfg
+    {
+        bool on{};
+        Frect r{};
+        float ry{}, rx{}, rz{}, ox{}, oy{}, pox{}, poy{}, persp{1.f};
+    };
+    Op22XfCfg m_op22_xf_cfg[4]{};
+    CUIStatic* m_op22_panel{};
+    bool m_op22_ammo_class{};
+    float m_op22_text_tint{};
+    u32 m_op22_mstate{};
+    int m_op22_loop{}, m_op22_shot{};
+    float m_op22_loop_t0{}, m_op22_shot_t0{}, m_op22_hit_seen{}, m_op22_blend_t0{-100.f};
+    Fvector m_op22_pose{}, m_op22_blend_from{};
+    float m_op22_ammo_t0{-100.f};
+    u32 m_op22_ammo_state{u32(-1)};
+    Fvector2 m_op22_wpn_s{};
+    bool m_op22_wpn_s_ok{};
+    void op22_xf_init(CUIXml& xml);
+    void op22_xf_update();
     void op22_icons_layout();
 
 public:

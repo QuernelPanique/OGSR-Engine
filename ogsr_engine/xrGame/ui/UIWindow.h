@@ -157,6 +157,7 @@ public:
 
     IC bool GetCustomDraw() const { return m_bCustomDraw; }
     IC void SetCustomDraw(bool b) { m_bCustomDraw = b; }
+    u8 m_op22_xf{}; // OP22: группа перспективы (op22_uixf.h), 0 - плоско; XML op22_xf, Lua SetOp22Xf
 
     IC void SetPriority(int index) { priority_index = index; }
     IC int GetPriority() const { return priority_index; }

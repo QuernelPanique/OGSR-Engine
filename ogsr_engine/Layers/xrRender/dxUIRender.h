@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../Include/xrRender/UIRender.h"
+#include "../../xr_3da/op22_uixf.h"
 
 class dxUIRender : public IUIRender
 {
@@ -45,3 +46,6 @@ private:
 };
 
 extern dxUIRender UIRenderImpl;
+
+// OP22: вершина TL через перспективу группы окна (op22_uixf.h): позиция, глубина в w, непрозрачность
+void op22_uixf_tl(FVF::TL* v, const op22_uixf_t& xf, float x, float y, u32 c, float u, float tv);

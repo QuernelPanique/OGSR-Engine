@@ -6,6 +6,9 @@
 #include "../Inventory.h" // OP22
 #include "../xr_level_controller.h" // OP22
 #include "UIFrameWindow.h" // OP22
+#include "../../xr_3da/op22_uixf.h" // OP22
+#include "../player_hud.h" // OP22
+#include "../actor_defs.h" // OP22
 
 #include "UIMainIngameWnd.h"
 #include "UIMessagesWindow.h"
@@ -147,12 +150,14 @@ void CUIMainIngameWnd::Init()
     AttachChild(&UIStaticHealth);
     xml_init.InitStatic(uiXml, "static_health", 0, &UIStaticHealth);
     m_op22_under = !!uiXml.ReadAttribInt("static_health", 0, "op22_under", 0); // OP22
+    op22_xf_init(uiXml); // OP22: HUD GAMMA 2.0 22.11 - подложка панели (op22_panel) и группы перспективы
 
     AttachChild(&UIStaticArmor);
     xml_init.InitStatic(uiXml, "static_armor", 0, &UIStaticArmor);
 
     AttachChild(&UIWeaponBack);
     xml_init.InitStatic(uiXml, "static_weapon", 0, &UIWeaponBack);
+    m_op22_ammo_class = !!uiXml.ReadAttribInt("static_weapon", 0, "op22_ammo_class", 0); // OP22: «патрон · класс»
 
     UIWeaponBack.AttachChild(&UIWeaponSignAmmo);
     xml_init.InitStatic(uiXml, "static_ammo", 0, &UIWeaponSignAmmo);
@@ -218,6 +223,7 @@ void CUIMainIngameWnd::Init()
     AttachChild(m_UIIcons);
     m_op22_icons_horz = !!uiXml.ReadAttribInt("icons_scroll_view", 0, "op22_horz", 0); // OP22
     m_op22_icons_gap = uiXml.ReadAttribFlt("icons_scroll_view", 0, "op22_gap", 0.f);
+    m_op22_text_tint = uiXml.ReadAttribFlt("icons_scroll_view", 0, "op22_text_tint", 0.f); // OP22: цвет подписи значка - от цвета значка
 
     // Загружаем иконки
     xml_init.InitStatic(uiXml, "starvation_static", 0, &UIStarvationIcon);
@@ -324,6 +330,7 @@ void CUIMainIngameWnd::Draw()
         return;
 
     UIMotionIcon.SetNoise((s16)(0xffff & iFloor(m_pActor->m_snd_noise * 100.0f)));
+    op22_xf_update(); // OP22: группы перспективы - до окон панели (главное окно и Lua op22_late)
     // OP22: подложка с op22_under уже нарисована в CUI::Render до пользовательских окон (шкалы и числа Lua - поверх неё)
     const bool op22_hide = m_op22_under && UIStaticHealth.IsShown();
     if (op22_hide)
@@ -429,6 +436,7 @@ void CUIMainIngameWnd::op22_qs_init(CUIXml& xml)
     AttachChild(m_op22_qs_wnd);
     m_op22_qs_wnd->SetWndPos(Fvector2().set(xml.ReadAttribFlt(P, 0, "x", 0.f), xml.ReadAttribFlt(P, 0, "y", 0.f)));
     m_op22_qs_wnd->SetWndSize(Fvector2().set((m_op22_qs_cell.x + indent) * 5, m_op22_qs_cell.y));
+    m_op22_qs_wnd->m_op22_xf = u8(xml.ReadAttribInt(P, 0, "op22_xf", 0)); // OP22: группа перспективы панели
 
     string_path probe;
     xr_sprintf(probe, "%s_lt.dds", tex.size() ? tex.c_str() : "");
@@ -758,7 +766,15 @@ void CUIMainIngameWnd::SetWarningIconColor(CUIStatic* s, const u32 cl)
     bool bIsShown = s->IsShown();
 
     if (bOn)
+    {
         s->SetColor(cl);
+        if (m_op22_text_tint > 0.f) // OP22: подпись плашки - цвет значка, смешанный с белым
+        {
+            const float k = m_op22_text_tint;
+            auto mix = [k](u32 c) { return u32(float(c) + (255.f - float(c)) * k); };
+            s->SetTextColor(color_argb(255, mix(color_get_R(cl)), mix(color_get_G(cl)), mix(color_get_B(cl))));
+        }
+    }
 
     if (bOn && !bIsShown)
     {
@@ -1007,6 +1023,11 @@ void CUIMainIngameWnd::UpdateActiveItemInfo()
         item->GetBriefInfo(str_name, icon_sect_name, str_count);
 
         UIWeaponSignAmmo.Show(true);
+        if (m_op22_ammo_class && icon_sect_name.size() && pSettings->line_exist(icon_sect_name.c_str(), "op22_ammo_class")) // OP22
+        {
+            str_name += " \xB7 ";
+            str_name += CStringTable().translate(pSettings->r_string(icon_sect_name.c_str(), "op22_ammo_class")).c_str();
+        }
         UIWeaponBack.SetText(str_name.c_str());
         UIWeaponSignAmmo.SetText(str_count.c_str());
         if (m_op22_ammo_mag || m_op22_ammo_rest) // OP22: «22/90» -> «22» и «/ 90»
@@ -1123,4 +1144,243 @@ void CUIMainIngameWnd::script_register(lua_State* L)
         def("get_main_window", &GetMainIngameWindow), // get_mainingame_window better??
         def("setup_game_icon", &SetupGameIcon)
     )];
+}
+
+// ---------------- OP22: HUD GAMMA 2.0 (22.11) - панель в воздухе и счётчик патронов у оружия ----------------
+// Макет design/gamma2/hud_float_20261122/Main.dc.html (доска 1600x900): числа - px макета, на экране x высота/900.
+float g_op22_actor_hit_time = -100.f; // CActor::Hit: попадание по ГГ (пуля, ранение, удар, взрыв)
+
+namespace
+{
+struct op22_kf
+{
+    float t, x, y, r; // доля длительности, translate px, rotate градусы
+};
+struct op22_anim
+{
+    float dur;
+    int ease; // 0 linear, 1 ease-in-out, 2 ease-out
+    int n;
+    op22_kf kf[7];
+};
+// @keyframes макета: walk, run (петли), jump, land, hit (разовые)
+const op22_anim OP22_ANIM[6] = {
+    {0.f, 0, 2, {{0, 0, 0, 0}, {1, 0, 0, 0}}},
+    {.62f, 1, 5, {{0, 0, 0, 0}, {.25f, 1.2f, 1.6f, .15f}, {.5f, 0, 0, 0}, {.75f, -1.2f, 1.6f, -.15f}, {1, 0, 0, 0}}},
+    {.4f, 1, 5, {{0, 0, 0, 0}, {.25f, 3.5f, 4.5f, .45f}, {.5f, 0, 1, 0}, {.75f, -3.5f, 4.5f, -.45f}, {1, 0, 0, 0}}},
+    {.7f, 2, 4, {{0, 0, 0, 0}, {.18f, 0, 16, .6f}, {.55f, 0, -6, 0}, {1, 0, 0, 0}}},
+    {.75f, 2, 6, {{0, 0, 0, 0}, {.12f, 0, -22, -.9f}, {.3f, 0, 9, .4f}, {.48f, 0, -5, 0}, {.66f, 0, 2, 0}, {1, 0, 0, 0}}},
+    {.45f, 0, 7, {{0, 0, 0, 0}, {.1f, -4, 3, -.5f}, {.25f, 4, -3, .5f}, {.4f, -3, 4, 0}, {.55f, 3, -2, 0}, {.7f, -2, 2, 0}, {1, 0, 0, 0}}},
+};
+enum
+{
+    OP22_IDLE,
+    OP22_WALK,
+    OP22_RUN,
+    OP22_JUMP,
+    OP22_LAND,
+    OP22_HIT
+};
+
+// CSS cubic-bezier(x1, y1, x2, y2)
+float op22_bezier(float x1, float y1, float x2, float y2, float t)
+{
+    float s = t;
+    for (int i = 0; i < 10; ++i)
+    {
+        const float is = 1.f - s;
+        const float bx = 3.f * is * is * s * x1 + 3.f * is * s * s * x2 + s * s * s - t;
+        const float d = 3.f * is * is * x1 + 6.f * is * s * (x2 - x1) + 3.f * s * s * (1.f - x2);
+        if (_abs(bx) < 1e-5f || _abs(d) < 1e-6f)
+            break;
+        s = std::clamp(s - bx / d, 0.f, 1.f);
+    }
+    const float is = 1.f - s;
+    return 3.f * is * is * s * y1 + 3.f * is * s * s * y2 + s * s * s;
+}
+
+float op22_ease(int e, float t)
+{
+    switch (e)
+    {
+    case 1: return op22_bezier(.42f, 0.f, .58f, 1.f, t);
+    case 2: return op22_bezier(0.f, 0.f, .58f, 1.f, t);
+    default: return t;
+    }
+}
+
+Fvector op22_sample(const op22_anim& a, float u)
+{
+    const op22_kf* end = a.kf + a.n;
+    const op22_kf* prev = a.kf;
+    for (const op22_kf* k = a.kf + 1; k != end; prev = k, ++k)
+    {
+        if (u > k->t && k + 1 != end)
+            continue;
+        const float f = op22_ease(a.ease, std::clamp((u - prev->t) / (k->t - prev->t), 0.f, 1.f));
+        return Fvector().set(prev->x + (k->x - prev->x) * f, prev->y + (k->y - prev->y) * f, prev->r + (k->r - prev->r) * f);
+    }
+    return Fvector().set(0, 0, 0);
+}
+} // namespace
+
+void CUIMainIngameWnd::op22_xf_init(CUIXml& xml)
+{
+    for (auto& g : g_op22_uixf_group) // другой скин HUD - группы выключены, пока их не задаст разметка
+        g.on = false;
+    if (xml.NavigateToNode("op22_panel", 0))
+    {
+        m_op22_panel = xr_new<CUIStatic>();
+        m_op22_panel->SetAutoDelete(true);
+        AttachChild(m_op22_panel);
+        CUIXmlInit().InitStatic(xml, "op22_panel", 0, m_op22_panel);
+    }
+    const int n = xml.GetNodesNum("", 0, "op22_xf");
+    for (int i = 0; i < n; ++i)
+    {
+        const int id = xml.ReadAttribInt("op22_xf", i, "id", 0);
+        if (id < 1 || id > 3)
+            continue;
+        Op22XfCfg& c = m_op22_xf_cfg[id];
+        c.on = true;
+        const float x = xml.ReadAttribFlt("op22_xf", i, "x", 0.f), y = xml.ReadAttribFlt("op22_xf", i, "y", 0.f);
+        c.r.set(x, y, x + xml.ReadAttribFlt("op22_xf", i, "width", 0.f), y + xml.ReadAttribFlt("op22_xf", i, "height", 0.f));
+        c.ry = deg2rad(xml.ReadAttribFlt("op22_xf", i, "ry", 0.f));
+        c.rx = deg2rad(xml.ReadAttribFlt("op22_xf", i, "rx", 0.f));
+        c.rz = deg2rad(xml.ReadAttribFlt("op22_xf", i, "rz", 0.f));
+        c.ox = xml.ReadAttribFlt("op22_xf", i, "ox", 0.f);
+        c.oy = xml.ReadAttribFlt("op22_xf", i, "oy", 0.f);
+        c.pox = xml.ReadAttribFlt("op22_xf", i, "pox", .5f);
+        c.poy = xml.ReadAttribFlt("op22_xf", i, "poy", .5f);
+        c.persp = xml.ReadAttribFlt("op22_xf", i, "persp", 1.f);
+    }
+}
+
+void CUIMainIngameWnd::op22_xf_update()
+{
+    const float now = Device.fTimeGlobal;
+    const float k = float(Device.dwHeight) / 900.f;
+    auto base = [&](int id, op22_uixf_t& g) {
+        const Op22XfCfg& c = m_op22_xf_cfg[id];
+        g = op22_uixf_t{};
+        g.on = c.on;
+        g.bx = UI()->ClientToScreenScaledX(c.r.x1);
+        g.by = UI()->ClientToScreenScaledY(c.r.y1);
+        g.w = UI()->ClientToScreenScaledX(c.r.width());
+        g.h = UI()->ClientToScreenScaledY(c.r.height());
+        g.ry = c.ry, g.rx = c.rx, g.rz = c.rz;
+        g.ox = c.ox * g.w, g.oy = c.oy * g.h;
+        g.pox = c.pox * g.w, g.poy = c.poy * g.h;
+        g.d = c.persp * float(Device.dwHeight);
+    };
+
+    // 1 - панель: петля ходьбы/бега, разовые прыжок, приземление, попадание (как переключение анимаций макета)
+    if (m_op22_xf_cfg[1].on)
+    {
+        op22_uixf_t& g = g_op22_uixf_group[1];
+        base(1, g);
+        const u32 ms = m_pActor ? m_pActor->MovingState() : 0;
+        const bool air = !!(ms & (mcJump | mcFall)), was_air = !!(m_op22_mstate & (mcJump | mcFall));
+        auto shot = [&](int a) {
+            m_op22_blend_from = m_op22_pose;
+            m_op22_blend_t0 = now;
+            m_op22_shot = a;
+            m_op22_shot_t0 = now;
+        };
+        if ((ms & mcJump) && !(m_op22_mstate & mcJump))
+            shot(OP22_JUMP);
+        else if (!air && was_air)
+            shot(OP22_LAND);
+        if (g_op22_actor_hit_time > m_op22_hit_seen)
+        {
+            m_op22_hit_seen = g_op22_actor_hit_time;
+            if (now - g_op22_actor_hit_time < .2f)
+                shot(OP22_HIT);
+        }
+        m_op22_mstate = ms;
+        const int loop = (!air && (ms & mcAnyMove)) ? ((ms & mcSprint) ? OP22_RUN : OP22_WALK) : OP22_IDLE;
+        if (loop != m_op22_loop)
+        {
+            m_op22_loop = loop;
+            m_op22_loop_t0 = now;
+            if (!m_op22_shot)
+            {
+                m_op22_blend_from = m_op22_pose;
+                m_op22_blend_t0 = now;
+            }
+        }
+        Fvector pose{};
+        if (m_op22_shot && now - m_op22_shot_t0 < OP22_ANIM[m_op22_shot].dur)
+            pose = op22_sample(OP22_ANIM[m_op22_shot], (now - m_op22_shot_t0) / OP22_ANIM[m_op22_shot].dur);
+        else
+        {
+            if (m_op22_shot) // разовая закончилась - обратно в петлю плавно
+            {
+                m_op22_shot = 0;
+                m_op22_blend_from = m_op22_pose;
+                m_op22_blend_t0 = now;
+            }
+            if (m_op22_loop)
+            {
+                const float d = OP22_ANIM[m_op22_loop].dur;
+                pose = op22_sample(OP22_ANIM[m_op22_loop], fmodf(now - m_op22_loop_t0, d) / d);
+            }
+        }
+        constexpr float BLEND = .12f; // смена петли и конец разовой - без рывка
+        if (now - m_op22_blend_t0 < BLEND)
+        {
+            const float f = (now - m_op22_blend_t0) / BLEND;
+            pose.set(m_op22_blend_from.x + (pose.x - m_op22_blend_from.x) * f, m_op22_blend_from.y + (pose.y - m_op22_blend_from.y) * f,
+                     m_op22_blend_from.z + (pose.z - m_op22_blend_from.z) * f);
+        }
+        m_op22_pose = pose;
+        g.tx = pose.x * k;
+        g.ty = pose.y * k;
+        g.rot = deg2rad(pose.z);
+        g.prepare();
+    }
+
+    // 2 - счётчик патронов: 3 с (keyframes ammoA макета) при доставании и перезарядке, качается вместе с оружием
+    if (m_op22_xf_cfg[2].on)
+    {
+        op22_uixf_t& g = g_op22_uixf_group[2];
+        base(2, g);
+        PIItem item = m_pActor ? m_pActor->inventory().ActiveItem() : nullptr;
+        CHudItem* hi = item && item->NeedBriefInfo() ? smart_cast<CHudItem*>(item) : nullptr;
+        const u32 st = hi ? hi->GetState() : u32(-1);
+        if (st != m_op22_ammo_state && (st == CHUDState::eShowing || st == CHUDState::eReload))
+            m_op22_ammo_t0 = now;
+        m_op22_ammo_state = st;
+        const float u = hi ? (now - m_op22_ammo_t0) / 3.f : 1.f;
+        if (u >= 1.f || u < 0.f)
+            g.alpha = 0.f;
+        else
+        {
+            const auto eo = [](float a, float b, float t0, float t1, float u) { return a + (b - a) * op22_ease(2, std::clamp((u - t0) / (t1 - t0), 0.f, 1.f)); };
+            g.alpha = u < .1f ? eo(0, 1, 0, .1f, u) : (u < .8f ? 1.f : eo(1, 0, .8f, 1.f, u));
+            g.ty = (u < .1f ? eo(10, 0, 0, .1f, u) : eo(0, -6, .1f, 1.f, u)) * k;
+            g.sc = u < .1f ? eo(.96f, 1, 0, .1f, u) : 1.f;
+        }
+        // качание оружия: проекция модели HUD минус её сглаживание (0.35 с), не дальше 40 px макета
+        attachable_hud_item* hd = hi ? hi->HudItemData() : nullptr;
+        if (hd)
+        {
+            Fvector4 v;
+            Device.mFullTransform_hud.transform(v, hd->m_item_transform.c);
+            if (v.w > 0.01f)
+            {
+                const Fvector2 cur{(v.x / v.w + 1.f) * .5f * float(Device.dwWidth), (1.f - v.y / v.w) * .5f * float(Device.dwHeight)};
+                if (!m_op22_wpn_s_ok)
+                    m_op22_wpn_s = cur, m_op22_wpn_s_ok = true;
+                const float f = _min(1.f, Device.fTimeDelta / .35f);
+                m_op22_wpn_s.x += (cur.x - m_op22_wpn_s.x) * f;
+                m_op22_wpn_s.y += (cur.y - m_op22_wpn_s.y) * f;
+                g.bx += std::clamp(cur.x - m_op22_wpn_s.x, -40.f * k, 40.f * k);
+                g.by += std::clamp(cur.y - m_op22_wpn_s.y, -40.f * k, 40.f * k);
+            }
+        }
+        else
+            m_op22_wpn_s_ok = false;
+        g.prepare();
+    }
 }

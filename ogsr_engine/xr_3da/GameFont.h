@@ -3,6 +3,7 @@
 #include "MbHelpers.h"
 
 #include "../Include/xrRender/FontRender.h"
+#include "op22_uixf.h"
 
 class ENGINE_API CGameFont
 {
@@ -25,6 +26,7 @@ private:
         float height;
         u32 color;
         EAligment align;
+        op22_uixf_t xf; // OP22: перспектива группы окна, в котором выведена строка
     };
 
 

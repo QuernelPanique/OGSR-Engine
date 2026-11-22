@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "dxFontRender.h"
+#include "dxUIRender.h"
 
 #include "../../xr_3da/GameFont.h"
 
@@ -102,20 +103,27 @@ void dxFontRender::RenderFragment(CGameFont& owner, u32& i, bool shadow_mode, fl
                 const float op22_dx = fis_zero(l.z) ? 0.f : op22_px; // OP22
 
                 const float fTCWidth = l.z / owner.vTS.x;
+                // OP22: строка из окна группы op22_xf - вершины через перспективу группы (op22_uixf.h)
+                auto put = [&](float px, float py, u32 c, float u, float tv) {
+                    if (PS.xf.on)
+                        op22_uixf_tl(v, PS.xf, px, py, c, u, tv);
+                    else
+                        v->set(px, py, c, u, tv);
+                };
 
                 if (!fis_zero(l.z))
                 {
                     const float tu = (l.x / owner.vTS.x);
                     const float tv = (l.y / owner.vTS.y);
 
-                    v->set(X - op22_dx, Y2, clr2, tu, tv + owner.fTCHeight);
+                    put(X - op22_dx, Y2, clr2, tu, tv + owner.fTCHeight);
                     v++;
-                    v->set(X - op22_dx, Y, clr, tu, tv);
+                    put(X - op22_dx, Y, clr, tu, tv);
                     v++;
 
-                    v->set(X - op22_dx + scw, Y2, clr2, tu + fTCWidth, tv + owner.fTCHeight);
+                    put(X - op22_dx + scw, Y2, clr2, tu + fTCWidth, tv + owner.fTCHeight);
                     v++;
-                    v->set(X - op22_dx + scw, Y, clr, tu + fTCWidth, tv);
+                    put(X - op22_dx + scw, Y, clr, tu + fTCWidth, tv);
                     v++;
                 }
 

@@ -5,6 +5,18 @@
 
 dxUIRender UIRenderImpl;
 
+void op22_uixf_tl(FVF::TL* v, const op22_uixf_t& xf, float x, float y, u32 c, float u, float tv)
+{
+    float X, Y, W;
+    xf.map(x, y, X, Y, W);
+    // stub_notransform_t: HPos.xy = (P.xy + 0.5) * 2 / screen_res - 1, HPos.zw = P.zw - точку кладём в xy, умноженные на W
+    const auto* target = RImplementation.Target;
+    const float rw = float(target ? target->GetActiveWidth() : Device.dwWidth);
+    const float rh = float(target ? target->GetActiveHeight() : Device.dwHeight);
+    const float nx = (X + .5f) * 2.f / rw - 1.f, ny = (Y + .5f) * 2.f / rh - 1.f;
+    v->set((nx * W + 1.f) * rw * .5f - .5f, (ny * W + 1.f) * rh * .5f - .5f, .0001f * W, .9999f * W, xf.color(c), u, tv);
+}
+
 void dxUIRender::CreateUIGeom()
 {
     hGeom_TL.create(FVF::F_TL, RImplementation.Vertex.Buffer(), nullptr);
@@ -65,7 +77,10 @@ void dxUIRender::PushPoint(float x, float y, float z, u32 C, float u, float v)
         ++LIT_pv;
         break;
     case pttTL:
-        TL_pv->set(x, y, C, u, v);
+        if (g_op22_uixf.on) // OP22
+            op22_uixf_tl(TL_pv, g_op22_uixf, x, y, C, u, v);
+        else
+            TL_pv->set(x, y, C, u, v);
         ++TL_pv;
         break;
     }

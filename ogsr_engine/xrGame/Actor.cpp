@@ -65,6 +65,8 @@
 #include "PHCapture.h"
 #include "CustomDetector.h"
 
+extern float g_op22_actor_hit_time; // OP22: ui/UIMainIngameWnd.cpp
+
 // Tip for action for object we're looking at
 constexpr const char* m_sCarCharacterUseAction = "car_character_use";
 constexpr const char* m_sCharacterUseAction = "character_use";
@@ -459,6 +461,12 @@ void CActor::Hit(SHit* pHDS)
     callback(GameObject::entity_alive_before_hit)(&HDS);
     if (HDS.ignore_flag)
         return;
+
+    // OP22: HUD GAMMA 2.0 (22.11) - панель слева внизу вздрагивает от попадания (пуля, ранение, удар, взрыв)
+    if (HDS.power > 0.f && this == Level().CurrentViewEntity() &&
+        (HDS.hit_type == ALife::eHitTypeFireWound || HDS.hit_type == ALife::eHitTypeWound || HDS.hit_type == ALife::eHitTypeWound_2 ||
+         HDS.hit_type == ALife::eHitTypeStrike || HDS.hit_type == ALife::eHitTypeExplosion))
+        g_op22_actor_hit_time = Device.fTimeGlobal;
 
     bool bPlaySound = true;
     if (!g_Alive())

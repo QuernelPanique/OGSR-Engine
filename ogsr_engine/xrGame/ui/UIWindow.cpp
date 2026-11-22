@@ -3,6 +3,7 @@
 //////////////////////////////////////////////////////////////////////
 #include "stdafx.h"
 #include "UIWindow.h"
+#include "../../xr_3da/op22_uixf.h"
 #include "../UICursor.h"
 #include "../MainMenu.h"
 #include "HudManager.h"
@@ -168,6 +169,14 @@ void CUIWindow::Draw()
 
         if ((*it)->GetCustomDraw())
             continue;
+
+        if ((*it)->m_op22_xf) // OP22: окно группы перспективы (op22_uixf.h)
+        {
+            op22_uixf_scope xf((*it)->m_op22_xf);
+            if (xf.draw)
+                (*it)->Draw();
+            continue;
+        }
 
         (*it)->Draw();
     }

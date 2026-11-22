@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "../xrCore/op22_skins.h"
 #include "ui_base.h"
+#include "../xr_3da/op22_uixf.h"
 #include "GamePersistent.h"
 #include "UICursor.h"
 #include "HUDManager.h"
@@ -159,6 +160,21 @@ Frect ui_core::ScreenRect()
     return R;
 }
 
+// OP22: ножницы окна группы op22_xf (op22_uixf.h) - прямоугольник, описанный вокруг повёрнутого, в пределах экрана
+static void op22_xf_rect(Frect& r)
+{
+    if (!g_op22_uixf.on)
+        return;
+    float x1 = flt_max, y1 = flt_max, x2 = -flt_max, y2 = -flt_max;
+    for (const auto& p : {Fvector2{r.x1, r.y1}, Fvector2{r.x2, r.y1}, Fvector2{r.x1, r.y2}, Fvector2{r.x2, r.y2}})
+    {
+        float X, Y, W;
+        g_op22_uixf.map(p.x, p.y, X, Y, W);
+        x1 = _min(x1, X), y1 = _min(y1, Y), x2 = _max(x2, X), y2 = _max(y2, Y);
+    }
+    r.set(_max(0.f, x1), _max(0.f, y1), _min(float(Device.dwWidth), x2), _min(float(Device.dwHeight), y2));
+}
+
 void ui_core::PushScissor(const Frect& r_tgt, bool overlapped)
 {
     if (UI()->m_currentPointType == IUIRender::pttLIT)
@@ -185,6 +201,7 @@ void ui_core::PushScissor(const Frect& r_tgt, bool overlapped)
     result.lt.y = ClientToScreenScaledY(result.lt.y);
     result.rb.x = ClientToScreenScaledX(result.rb.x);
     result.rb.y = ClientToScreenScaledY(result.rb.y);
+    op22_xf_rect(result);
 
     Irect r;
     r.x1 = iFloor(result.x1);
@@ -212,6 +229,13 @@ void ui_core::PopScissor()
         tgt.lt.y = iFloor(ClientToScreenScaledY(top.lt.y));
         tgt.rb.x = iFloor(ClientToScreenScaledX(top.rb.x));
         tgt.rb.y = iFloor(ClientToScreenScaledY(top.rb.y));
+        if (g_op22_uixf.on) // OP22
+        {
+            Frect f;
+            f.set(ClientToScreenScaledX(top.lt.x), ClientToScreenScaledY(top.lt.y), ClientToScreenScaledX(top.rb.x), ClientToScreenScaledY(top.rb.y));
+            op22_xf_rect(f);
+            tgt.set(iFloor(f.x1), iFloor(f.y1), iFloor(f.x2 + .5f), iFloor(f.y2 + .5f));
+        }
 
         UIRender->SetScissor(&tgt);
     }

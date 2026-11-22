@@ -105,6 +105,7 @@ bool CUIXmlInit::InitWindow(CUIXml& xml_doc, LPCSTR path, int index, CUIWindow* 
     }
 
     pWnd->Init(x, y, width, height);
+    pWnd->m_op22_xf = u8(xml_doc.ReadAttribInt(path, index, "op22_xf", 0)); // OP22: группа перспективы (op22_uixf.h)
 
     string512 buf;
     CGameFont* LocalFont = NULL;
