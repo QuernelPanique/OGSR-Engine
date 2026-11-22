@@ -115,6 +115,8 @@ public:
     struct Op22XfCfg
     {
         bool on{}, shake{};
+        u8 parent{};          // группа внутри другой (полосы панели): геометрия и раскладка родителя, свой только цвет
+        u32 color{0xffffff};  // исходный цвет вершин группы (текстура белая; цвет игрока его заменяет)
         Frect r{};
         float ry{}, rx{}, rz{}, ox{}, oy{}, pox{}, poy{}, persp{1.f};
         shared_str name; // подпись в редакторе HUD

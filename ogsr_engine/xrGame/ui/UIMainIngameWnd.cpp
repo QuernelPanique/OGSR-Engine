@@ -188,36 +188,49 @@ class CUIOp22HudEdit : public CUIDialogWnd
     static float K() { return float(Device.dwHeight) / 900.f; }
     static Fvector2 to_ui(const Fvector2& p) { return Fvector2().set(p.x * UI_BASE_WIDTH / float(Device.dwWidth), p.y * UI_BASE_HEIGHT / float(Device.dwHeight)); }
 
-    // описанный прямоугольник коробки группы после всех преобразований, px экрана
-    static Frect box_px(const op22_uixf_t& g)
+    int owner(int id) const { return m_main->op22_xf_cfg(id).parent ? m_main->op22_xf_cfg(id).parent : id; }
+    // преобразование группы-владельца с раскладкой u (сразу, не дожидаясь кадра)
+    static op22_uixf_t xf_with(int o, const op22_hud_user_t& u)
     {
-        Frect r;
-        r.set(flt_max, flt_max, -flt_max, -flt_max);
+        op22_uixf_t g = g_op22_uixf_group[o];
+        const float H = float(Device.dwHeight);
+        g.ux = u.dx * H, g.uy = u.dy * H, g.us = u.s;
+        return g;
+    }
+    // описанный прямоугольник куска (своя коробка или прямоугольник полосы внутри родителя) после преобразования, px экрана
+    Frect rect_with(int id, const op22_hud_user_t& u) const
+    {
+        const int o = owner(id);
+        const op22_uixf_t g = xf_with(o, u);
+        float x = g.bx, y = g.by, w = g.w, h = g.h;
+        if (o != id)
+        {
+            const Frect& r = m_main->op22_xf_cfg(id).r;
+            Fvector2 a{r.x1, r.y1}, b{r.x2, r.y2};
+            UI()->ClientToScreenScaled(a);
+            UI()->ClientToScreenScaled(b);
+            x = a.x, y = a.y, w = b.x - a.x, h = b.y - a.y;
+        }
+        Frect q;
+        q.set(flt_max, flt_max, -flt_max, -flt_max);
         for (int i = 0; i < 4; ++i)
         {
             float X, Y, W;
-            g.map(g.bx + ((i & 1) ? g.w : 0.f), g.by + ((i & 2) ? g.h : 0.f), X, Y, W);
-            r.x1 = _min(r.x1, X), r.y1 = _min(r.y1, Y), r.x2 = _max(r.x2, X), r.y2 = _max(r.y2, Y);
+            g.map(x + ((i & 1) ? w : 0.f), y + ((i & 2) ? h : 0.f), X, Y, W);
+            q.x1 = _min(q.x1, X), q.y1 = _min(q.y1, Y), q.x2 = _max(q.x2, X), q.y2 = _max(q.y2, Y);
         }
-        return r;
+        return q;
     }
-    bool on(int id) const { return m_main->op22_xf_cfg(id).on && g_op22_uixf_group[id].on; }
-    // прямоугольник группы с раскладкой u (сразу, не дожидаясь кадра)
-    static Frect rect_with(int id, const op22_hud_user_t& u)
+    Frect rect(int id) const { return rect_with(id, g_op22_hud_user[owner(id)]); }
+    bool on(int id) const
     {
-        op22_uixf_t g = g_op22_uixf_group[id];
-        g.ux = g.uy = 0.f, g.us = 1.f;
-        const Frect b = box_px(g);
-        const float H = float(Device.dwHeight), cx = g.bx + g.w * .5f, cy = g.by + g.h * .5f;
-        Frect r;
-        r.set(cx + (b.x1 - cx) * u.s + u.dx * H, cy + (b.y1 - cy) * u.s + u.dy * H, cx + (b.x2 - cx) * u.s + u.dx * H, cy + (b.y2 - cy) * u.s + u.dy * H);
-        return r;
+        const auto& c = m_main->op22_xf_cfg(id);
+        return c.on && g_op22_uixf_group[owner(id)].on;
     }
-    static Frect rect(int id) { return rect_with(id, g_op22_hud_user[id]); }
     float handle() const { return _max(8.f, 12.f * K()); }
     Frect handle_rect(int id) const
     {
-        const Frect r = rect(id);
+        const Frect r = rect(owner(id));
         const float h = handle();
         Frect q;
         q.set(r.x2 - h * .5f, r.y2 - h * .5f, r.x2 + h * .5f, r.y2 + h * .5f);
@@ -260,7 +273,7 @@ class CUIOp22HudEdit : public CUIDialogWnd
         }
         return -1;
     }
-    // центр куска - на экране
+    // центр куска - на экране (id - владелец)
     void keep_on_screen(int id)
     {
         op22_hud_user_t& u = g_op22_hud_user[id];
@@ -275,13 +288,12 @@ class CUIOp22HudEdit : public CUIDialogWnd
         if (cy > H)
             u.dy -= (cy - H) / H;
     }
-    // размер за правый нижний угол: левый верхний угол (m_anchor) стоит на месте
+    // размер за правый нижний угол (id - владелец): левый верхний угол (m_anchor) стоит на месте
     void resize_to(int id, const Fvector2& p)
     {
         op22_hud_user_t& u = g_op22_hud_user[id];
-        op22_uixf_t g = g_op22_uixf_group[id];
-        g.ux = g.uy = 0.f, g.us = 1.f;
-        const Frect b = box_px(g);
+        const op22_uixf_t g = g_op22_uixf_group[id];
+        const Frect b = rect_with(id, op22_hud_user_t{});
         const float bw = b.width(), bh = b.height();
         if (bw < 1.f || bh < 1.f)
             return;
@@ -388,12 +400,13 @@ public:
         case WINDOW_MOUSE_MOVE:
             if (m_drag == 1 && m_sel)
             {
-                g_op22_hud_user[m_sel].dx += (p.x - m_last.x) / H;
-                g_op22_hud_user[m_sel].dy += (p.y - m_last.y) / H;
-                keep_on_screen(m_sel);
+                const int o = owner(m_sel); // полосу тащат вместе с панелью
+                g_op22_hud_user[o].dx += (p.x - m_last.x) / H;
+                g_op22_hud_user[o].dy += (p.y - m_last.y) / H;
+                keep_on_screen(o);
             }
             else if (m_drag == 2 && m_sel)
-                resize_to(m_sel, p);
+                resize_to(owner(m_sel), p);
             else
                 m_hover = hit(p);
             m_last = p;
@@ -410,7 +423,7 @@ public:
             if (m_sel && p.x >= h.x1 && p.x <= h.x2 && p.y >= h.y1 && p.y <= h.y2)
             {
                 m_drag = 2;
-                m_anchor = rect(m_sel).lt;
+                m_anchor = rect(owner(m_sel)).lt;
             }
             else
             {
@@ -423,11 +436,12 @@ public:
         case WINDOW_LBUTTON_UP: m_drag = 0; return true;
         case WINDOW_RBUTTON_DOWN: {
             const int id = hit(p);
-            if (id)
-            {
+            if (id && owner(id) != id)
+                g_op22_hud_user[id].tint = 0xffffff; // полоса: исходный цвет
+            else if (id)
                 g_op22_hud_user[id] = op22_hud_user_t{};
+            if (id)
                 m_sel = id;
-            }
             return true;
         }
         case WINDOW_MOUSE_WHEEL_UP:
@@ -435,6 +449,8 @@ public:
             int id = hit(p);
             if (!id)
                 id = m_sel;
+            if (id)
+                id = owner(id);
             if (id)
             {
                 op22_hud_user_t& u = g_op22_hud_user[id];
@@ -460,10 +476,13 @@ public:
             if (!on(id))
                 continue;
             const Frect r = rect(id);
+            const bool child = owner(id) != id;
             const bool sel = id == m_sel, hov = id == m_hover;
+            if (child && !sel && !hov) // полоса панели: рамка только под курсором и у выбранной
+                continue;
             add(r.x1, r.y1, r.x2, r.y2, sel ? 0x30e0a43c : (hov ? 0x22ffffff : 0x12ffffff));
             frame(r, sel ? 2.f * t : t, sel ? 0xffe0a43c : (hov ? 0xd0ffffff : 0x80ffffff));
-            if (sel)
+            if (m_sel && owner(m_sel) == id) // ручка размера - у владельца выбранного куска
             {
                 const Frect h = handle_rect(id);
                 add(h.x1, h.y1, h.x2, h.y2, 0xffe0a43c);
@@ -1701,6 +1720,12 @@ void CUIMainIngameWnd::op22_xf_init(CUIXml& xml)
         c.on = true;
         c.shake = !!xml.ReadAttribInt("op22_xf", i, "shake", 0);
         c.name = xml.ReadAttrib("op22_xf", i, "name", "");
+        c.parent = u8(std::clamp(xml.ReadAttribInt("op22_xf", i, "parent", 0), 0, OP22_UIXF_GROUPS - 1));
+        if (c.parent == id)
+            c.parent = 0;
+        int cr = 255, cg = 255, cb = 255;
+        if (LPCSTR col = xml.ReadAttrib("op22_xf", i, "color", nullptr); col && sscanf(col, "%d,%d,%d", &cr, &cg, &cb) == 3)
+            c.color = (u32(cr & 255) << 16) | (u32(cg & 255) << 8) | u32(cb & 255);
         const float x = xml.ReadAttribFlt("op22_xf", i, "x", 0.f), y = xml.ReadAttribFlt("op22_xf", i, "y", 0.f);
         c.r.set(x, y, x + xml.ReadAttribFlt("op22_xf", i, "width", 0.f), y + xml.ReadAttribFlt("op22_xf", i, "height", 0.f));
         c.ry = deg2rad(xml.ReadAttribFlt("op22_xf", i, "ry", 0.f));
@@ -1734,7 +1759,7 @@ void CUIMainIngameWnd::op22_xf_update()
 
     for (int id = 1; id < OP22_UIXF_GROUPS; ++id)
     {
-        if (m_op22_xf_cfg[id].on)
+        if (m_op22_xf_cfg[id].on && !m_op22_xf_cfg[id].parent)
             base(id, g_op22_uixf_group[id]);
         else
             g_op22_uixf_group[id].on = false;
@@ -1876,5 +1901,16 @@ void CUIMainIngameWnd::op22_xf_update()
         g.us = u.s;
         g.tint = u.tint;
         g.prepare();
+    }
+    // группы внутри других (полосы панели): преобразование родителя, цвет - свой (игрока или исходный из разметки)
+    for (int id = 1; id < OP22_UIXF_GROUPS; ++id)
+    {
+        const Op22XfCfg& c = m_op22_xf_cfg[id];
+        if (!c.on || !c.parent || !g_op22_uixf_group[c.parent].on)
+            continue;
+        op22_uixf_t& g = g_op22_uixf_group[id];
+        g = g_op22_uixf_group[c.parent];
+        const u32 t = g_op22_hud_user[id].tint & 0xffffff;
+        g.tint = t != 0xffffff ? t : c.color;
     }
 }
