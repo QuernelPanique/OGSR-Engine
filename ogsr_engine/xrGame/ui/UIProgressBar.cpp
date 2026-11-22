@@ -59,6 +59,8 @@ void CUIProgressBar::UpdateProgressBar()
     float progressbar_unit = 1 / (m_MaxPos - m_MinPos);
 
     float fCurrentLength = m_ProgressPos.x * progressbar_unit;
+    if (m_op22_steps > 0) // OP22
+        fCurrentLength = std::round(fCurrentLength * m_op22_steps) / float(m_op22_steps);
 
     switch (m_orient_mode)
     {

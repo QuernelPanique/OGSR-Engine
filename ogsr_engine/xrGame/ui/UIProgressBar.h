@@ -52,6 +52,7 @@ public:
     // OP22: GAMMA 2.0 (22.11) - заливка из трёх частей (op22_caps="ui\\tex" -> tex_l, tex_m, tex_r): края со свечением и
     // середина по длине заливки, без обрезки ножницами (свечение у конца заливки - как на макете); g = поле x, поле y, край
     CUIStatic* m_op22_cap[3]{};
+    int m_op22_steps{}; // OP22: шкала делениями - длина до целого деления (op22_steps)
     Fvector3 m_op22_cap_g{};
     void op22_caps(LPCSTR tex, const Fvector3& g);
 

@@ -6,6 +6,7 @@
 
 #include "UIListWnd.h"
 #include "UIProgressBar.h"
+#include "UIFrameWindow.h" // OP22
 #include "UIScrollView.h"
 
 #include "../string_table.h"
@@ -44,6 +45,18 @@ CUIItemInfo::~CUIItemInfo()
     xr_delete(UIArtefactParams);
 }
 
+void CUIItemInfo::op22_chip_fit(int i, CUIStatic* s) // OP22: плашка по ширине текста подписи
+{
+    CUIFrameWindow* f = m_op22_chip[i];
+    if (!f || !s || !s->GetFont())
+        return;
+    float len = s->GetFont()->SizeOf_(s->GetText());
+    UI()->ClientToScreenScaledWidth(len);
+    f->SetWndPos(s->GetWndPos());
+    f->SetWidth(len + 2.f * m_op22_chip_pad[i]);
+    f->Show(s->IsShown() && s->GetText() && s->GetText()[0]);
+}
+
 void CUIItemInfo::Init(LPCSTR xml_name)
 {
     CUIXml uiXml;
@@ -75,6 +88,7 @@ void CUIItemInfo::Init(LPCSTR xml_name)
         AttachChild(back);
         xml_init.InitFrameWindow(uiXml, "background_frame", 0, back);
         m_op22_back = back; // OP22
+        sscanf(uiXml.ReadAttrib("background_frame", 0, "op22_margin", "0,0"), "%f,%f", &m_op22_back_m.x, &m_op22_back_m.y);
     }
 
     if (uiXml.NavigateToNode("static_name", 0))
@@ -87,6 +101,20 @@ void CUIItemInfo::Init(LPCSTR xml_name)
         if (uiXml.ReadAttribInt("static_name", 0, "op22_name_auto", 0) == 2) // OP22: GAMMA 2.0 - панель описания
             m_op22_name_shift = 2;
         m_op22_name_h = UIName->GetHeight();
+    }
+    for (int i = 0; i < 2; ++i) // OP22: плашки веса и цены - до самих подписей (рисуются под ними)
+    {
+        LPCSTR node = i ? "static_cost" : "static_weight";
+        LPCSTR c = uiXml.NavigateToNode(node, 0) ? uiXml.ReadAttrib(node, 0, "op22_chip", nullptr) : nullptr;
+        if (!c || !c[0])
+            continue;
+        string256 tex{};
+        float h = 0.f;
+        sscanf(c, "%255[^;];%f,%f", tex, &m_op22_chip_pad[i], &h);
+        m_op22_chip[i] = xr_new<CUIFrameWindow>();
+        m_op22_chip[i]->SetAutoDelete(true);
+        AttachChild(m_op22_chip[i]);
+        m_op22_chip[i]->Init(tex, 0.f, 0.f, 10.f, h);
     }
     if (uiXml.NavigateToNode("static_weight", 0))
     {
@@ -233,6 +261,7 @@ void CUIItemInfo::InitItem(CInventoryItem* pInvItem)
             sprintf_s(str, "%s %s", w.c_str(), CStringTable().translate("st_kg").c_str());
         }
         UIWeight->SetText(str);
+        op22_chip_fit(0, UIWeight);
     }
     if (UICost)
     {
@@ -244,6 +273,7 @@ void CUIItemInfo::InitItem(CInventoryItem* pInvItem)
             UI()->ClientToScreenScaledWidth(len);
             UICost->SetWndPos(Fvector2().set(UIWeight->GetWndPos().x + UIWeight->GetTextX() + len + m_op22_cost_gap, UIWeight->GetWndPos().y));
         }
+        op22_chip_fit(1, UICost);
     }
 
     if (UICondProgresBar)
@@ -311,7 +341,7 @@ void CUIItemInfo::InitItem(CInventoryItem* pInvItem)
             UIDesc->SetHeight(list_h);
             SetHeight(full);
             if (m_op22_back)
-                m_op22_back->SetHeight(full);
+                m_op22_back->SetHeight(full + 2.f * m_op22_back_m.y);
             // OP22: не влезло - полоса прокрутки рисуется внутри списка поверх правого края (числа шкал, текст): окно и список
             // шире на полосу, полоса встаёт справа от содержимого, раскладка содержимого прежняя
             if (m_op22_w0 < 0.f)
@@ -326,7 +356,7 @@ void CUIItemInfo::InitItem(CInventoryItem* pInvItem)
                 UIDesc->ScrollBar()->SetWndPos(Fvector2().set(UIDesc->GetWidth() - UIDesc->ScrollBar()->GetWidth(), UIDesc->ScrollBar()->GetWndPos().y));
             SetWidth(m_op22_w0 + sbw);
             if (m_op22_back)
-                m_op22_back->SetWidth(m_op22_w0 + sbw);
+                m_op22_back->SetWidth(m_op22_w0 + sbw + 2.f * m_op22_back_m.x);
         }
     }
     if (UIItemImage)

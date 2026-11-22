@@ -53,6 +53,7 @@ public:
     bool m_op22_autoh{};
     float m_op22_max_h{}, m_op22_pad_b{};
     class CUIFrameWindow* m_op22_back{};
+    Fvector2 m_op22_back_m{}; // OP22: поле фона вокруг окна под тень карточки (background_frame op22_margin="x,y")
     // OP22: шкала состояния только у предметов с состоянием (condition_progress op22_cond_auto="1")
     bool m_op22_cond_auto{};
     float m_op22_cond_h{}, m_op22_desc_y{}, m_op22_desc_h{};
@@ -60,6 +61,10 @@ public:
     CUIStatic* m_op22_cond_val{}; // OP22: GAMMA 2.0 - «64» справа от пунктира
     bool m_op22_weight_fmt{}; // OP22: GAMMA 2.0 - вес «4,9 кг» (static_weight op22_fmt)
     float m_op22_cost_gap{-1.f};
+    // OP22: GAMMA 2.0 (22.11) - вес и цена в плашке по ширине текста (op22_chip="текстура;поле x,высота")
+    class CUIFrameWindow* m_op22_chip[2]{};
+    float m_op22_chip_pad[2]{};
+    void op22_chip_fit(int i, CUIStatic* s);
     shared_str m_op22_cost_prefix; // OP22: GAMMA 2.0 - подпись перед ценой (static_cost op22_prefix, с кодами цвета) // OP22: GAMMA 2.0 - цена сразу за текстом веса (static_cost op22_after_weight)
     float m_op22_line_h{};
     bool m_op22_wpn_fixed{}; // OP22: GAMMA 2.0 - параметры оружия своим окном в точке разметки (wpn_params op22_fixed), не в прокрутке

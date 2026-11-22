@@ -620,6 +620,21 @@ bool CUIXmlInit::InitDragDropListEx(CUIXml& xml_doc, const char* path, int index
     pWnd->m_op22_count_at_list = !!xml_doc.ReadAttribInt(path, index, "op22_count_at_list", 0); // OP22
     pWnd->op22_item_frames(xml_doc.ReadAttrib(path, index, "op22_item_frames", ""), xml_doc.ReadAttrib(path, index, "op22_item_frame_pad", "0,0")); // OP22
     pWnd->op22_hl(xml_doc.ReadAttrib(path, index, "op22_hl_frame", ""), xml_doc.ReadAttrib(path, index, "op22_hl_pad", "0,0"));
+    sscanf(xml_doc.ReadAttrib(path, index, "op22_count_rb", "-1,-1"), "%f,%f", &pWnd->m_op22_count_rb.x, &pWnd->m_op22_count_rb.y);
+    if (const int k = xml_doc.ReadAttribInt(path, index, "op22_key", -1); k >= 0) // OP22: клавиша быстрого слота подписью
+    {
+        string512 kb;
+        strconcat(sizeof(kb), kb, path, ":op22_key_label");
+        if (xml_doc.NavigateToNode(kb, index))
+        {
+            auto* lbl = xr_new<CUIStatic>();
+            lbl->SetAutoDelete(true);
+            pWnd->AttachChild(lbl);
+            InitStatic(xml_doc, kb, index, lbl);
+            pWnd->m_op22_key = k;
+            pWnd->m_op22_key_lbl = lbl;
+        }
+    }
     if (LPCSTR ct = xml_doc.ReadAttrib(path, index, "op22_cond_tex", nullptr); ct && ct[0]) // OP22: текстуры делений «обычный;узкий»
     {
         string512 a{}, b{};
@@ -773,6 +788,7 @@ bool CUIXmlInit::InitProgressBar(CUIXml& xml_doc, LPCSTR path, int index, CUIPro
     }
 
     pWnd->InitProgressBar(pos, size, mode);
+    pWnd->m_op22_steps = xml_doc.ReadAttribInt(path, index, "op22_steps", 0); // OP22
     if (LPCSTR caps = xml_doc.ReadAttrib(path, index, "op22_caps", nullptr); caps && caps[0]) // OP22: заливка из трёх частей
     {
         Fvector3 g{};

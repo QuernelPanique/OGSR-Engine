@@ -156,9 +156,10 @@ bool CUICellItem::HasChild(CUICellItem* item) { return (m_childs.end() != std::f
 void CUICellItem::UpdateItemText()
 {
     string32 str;
-    if (m_op22_count > 1) // OP22: GAMMA 2.0 - быстрый слот: «x4» = все такие предметы, как число на HUD
+    const bool op22_plain = m_pParentList && m_pParentList->m_op22_count_rb.x >= 0.f; // OP22: «4» в углу слота, и при одном
+    if (m_op22_count > 1 || (op22_plain && m_op22_count >= 1)) // OP22: GAMMA 2.0 - быстрый слот: «x4» = все такие предметы, как число на HUD
     {
-        sprintf_s(str, "x%d", m_op22_count);
+        sprintf_s(str, op22_plain ? "%d" : "x%d", m_op22_count);
         if (Core.Features.test(xrCore::Feature::show_inv_item_condition))
         {
             m_text->SetText(str);

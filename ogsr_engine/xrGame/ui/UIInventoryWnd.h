@@ -164,6 +164,8 @@ protected:
     CUIProgressBar* m_op22_satiety{};
     CUIProgressBar* m_op22_thirst{};
     CUIStatic* m_op22_weight{};
+    CUIStatic* m_op22_weight_max{}; // OP22: «/ 60 кг» отдельной подписью (узел op22_weight_max, зазор op22_gap)
+    float m_op22_weight_gap{};
     CUIProgressBar* m_op22_weight_bar{};
     CUIStatic* m_op22_caption{};
     // OP22: интерфейс GAMMA 2.0 - имя костюма, числа шкал здоровья/пси/облучения, счётчик пояса (узлы есть - статики есть)

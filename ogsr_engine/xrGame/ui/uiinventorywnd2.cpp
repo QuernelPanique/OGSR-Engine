@@ -644,6 +644,7 @@ void CUIInventoryWnd::op22_quick_fill()
             ci->m_op22_count = cnt;
             ci->UpdateItemText();
             l->SetItem(ci);
+            ci->UpdateItemText(); // OP22: список известен - формат числа слота (op22_count_rb)
         }
     }
 }
@@ -652,7 +653,7 @@ void CUIInventoryWnd::UpdateWeight()
 {
     if (m_op22_weight || m_op22_weight_bar) // OP22: вес по макету
     {
-        InventoryUtilities::op22_UpdateWeight(m_op22_weight, m_op22_weight_bar);
+        InventoryUtilities::op22_UpdateWeight(m_op22_weight, m_op22_weight_bar, m_op22_weight_max, m_op22_weight_gap);
         return;
     }
     InventoryUtilities::UpdateWeight(UIBagWnd, true);

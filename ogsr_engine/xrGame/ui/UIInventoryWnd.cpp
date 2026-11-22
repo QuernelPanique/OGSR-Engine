@@ -176,6 +176,14 @@ void CUIInventoryWnd::Init()
         AttachChild(m_op22_weight);
         xml_init.InitStatic(uiXml, "op22_weight", 0, m_op22_weight);
     }
+    if (uiXml.NavigateToNode("op22_weight_max", 0)) // OP22
+    {
+        m_op22_weight_max = xr_new<CUIStatic>();
+        m_op22_weight_max->SetAutoDelete(true);
+        AttachChild(m_op22_weight_max);
+        xml_init.InitStatic(uiXml, "op22_weight_max", 0, m_op22_weight_max);
+        m_op22_weight_gap = uiXml.ReadAttribFlt("op22_weight_max", 0, "op22_gap", 0.f);
+    }
     if (uiXml.NavigateToNode("op22_weight_bar", 0))
     {
         m_op22_weight_bar = xr_new<CUIProgressBar>();

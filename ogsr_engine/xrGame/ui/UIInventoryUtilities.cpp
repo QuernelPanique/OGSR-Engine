@@ -8,6 +8,7 @@
 #include "../eatable_item.h"
 #include "../Level.h"
 #include "../HUDManager.h"
+#include "../ui_base.h" // OP22: UI()
 #include "../date_time.h"
 #include "../string_table.h"
 #include "../Inventory.h"
@@ -331,14 +332,32 @@ std::string InventoryUtilities::op22_group_digits(s64 v)
 }
 
 // OP22: вес в стиле макета - «38,6 / 60 кг», красный при перегрузе, и шкала заполнения
-void InventoryUtilities::op22_UpdateWeight(CUIStatic* wnd, CUIProgressBar* bar)
+void InventoryUtilities::op22_UpdateWeight(CUIStatic* wnd, CUIProgressBar* bar, CUIStatic* wnd_max, float gap)
 {
     CInventoryOwner* pInvOwner = smart_cast<CInventoryOwner*>(Level().CurrentEntity());
     if (!pInvOwner)
         return;
     const float total = pInvOwner->inventory().CalcTotalWeight();
     const float max = pInvOwner->MaxCarryWeight();
-    if (wnd)
+    if (wnd && wnd_max) // OP22: GAMMA 2.0 (22.11) - «38,6» крупно и «/ 60 кг» мельче, число вплотную левее (зазор gap)
+    {
+        string128 a{}, b{};
+        sprintf_s(a, "%s%.1f", total > max ? "%c[red]" : "", total);
+        for (char* c = a; *c; ++c)
+            if (*c == '.')
+                *c = ',';
+        sprintf_s(b, "/ %.0f %s", max, *CStringTable().translate("st_kg"));
+        wnd->SetText(a);
+        wnd_max->SetText(b);
+        if (CGameFont* f = wnd_max->GetFont())
+        {
+            float len = f->SizeOf_(b);
+            UI()->ClientToScreenScaledWidth(len);
+            const Frect r = wnd_max->GetWndRect();
+            wnd->SetWndPos(Fvector2().set(r.x2 - len - gap - wnd->GetWidth(), wnd->GetWndPos().y));
+        }
+    }
+    else if (wnd)
     {
         string128 buf{};
         sprintf_s(buf, "%s%.1f / %.0f %s", total > max ? "%c[red]" : "", total, max, *CStringTable().translate("st_kg"));

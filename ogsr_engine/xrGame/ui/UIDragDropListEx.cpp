@@ -6,6 +6,7 @@
 #include "UICellItem.h"
 #include "UIStatic.h" // OP22
 #include "UIFrameWindow.h" // OP22
+#include "../xr_level_controller.h" // OP22
 
 #include "UIInventoryWnd.h"
 #include "UITradeWnd.h"
@@ -322,8 +323,22 @@ void CUIDragDropListEx::op22_hl(LPCSTR tex, LPCSTR pad)
     m_op22_hl_frame = op22_new_frame(tex);
 }
 
+static LPCSTR op22_quick_key(int i) // OP22: короткое имя клавиши быстрого слота, как на HUD (UIMainIngameWnd::op22_qs_update)
+{
+    LPCSTR kn = dik_to_keyname(get_action_dik(EGameActions(kUSE_QUICK_SLOT0 + i)));
+    LPCSTR k = kn && kn[0] == 'k' ? kn + 1 : kn;
+    static const std::pair<LPCSTR, LPCSTR> abbr[] = {{"INSERT", "INS"}, {"DELETE", "DEL"}, {"PGUP", "PGUP"}, {"PRIOR", "PGUP"}, {"NEXT", "PGDN"}, {"PGDN", "PGDN"}};
+    if (k)
+        for (const auto& [from, to] : abbr)
+            if (!xr_strcmp(k, from))
+                k = to;
+    return k ? k : "";
+}
+
 void CUIDragDropListEx::Draw()
 {
+    if (m_op22_key_lbl && m_op22_key >= 0) // OP22
+        m_op22_key_lbl->SetText(op22_quick_key(m_op22_key));
     if (m_op22_frame_on || m_op22_frame_off) // OP22: рамка слота поверх предмета
     {
         const bool has = ItemsCount() > 0;
@@ -525,7 +540,13 @@ void CUIDragDropListEx::SetItem(CUICellItem* itm, Ivector2 cell_pos) // start at
             const Fvector2 sz{k * g.x, k * g.y};
             itm->SetWndSize(sz);
             itm->SetWndPos(Fvector2().set(itm->GetWndPos().x + (full.x - sz.x) / 2, itm->GetWndPos().y + (full.y - sz.y) / 2));
-            if (m_op22_count_at_list && itm->op22_text()) // OP22: число - от угла списка
+            if (m_op22_count_at_list && itm->op22_text() && m_op22_count_rb.x >= 0.f) // OP22: число - от правого нижнего угла слота
+            {
+                CUIStatic* t = itm->op22_text();
+                t->SetTextAlignment(CGameFont::alRight);
+                t->SetWndPos(Fvector2().set(full.x - m_op22_count_rb.x - t->GetWidth() - (full.x - sz.x) / 2, full.y - m_op22_count_rb.y - t->GetHeight() - (full.y - sz.y) / 2));
+            }
+            else if (m_op22_count_at_list && itm->op22_text()) // OP22: число - от угла списка
             {
                 CUIStatic* t = itm->op22_text();
                 if (itm->m_op22_text_pos.x < 0.f)
