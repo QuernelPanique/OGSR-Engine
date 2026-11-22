@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../xr_3da/op22_uixf.h" // OP22
 #include "UIGameCustom.h"
 #include "ui.h"
 #include "level.h"
@@ -201,7 +202,11 @@ bool SDrawStaticStruct::IsActual()
 void SDrawStaticStruct::Draw()
 {
     if (m_static && m_static->IsShown())
-        m_static->Draw();
+    {
+        op22_uixf_scope xf(m_static->m_op22_xf); // OP22: группа op22_xf у самого окна (биорадар - группа 3, редактор HUD)
+        if (xf.draw)
+            m_static->Draw();
+    }
 }
 
 void SDrawStaticStruct::Update()

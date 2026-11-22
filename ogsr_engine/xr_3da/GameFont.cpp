@@ -7,7 +7,7 @@ extern ENGINE_API BOOL g_bRendering;
 
 ENGINE_API Fvector2 g_current_font_scale = {1.f, 1.f};
 ENGINE_API op22_uixf_t g_op22_uixf; // OP22: op22_uixf.h
-ENGINE_API op22_uixf_t g_op22_uixf_group[4];
+ENGINE_API op22_uixf_t g_op22_uixf_group[OP22_UIXF_GROUPS];
 
 ENGINE_API float g_fontWidthScale = 1.f;
 ENGINE_API float g_fontHeightScale = 1.f;

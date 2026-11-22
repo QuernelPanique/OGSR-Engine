@@ -11,6 +11,9 @@
 #include "HUDManager.h"
 #include "../xrCore/op22_skins.h"
 
+void op22_hud_layout_parse(LPCSTR s); // OP22: ui/UIMainIngameWnd.cpp - редактор HUD
+void op22_hud_edit_cmd();
+
 namespace
 {
 Flags32 g_flags{};
@@ -159,6 +162,33 @@ void skin(LPCSTR name, int kind)
     v[0] = 0;
     add(xr_new<CCC_OP22Skin>(name, v, size, kind));
 }
+// OP22: редактор HUD (22.11, ui/UIMainIngameWnd.cpp): раскладка игрока и команда открытия редактора
+class CCC_OP22HudLayout : public CCC_String
+{
+public:
+    CCC_OP22HudLayout(LPCSTR N, LPSTR V, int size) : CCC_String(N, V, size) {}
+    virtual void Execute(LPCSTR args)
+    {
+        CCC_String::Execute(args);
+        op22_hud_layout_parse(value);
+    }
+    virtual void Info(TInfo& I) { xr_strcpy(I, "HUD layout: g:dx,dy,scale,rrggbb/... (op22_hud_edit)"); }
+};
+
+class CCC_OP22HudEdit : public IConsole_Command
+{
+public:
+    CCC_OP22HudEdit(LPCSTR N) : IConsole_Command(N)
+    {
+        bEmptyArgsHandled = TRUE;
+        SetCanSave(false);
+    }
+    virtual void Execute(LPCSTR)
+    {
+        op22_hud_edit_cmd();
+    }
+    virtual void Info(TInfo& I) { xr_strcpy(I, "open HUD editor: drag, resize and recolor HUD parts"); }
+};
 } // namespace
 
 LPCSTR op22_font_profile_key() { return g_font_profile < g_font_profiles.size() ? g_font_profiles[g_font_profile].second.c_str() : nullptr; }
@@ -232,6 +262,9 @@ void op22_register_console()
     }
     str("bolt_visual", "bolt");
     str("hc_unarmed", "");
+    extern char g_op22_hud_layout[512];
+    add(xr_new<CCC_OP22HudLayout>("op22_hud_layout", g_op22_hud_layout, 512));
+    add(xr_new<CCC_OP22HudEdit>("op22_hud_edit"));
     skin("g_current_hud", op22_skins::eHud);
     skin("g_current_inventory", op22_skins::eInventory);
     str("buy_item", "nil");

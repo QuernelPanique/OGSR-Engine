@@ -17,6 +17,10 @@ struct op22_uixf_t
     float pox{}, poy{};            // точка перспективы от левого верхнего угла коробки, px
     float d{1000.f};               // perspective, px
     float alpha{1.f};              // множитель непрозрачности
+    // раскладка игрока (редактор HUD op22_hud_edit, 22.11): после перспективы - масштаб us вокруг центра коробки и сдвиг ux, uy
+    // (px экрана); tint - множитель цвета вершин (0xRRGGBB, белый - без изменений)
+    float ux{}, uy{}, us{1.f};
+    u32 tint{0xffffff};
 
     // коэффициенты (prepare)
     float m_ar{1.f}, m_ai{}, m_r[9]{1.f, 0, 0, 0, 1.f, 0, 0, 0, 1.f};
@@ -53,10 +57,22 @@ struct op22_uixf_t
             W = .05f;
         X = bx + pox + (qx - pox) / W;
         Y = by + poy + (qy - poy) / W;
+        if (us != 1.f || ux != 0.f || uy != 0.f)
+        {
+            X = bx + cx + (X - bx - cx) * us + ux;
+            Y = by + cy + (Y - by - cy) * us + uy;
+        }
     }
 
     u32 color(u32 c) const
     {
+        if ((tint & 0xffffff) != 0xffffff)
+        {
+            const u32 r = (((c >> 16) & 0xff) * ((tint >> 16) & 0xff) + 127) / 255;
+            const u32 g = (((c >> 8) & 0xff) * ((tint >> 8) & 0xff) + 127) / 255;
+            const u32 b = ((c & 0xff) * (tint & 0xff) + 127) / 255;
+            c = (c & 0xff000000) | (r << 16) | (g << 8) | b;
+        }
         if (alpha >= 1.f)
             return c;
         const u32 a = u32(float(c >> 24) * (alpha < 0.f ? 0.f : alpha));
@@ -65,7 +81,8 @@ struct op22_uixf_t
 };
 
 ENGINE_API extern op22_uixf_t g_op22_uixf; // текущее (on - пока рисуется группа)
-ENGINE_API extern op22_uixf_t g_op22_uixf_group[4]; // группы 1..3, заполняет игра каждый кадр (on - группа активна)
+constexpr u8 OP22_UIXF_GROUPS = 8;
+ENGINE_API extern op22_uixf_t g_op22_uixf_group[OP22_UIXF_GROUPS]; // группы 1..7, заполняет игра каждый кадр (on - группа активна)
 
 // окно группы g: true - рисовать (группа выключена - рисуется плоско; прозрачная - не рисуется)
 struct op22_uixf_scope
@@ -74,7 +91,7 @@ struct op22_uixf_scope
     bool draw{true};
     explicit op22_uixf_scope(u8 g) : prev(g_op22_uixf)
     {
-        if (g && g < 4 && g_op22_uixf_group[g].on)
+        if (g && g < OP22_UIXF_GROUPS && g_op22_uixf_group[g].on)
         {
             g_op22_uixf = g_op22_uixf_group[g];
             draw = g_op22_uixf.alpha > 0.004f;

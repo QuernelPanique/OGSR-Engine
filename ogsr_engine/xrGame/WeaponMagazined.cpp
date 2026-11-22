@@ -1795,6 +1795,8 @@ void CWeaponMagazined::OnNextFireMode(bool opt)
     m_iCurFireMode = (m_iCurFireMode + 1 + m_aFireModes.size()) % m_aFireModes.size();
     SetQueueSize(GetCurrentFireMode());
     PlaySound(sndFireModes, get_LastFP());
+    if (ParentIsActor()) // OP22: HUD - счётчик патронов всплывает при смене режима огня (режим - в подписи)
+        g_op22_ammo_req = Device.fTimeGlobal;
 }
 
 void CWeaponMagazined::OnPrevFireMode(bool opt)
@@ -1806,6 +1808,8 @@ void CWeaponMagazined::OnPrevFireMode(bool opt)
     m_iCurFireMode = (m_iCurFireMode - 1 + m_aFireModes.size()) % m_aFireModes.size();
     SetQueueSize(GetCurrentFireMode());
     PlaySound(sndFireModes, get_LastFP());
+    if (ParentIsActor()) // OP22: HUD - счётчик патронов всплывает при смене режима огня (режим - в подписи)
+        g_op22_ammo_req = Device.fTimeGlobal;
 }
 
 void CWeaponMagazined::OnH_A_Chield()

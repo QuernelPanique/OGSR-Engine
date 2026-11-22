@@ -9,6 +9,10 @@
 #include "../../xr_3da/op22_uixf.h" // OP22
 #include "../player_hud.h" // OP22
 #include "../actor_defs.h" // OP22
+#include "UIDialogWnd.h" // OP22: редактор HUD
+#include "../../xr_3da/xr_ioconsole.h" // OP22
+#include "../../Include/xrRender/UIRender.h" // OP22
+#include "../../Include/xrRender/UIShader.h" // OP22
 
 #include "UIMainIngameWnd.h"
 #include "UIMessagesWindow.h"
@@ -106,6 +110,448 @@ static bool SetupGameIcon(CUIMainIngameWnd::EWarningIcons icon, u32 cl, float wi
     return true;
 }
 
+// ---------------- OP22: редактор HUD (22.11) - игрок двигает, масштабирует и красит группы op22_xf ----------------
+// Консоль: op22_hud_edit - открыть редактор; op22_hud_layout - раскладка "g:dx,dy,s,rrggbb/..." (dx, dy - доли высоты
+// экрана, s - масштаб, rrggbb - множитель цвета), пишется в user.ltx при выходе из редактора (cfg_save).
+// Мышь: ЛКМ - выбрать и тащить кусок, угол-ручка или колесо - размер, палитра внизу - цвет, ПКМ - сброс куска;
+// Del - сбросить всё; Esc/Enter - готово. Подписи и подсказка - узел op22_hud_edit в maingame.xml скина HUD.
+struct op22_hud_user_t
+{
+    float dx{}, dy{}, s{1.f};
+    u32 tint{0xffffff};
+    bool is_default() const { return fis_zero(dx, .0001f) && fis_zero(dy, .0001f) && fsimilar(s, 1.f, .001f) && (tint & 0xffffff) == 0xffffff; }
+};
+static op22_hud_user_t g_op22_hud_user[OP22_UIXF_GROUPS];
+static bool g_op22_hud_editing = false;
+char g_op22_hud_layout[512]{}; // значение op22_hud_layout (op22_console.cpp)
+
+void op22_hud_layout_parse(LPCSTR s)
+{
+    for (auto& u : g_op22_hud_user)
+        u = op22_hud_user_t{};
+    if (!s || !s[0])
+        return;
+    string512 buf;
+    xr_strcpy(buf, s);
+    char* ctx{};
+    for (char* tok = strtok_s(buf, "/", &ctx); tok; tok = strtok_s(nullptr, "/", &ctx))
+    {
+        int g{};
+        float dx{}, dy{}, sc{1.f};
+        unsigned int tint = 0xffffff;
+        if (sscanf(tok, " %d:%f,%f,%f,%x", &g, &dx, &dy, &sc, &tint) < 4 || g < 1 || g >= OP22_UIXF_GROUPS)
+            continue;
+        op22_hud_user_t& u = g_op22_hud_user[g];
+        u.dx = std::clamp(dx, -2.f, 2.f);
+        u.dy = std::clamp(dy, -2.f, 2.f);
+        u.s = std::clamp(sc, .4f, 2.5f);
+        u.tint = tint & 0xffffff;
+    }
+}
+
+static void op22_hud_layout_store()
+{
+    xr_string s;
+    for (int g = 1; g < OP22_UIXF_GROUPS; ++g)
+    {
+        const op22_hud_user_t& u = g_op22_hud_user[g];
+        if (u.is_default())
+            continue;
+        string128 t;
+        xr_sprintf(t, "%s%d:%.4f,%.4f,%.3f,%06x", s.empty() ? "" : "/", g, u.dx, u.dy, u.s, u.tint & 0xffffff);
+        s += t;
+    }
+    xr_strcpy(g_op22_hud_layout, s.c_str());
+}
+
+class CUIOp22HudEdit : public CUIDialogWnd
+{
+    typedef CUIDialogWnd inherited;
+
+    CUIMainIngameWnd* m_main;
+    ui_shader m_sh;
+    CUIStatic m_label[OP22_UIXF_GROUPS];
+    CUIStatic m_hint;
+    int m_sel{}, m_hover{}, m_drag{}; // m_drag: 1 - сдвиг, 2 - размер за угол
+    Fvector2 m_last{}, m_anchor{};
+    struct quad
+    {
+        Frect r;
+        u32 c;
+    };
+    xr_vector<quad> m_q;
+
+    // палитра: множитель цвета (белый - как было)
+    static constexpr int PAL_N = 12;
+    static constexpr u32 PAL[PAL_N] = {0xffffff, 0xffd36b, 0xffa64d, 0xff6b5e, 0xff7ac8, 0xb78bff, 0x6fa8ff, 0x5fe0ff, 0x6dff9a, 0xc8ff6b, 0xb4b4b4, 0x787878};
+
+    static float K() { return float(Device.dwHeight) / 900.f; }
+    static Fvector2 to_ui(const Fvector2& p) { return Fvector2().set(p.x * UI_BASE_WIDTH / float(Device.dwWidth), p.y * UI_BASE_HEIGHT / float(Device.dwHeight)); }
+
+    // описанный прямоугольник коробки группы после всех преобразований, px экрана
+    static Frect box_px(const op22_uixf_t& g)
+    {
+        Frect r;
+        r.set(flt_max, flt_max, -flt_max, -flt_max);
+        for (int i = 0; i < 4; ++i)
+        {
+            float X, Y, W;
+            g.map(g.bx + ((i & 1) ? g.w : 0.f), g.by + ((i & 2) ? g.h : 0.f), X, Y, W);
+            r.x1 = _min(r.x1, X), r.y1 = _min(r.y1, Y), r.x2 = _max(r.x2, X), r.y2 = _max(r.y2, Y);
+        }
+        return r;
+    }
+    bool on(int id) const { return m_main->op22_xf_cfg(id).on && g_op22_uixf_group[id].on; }
+    // прямоугольник группы с раскладкой u (сразу, не дожидаясь кадра)
+    static Frect rect_with(int id, const op22_hud_user_t& u)
+    {
+        op22_uixf_t g = g_op22_uixf_group[id];
+        g.ux = g.uy = 0.f, g.us = 1.f;
+        const Frect b = box_px(g);
+        const float H = float(Device.dwHeight), cx = g.bx + g.w * .5f, cy = g.by + g.h * .5f;
+        Frect r;
+        r.set(cx + (b.x1 - cx) * u.s + u.dx * H, cy + (b.y1 - cy) * u.s + u.dy * H, cx + (b.x2 - cx) * u.s + u.dx * H, cy + (b.y2 - cy) * u.s + u.dy * H);
+        return r;
+    }
+    static Frect rect(int id) { return rect_with(id, g_op22_hud_user[id]); }
+    float handle() const { return _max(8.f, 12.f * K()); }
+    Frect handle_rect(int id) const
+    {
+        const Frect r = rect(id);
+        const float h = handle();
+        Frect q;
+        q.set(r.x2 - h * .5f, r.y2 - h * .5f, r.x2 + h * .5f, r.y2 + h * .5f);
+        return q;
+    }
+    int hit(const Fvector2& p) const
+    {
+        int best = 0;
+        float area = flt_max;
+        for (int id = 1; id < OP22_UIXF_GROUPS; ++id)
+        {
+            if (!on(id))
+                continue;
+            const Frect r = rect(id);
+            if (p.x < r.x1 || p.x > r.x2 || p.y < r.y1 || p.y > r.y2)
+                continue;
+            const float a = r.width() * r.height();
+            if (a < area)
+                area = a, best = id;
+        }
+        return best;
+    }
+    // палитра - внизу по центру, над подсказкой
+    Frect swatch(int i) const
+    {
+        const float k = K(), s = 22.f * k, gap = 6.f * k;
+        const float W = PAL_N * s + (PAL_N - 1) * gap;
+        const float x = (float(Device.dwWidth) - W) * .5f + i * (s + gap), y = float(Device.dwHeight) - 86.f * k;
+        Frect r;
+        r.set(x, y, x + s, y + s);
+        return r;
+    }
+    int swatch_at(const Fvector2& p) const
+    {
+        for (int i = 0; i < PAL_N; ++i)
+        {
+            const Frect r = swatch(i);
+            if (p.x >= r.x1 && p.x <= r.x2 && p.y >= r.y1 && p.y <= r.y2)
+                return i;
+        }
+        return -1;
+    }
+    // центр куска - на экране
+    void keep_on_screen(int id)
+    {
+        op22_hud_user_t& u = g_op22_hud_user[id];
+        const Frect r = rect_with(id, u);
+        const float H = float(Device.dwHeight), cx = (r.x1 + r.x2) * .5f, cy = (r.y1 + r.y2) * .5f;
+        if (cx < 0.f)
+            u.dx -= cx / H;
+        if (cx > float(Device.dwWidth))
+            u.dx -= (cx - float(Device.dwWidth)) / H;
+        if (cy < 0.f)
+            u.dy -= cy / H;
+        if (cy > H)
+            u.dy -= (cy - H) / H;
+    }
+    // размер за правый нижний угол: левый верхний угол (m_anchor) стоит на месте
+    void resize_to(int id, const Fvector2& p)
+    {
+        op22_hud_user_t& u = g_op22_hud_user[id];
+        op22_uixf_t g = g_op22_uixf_group[id];
+        g.ux = g.uy = 0.f, g.us = 1.f;
+        const Frect b = box_px(g);
+        const float bw = b.width(), bh = b.height();
+        if (bw < 1.f || bh < 1.f)
+            return;
+        const float vx = p.x - m_anchor.x, vy = p.y - m_anchor.y;
+        u.s = std::clamp((vx * bw + vy * bh) / (bw * bw + bh * bh), .4f, 2.5f);
+        const float H = float(Device.dwHeight), cx = g.bx + g.w * .5f, cy = g.by + g.h * .5f;
+        u.dx = (m_anchor.x - cx - (b.x1 - cx) * u.s) / H;
+        u.dy = (m_anchor.y - cy - (b.y1 - cy) * u.s) / H;
+    }
+    void add(float x1, float y1, float x2, float y2, u32 c)
+    {
+        quad q;
+        q.r.set(x1, y1, x2, y2);
+        q.c = c;
+        m_q.push_back(q);
+    }
+    void frame(const Frect& r, float t, u32 c)
+    {
+        add(r.x1, r.y1, r.x2, r.y1 + t, c);
+        add(r.x1, r.y2 - t, r.x2, r.y2, c);
+        add(r.x1, r.y1 + t, r.x1 + t, r.y2 - t, c);
+        add(r.x2 - t, r.y1 + t, r.x2, r.y2 - t, c);
+    }
+
+public:
+    explicit CUIOp22HudEdit(CUIMainIngameWnd* main) : m_main(main)
+    {
+        SetWndRect(Frect().set(0.f, 0.f, UI_BASE_WIDTH, UI_BASE_HEIGHT));
+        m_sh->create("hud\\default", "ui\\g2_white");
+        CUIXml xml;
+        xml.Init(CONFIG_PATH, UI_PATH, MAININGAME_XML);
+        CUIXmlInit xi;
+        const bool has = !!xml.NavigateToNode("op22_hud_edit", 0);
+        for (auto& l : m_label)
+        {
+            if (has && xml.NavigateToNode("op22_hud_edit:label", 0))
+                xi.InitStatic(xml, "op22_hud_edit:label", 0, &l);
+            else
+            {
+                l.SetWndRect(Frect().set(0.f, 0.f, 300.f, 16.f));
+                l.SetFont(UI()->Font()->pFontLetterica16Russian);
+                l.SetTextColor(0xffece6da);
+            }
+            l.Show(false);
+            AttachChild(&l);
+        }
+        if (has && xml.NavigateToNode("op22_hud_edit:hint", 0))
+            xi.InitStatic(xml, "op22_hud_edit:hint", 0, &m_hint);
+        else
+        {
+            m_hint.SetWndRect(Frect().set(0.f, 740.f, UI_BASE_WIDTH, 760.f));
+            m_hint.SetFont(UI()->Font()->pFontLetterica16Russian);
+            m_hint.SetTextColor(0xffece6da);
+            m_hint.SetTextAlignment(CGameFont::alCenter);
+            m_hint.SetText("LMB - move, corner or wheel - size, palette - color, RMB - reset, Del - reset all, Esc - done");
+        }
+        AttachChild(&m_hint);
+    }
+
+    virtual void Show()
+    {
+        inherited::Show();
+        g_op22_hud_editing = true;
+        m_sel = m_hover = m_drag = 0;
+    }
+    virtual void Hide()
+    {
+        inherited::Hide();
+        if (!g_op22_hud_editing)
+            return;
+        g_op22_hud_editing = false;
+        m_drag = 0;
+        op22_hud_layout_store();
+        Msg("~ [OP22] op22_hud_layout [%s]", g_op22_hud_layout);
+        Console->Execute("cfg_save");
+    }
+    virtual bool StopAnyMove() { return true; }
+
+    virtual bool OnKeyboard(int dik, EUIMessages keyboard_action)
+    {
+        if (keyboard_action != WINDOW_KEY_PRESSED)
+            return true;
+        if (dik == DIK_ESCAPE || dik == DIK_RETURN || dik == DIK_NUMPADENTER)
+        {
+            if (GetHolder())
+                GetHolder()->StartStopMenu(this, true);
+            return true;
+        }
+        if (dik == DIK_DELETE)
+        {
+            for (auto& u : g_op22_hud_user)
+                u = op22_hud_user_t{};
+            return true;
+        }
+        return true;
+    }
+
+    virtual bool OnMouse(float x, float y, EUIMessages mouse_action)
+    {
+        const Fvector2 p{x * float(Device.dwWidth) / UI_BASE_WIDTH, y * float(Device.dwHeight) / UI_BASE_HEIGHT};
+        const float H = float(Device.dwHeight);
+        switch (mouse_action)
+        {
+        case WINDOW_MOUSE_MOVE:
+            if (m_drag == 1 && m_sel)
+            {
+                g_op22_hud_user[m_sel].dx += (p.x - m_last.x) / H;
+                g_op22_hud_user[m_sel].dy += (p.y - m_last.y) / H;
+                keep_on_screen(m_sel);
+            }
+            else if (m_drag == 2 && m_sel)
+                resize_to(m_sel, p);
+            else
+                m_hover = hit(p);
+            m_last = p;
+            return true;
+        case WINDOW_LBUTTON_DOWN:
+        case WINDOW_LBUTTON_DB_CLICK: {
+            const int sw = m_sel ? swatch_at(p) : -1;
+            if (sw >= 0)
+            {
+                g_op22_hud_user[m_sel].tint = PAL[sw];
+                return true;
+            }
+            const Frect h = m_sel ? handle_rect(m_sel) : Frect().set(0, 0, 0, 0);
+            if (m_sel && p.x >= h.x1 && p.x <= h.x2 && p.y >= h.y1 && p.y <= h.y2)
+            {
+                m_drag = 2;
+                m_anchor = rect(m_sel).lt;
+            }
+            else
+            {
+                m_sel = hit(p);
+                m_drag = m_sel ? 1 : 0;
+            }
+            m_last = p;
+            return true;
+        }
+        case WINDOW_LBUTTON_UP: m_drag = 0; return true;
+        case WINDOW_RBUTTON_DOWN: {
+            const int id = hit(p);
+            if (id)
+            {
+                g_op22_hud_user[id] = op22_hud_user_t{};
+                m_sel = id;
+            }
+            return true;
+        }
+        case WINDOW_MOUSE_WHEEL_UP:
+        case WINDOW_MOUSE_WHEEL_DOWN: {
+            int id = hit(p);
+            if (!id)
+                id = m_sel;
+            if (id)
+            {
+                op22_hud_user_t& u = g_op22_hud_user[id];
+                u.s = std::clamp(u.s * (mouse_action == WINDOW_MOUSE_WHEEL_UP ? 1.05f : 1.f / 1.05f), .4f, 2.5f);
+                if (fsimilar(u.s, 1.f, .02f))
+                    u.s = 1.f;
+                m_sel = id;
+                keep_on_screen(id);
+            }
+            return true;
+        }
+        default: return true;
+        }
+    }
+
+    virtual void Draw()
+    {
+        const float k = K(), t = _max(1.f, floorf(1.5f * k + .5f));
+        m_q.clear();
+        for (int id = 1; id < OP22_UIXF_GROUPS; ++id)
+        {
+            m_label[id].Show(false);
+            if (!on(id))
+                continue;
+            const Frect r = rect(id);
+            const bool sel = id == m_sel, hov = id == m_hover;
+            add(r.x1, r.y1, r.x2, r.y2, sel ? 0x30e0a43c : (hov ? 0x22ffffff : 0x12ffffff));
+            frame(r, sel ? 2.f * t : t, sel ? 0xffe0a43c : (hov ? 0xd0ffffff : 0x80ffffff));
+            if (sel)
+            {
+                const Frect h = handle_rect(id);
+                add(h.x1, h.y1, h.x2, h.y2, 0xffe0a43c);
+                add(h.x1 + t, h.y1 + t, h.x2 - t, h.y2 - t, 0xff16160f);
+            }
+            // подпись: имя и масштаб - над куском (у верхнего края - под ним)
+            const op22_hud_user_t& u = g_op22_hud_user[id];
+            const shared_str& nm = m_main->op22_xf_cfg(id).name;
+            string256 txt;
+            if (fsimilar(u.s, 1.f, .001f))
+                xr_sprintf(txt, "%s", nm.size() ? nm.c_str() : "HUD");
+            else
+                xr_sprintf(txt, "%s  %d%%", nm.size() ? nm.c_str() : "HUD", iFloor(u.s * 100.f + .5f));
+            CUIStatic& l = m_label[id];
+            l.SetText(txt);
+            Fvector2 lp = to_ui(Fvector2().set(r.x1 + 2.f * t, r.y1));
+            lp.y -= l.GetHeight() + 2.f;
+            if (lp.y < 0.f)
+                lp.y = to_ui(Fvector2().set(0.f, r.y2)).y + 2.f;
+            l.SetWndPos(lp);
+            l.Show(true);
+        }
+        if (m_sel)
+        {
+            const Frect a = swatch(0), b = swatch(PAL_N - 1);
+            const float m = 8.f * k;
+            add(a.x1 - m, a.y1 - m, b.x2 + m, b.y2 + m, 0xc0101010);
+            for (int i = 0; i < PAL_N; ++i)
+            {
+                const Frect s = swatch(i);
+                const bool cur = (g_op22_hud_user[m_sel].tint & 0xffffff) == PAL[i];
+                if (cur)
+                    add(s.x1 - 2.f * t, s.y1 - 2.f * t, s.x2 + 2.f * t, s.y2 + 2.f * t, 0xffe0a43c);
+                add(s.x1, s.y1, s.x2, s.y2, 0xff000000 | PAL[i]);
+            }
+        }
+        if (!m_q.empty())
+        {
+            UIRender->SetShader(*m_sh);
+            UIRender->StartPrimitive(u32(m_q.size() * 6), IUIRender::ptTriList, UI()->m_currentPointType);
+            for (const quad& q : m_q)
+            {
+                UIRender->PushPoint(q.r.x1, q.r.y1, 0, q.c, 0.f, 0.f);
+                UIRender->PushPoint(q.r.x2, q.r.y1, 0, q.c, 1.f, 0.f);
+                UIRender->PushPoint(q.r.x2, q.r.y2, 0, q.c, 1.f, 1.f);
+                UIRender->PushPoint(q.r.x1, q.r.y1, 0, q.c, 0.f, 0.f);
+                UIRender->PushPoint(q.r.x2, q.r.y2, 0, q.c, 1.f, 1.f);
+                UIRender->PushPoint(q.r.x1, q.r.y2, 0, q.c, 0.f, 1.f);
+            }
+            UIRender->FlushPrimitive();
+        }
+        inherited::Draw();
+    }
+};
+
+void CUIMainIngameWnd::op22_hud_edit_open()
+{
+    bool any = false;
+    for (int id = 1; id < OP22_UIXF_GROUPS; ++id)
+        any |= m_op22_xf_cfg[id].on;
+    if (!any)
+    {
+        Msg("! [OP22] op22_hud_edit: this HUD skin has no op22_xf groups");
+        return;
+    }
+    if (!m_op22_edit)
+        m_op22_edit = xr_new<CUIOp22HudEdit>(this);
+    if (!m_op22_edit->IsShown())
+        HUD().GetUI()->StartStopMenu(m_op22_edit, false);
+}
+
+void op22_hud_edit_cmd() // op22_console.cpp: команда op22_hud_edit
+{
+    CUI* ui = g_hud ? g_hud->GetUI() : nullptr;
+    if (!g_pGameLevel || !ui || !ui->UIMainIngameWnd || !Actor())
+    {
+        Msg("! [OP22] op22_hud_edit: only in game");
+        return;
+    }
+    if (ui->MainInputReceiver())
+    {
+        Msg("! [OP22] op22_hud_edit: close the open window first");
+        return;
+    }
+    Console->Hide();
+    ui->UIMainIngameWnd->op22_hud_edit_open();
+}
+
 CUIMainIngameWnd::CUIMainIngameWnd()
 {
     m_pActor = NULL;
@@ -135,6 +581,7 @@ CUIMainIngameWnd::~CUIMainIngameWnd()
         xr_delete(m_artefactPanel);
     HUD_SOUND::DestroySound(m_contactSnd);
     xr_delete(g_MissileForceShape);
+    xr_delete(m_op22_edit); // OP22
 }
 
 void CUIMainIngameWnd::Init()
@@ -338,7 +785,11 @@ void CUIMainIngameWnd::Draw()
     CUIWindow::Draw();
     if (op22_hide)
         UIStaticHealth.Show(true);
-    UIZoneMap->Render();
+    {
+        op22_uixf_scope xf(3); // OP22: мини-карта - группа 3 (редактор HUD)
+        if (xf.draw)
+            UIZoneMap->Render();
+    }
 
     RenderQuickInfos();
 }
@@ -346,7 +797,11 @@ void CUIMainIngameWnd::Draw()
 void CUIMainIngameWnd::op22_draw_under()
 {
     if (m_pActor && m_op22_under && IsShown() && UIStaticHealth.IsShown())
-        UIStaticHealth.Draw();
+    {
+        op22_uixf_scope xf(UIStaticHealth.m_op22_xf);
+        if (xf.draw)
+            UIStaticHealth.Draw();
+    }
 }
 
 void CUIMainIngameWnd::SetAmmoIcon(const shared_str& sect_name)
@@ -1240,10 +1695,12 @@ void CUIMainIngameWnd::op22_xf_init(CUIXml& xml)
     for (int i = 0; i < n; ++i)
     {
         const int id = xml.ReadAttribInt("op22_xf", i, "id", 0);
-        if (id < 1 || id > 3)
+        if (id < 1 || id >= OP22_UIXF_GROUPS)
             continue;
         Op22XfCfg& c = m_op22_xf_cfg[id];
         c.on = true;
+        c.shake = !!xml.ReadAttribInt("op22_xf", i, "shake", 0);
+        c.name = xml.ReadAttrib("op22_xf", i, "name", "");
         const float x = xml.ReadAttribFlt("op22_xf", i, "x", 0.f), y = xml.ReadAttribFlt("op22_xf", i, "y", 0.f);
         c.r.set(x, y, x + xml.ReadAttribFlt("op22_xf", i, "width", 0.f), y + xml.ReadAttribFlt("op22_xf", i, "height", 0.f));
         c.ry = deg2rad(xml.ReadAttribFlt("op22_xf", i, "ry", 0.f));
@@ -1275,11 +1732,19 @@ void CUIMainIngameWnd::op22_xf_update()
         g.d = c.persp * float(Device.dwHeight);
     };
 
-    // 1 - панель: петля ходьбы/бега, разовые прыжок, приземление, попадание (как переключение анимаций макета)
-    if (m_op22_xf_cfg[1].on)
+    for (int id = 1; id < OP22_UIXF_GROUPS; ++id)
+    {
+        if (m_op22_xf_cfg[id].on)
+            base(id, g_op22_uixf_group[id]);
+        else
+            g_op22_uixf_group[id].on = false;
+    }
+
+    // 1 - панель: петля ходьбы/бега, разовые прыжок, приземление, попадание (как переключение анимаций макета);
+    // тряска - только с shake="1" (22.11, решение пользователя: панель ровная, без тряски)
+    if (m_op22_xf_cfg[1].on && m_op22_xf_cfg[1].shake && !g_op22_hud_editing)
     {
         op22_uixf_t& g = g_op22_uixf_group[1];
-        base(1, g);
         const u32 ms = m_pActor ? m_pActor->MovingState() : 0;
         const bool air = !!(ms & (mcJump | mcFall)), was_air = !!(m_op22_mstate & (mcJump | mcFall));
         auto shot = [&](int a) {
@@ -1338,14 +1803,12 @@ void CUIMainIngameWnd::op22_xf_update()
         g.tx = pose.x * k;
         g.ty = pose.y * k;
         g.rot = deg2rad(pose.z);
-        g.prepare();
     }
 
     // 2 - счётчик патронов: 3 с (keyframes ammoA макета) при доставании и перезарядке, качается вместе с оружием
     if (m_op22_xf_cfg[2].on)
     {
         op22_uixf_t& g = g_op22_uixf_group[2];
-        base(2, g);
         PIItem item = m_pActor ? m_pActor->inventory().ActiveItem() : nullptr;
         CHudItem* hi = item && item->NeedBriefInfo() ? smart_cast<CHudItem*>(item) : nullptr;
         const u32 st = hi ? hi->GetState() : u32(-1);
@@ -1396,6 +1859,22 @@ void CUIMainIngameWnd::op22_xf_update()
         }
         else
             m_op22_wpn_s_ok = false;
+        if (g_op22_hud_editing) // редактор HUD: счётчик виден всё время, на своём месте (без анимации и качания)
+            base(2, g);
+    }
+
+    // раскладка игрока (редактор HUD): сдвиг, масштаб, цвет
+    const float H = float(Device.dwHeight);
+    for (int id = 1; id < OP22_UIXF_GROUPS; ++id)
+    {
+        op22_uixf_t& g = g_op22_uixf_group[id];
+        if (!g.on)
+            continue;
+        const op22_hud_user_t& u = g_op22_hud_user[id];
+        g.ux = u.dx * H;
+        g.uy = u.dy * H;
+        g.us = u.s;
+        g.tint = u.tint;
         g.prepare();
     }
 }

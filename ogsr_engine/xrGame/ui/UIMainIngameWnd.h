@@ -13,6 +13,7 @@
 #include "UIMotionIcon.h"
 #include "../hudsound.h"
 #include "../script_export_space.h"
+#include "../../xr_3da/op22_uixf.h" // OP22
 
 struct GAME_NEWS_DATA;
 
@@ -106,15 +107,24 @@ protected:
     float m_op22_icons_gap{};
     CUIStatic* m_op22_ammo_mag{};
     CUIStatic* m_op22_ammo_rest{};
+public:
     // OP22: HUD GAMMA 2.0 (22.11, макет design/gamma2/hud_float_20261122): группы перспективы op22_uixf.h -
-    // 1 - панель слева внизу (наклон и тряска от движения ГГ), 2 - счётчик патронов у оружия (3 с при доставании и перезарядке)
+    // 1 - панель слева внизу (тряска от движения ГГ - shake="1"), 2 - счётчик патронов у оружия (3 с при доставании,
+    // перезарядке, смене режима огня), 3 - мини-карта с подписью и биорадаром, 4 - лента сообщений. Игрок двигает,
+    // масштабирует и красит группы редактором HUD (консоль op22_hud_edit, раскладка - op22_hud_layout)
     struct Op22XfCfg
     {
-        bool on{};
+        bool on{}, shake{};
         Frect r{};
         float ry{}, rx{}, rz{}, ox{}, oy{}, pox{}, poy{}, persp{1.f};
+        shared_str name; // подпись в редакторе HUD
     };
-    Op22XfCfg m_op22_xf_cfg[4]{};
+    const Op22XfCfg& op22_xf_cfg(int id) const { return m_op22_xf_cfg[id]; }
+    void op22_hud_edit_open();
+
+protected:
+    Op22XfCfg m_op22_xf_cfg[OP22_UIXF_GROUPS]{};
+    class CUIOp22HudEdit* m_op22_edit{};
     CUIStatic* m_op22_panel{};
     bool m_op22_ammo_class{};
     float m_op22_text_tint{};

@@ -76,6 +76,15 @@ void CUI::UIOnFrame()
 //--------------------------------------------------------------------
 #include "inventory.h"
 #include "huditem.h"
+#include "../xr_3da/op22_uixf.h" // OP22
+// OP22: лента сообщений - группа 4 (редактор HUD: сдвиг, масштаб, цвет)
+void CUI::op22_draw_messages()
+{
+    op22_uixf_scope xf(4);
+    if (xf.draw)
+        m_pMessagesWnd->Draw();
+}
+
 bool CUI::Render()
 {
     // OP22: GAMMA 2.0 - подложка HUD под шкалами Lua (пользовательские окна рисуются раньше главного окна)
@@ -102,7 +111,7 @@ bool CUI::Render()
             UIMainIngameWnd->Draw();
             if (pUIGame) // OP22: GAMMA 2.0 - шкалы Lua и биорадар поверх подложки и мини-карты
                 pUIGame->op22_render_late();
-            m_pMessagesWnd->Draw();
+            op22_draw_messages();
         }
         // Оставил рендер новостей под этим условием чтобы при скриптовом скрытии ui сообщения продолжали быть видны,
         // а при скрытии с клавиатуры - нет. Способ кривоватый но посмотрим, мб и так пойдет.
@@ -111,10 +120,10 @@ bool CUI::Render()
             if (auto gSP = smart_cast<CUIGameSP*>(HUD().GetUI()->UIGame()))
             {
                 if (!gSP->PdaMenu->GetVisible())
-                    m_pMessagesWnd->Draw();
+                    op22_draw_messages();
             }
             else
-                m_pMessagesWnd->Draw();
+                op22_draw_messages();
         }
     }
 

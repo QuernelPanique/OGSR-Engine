@@ -28,6 +28,7 @@ public:
     virtual ~CUI();
 
     bool Render();
+    void op22_draw_messages(); // OP22: сообщения в группе 4 (op22_uixf.h)
     void UIOnFrame();
 
     void Load(CUIGameCustom* pGameUI);
