@@ -38,7 +38,7 @@
 #include "ai_stalker_space.h"
 #include "../../actor.h" // OP22: op22_HitEvent
 #include "../../ai_space.h" // OP22
-#include "../../script_engine.h" // OP22
+#include "script_engine.h" // OP22
 #include "../../effectorshot.h"
 #include "../../BoneProtections.h"
 #include "../../RadioactiveZone.h"
