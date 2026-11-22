@@ -62,7 +62,7 @@ public:
     bool m_op22_weight_fmt{}; // OP22: GAMMA 2.0 - вес «4,9 кг» (static_weight op22_fmt)
     float m_op22_cost_gap{-1.f};
     // OP22: GAMMA 2.0 (22.11) - вес и цена в плашке по ширине текста (op22_chip="текстура;поле x,высота")
-    class CUIFrameWindow* m_op22_chip[2]{};
+    class CUIOp22Frame9* m_op22_chip[2]{};
     float m_op22_chip_pad[2]{};
     void op22_chip_fit(int i, CUIStatic* s);
     shared_str m_op22_cost_prefix; // OP22: GAMMA 2.0 - подпись перед ценой (static_cost op22_prefix, с кодами цвета) // OP22: GAMMA 2.0 - цена сразу за текстом веса (static_cost op22_after_weight)

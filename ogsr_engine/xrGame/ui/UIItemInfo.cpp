@@ -14,7 +14,7 @@
 #include "UIInventoryUtilities.h"
 #include "../PhysicsShellHolder.h"
 #include "UIWpnParams.h"
-#include "UIFrameWindow.h" // OP22
+#include "op22_frame9.h" // OP22
 #include "UILines.h" // OP22: межстрочный интервал описания
 #include "ui_af_params.h"
 #include <format>
@@ -47,7 +47,7 @@ CUIItemInfo::~CUIItemInfo()
 
 void CUIItemInfo::op22_chip_fit(int i, CUIStatic* s) // OP22: плашка по ширине текста подписи
 {
-    CUIFrameWindow* f = m_op22_chip[i];
+    CUIOp22Frame9* f = m_op22_chip[i];
     if (!f || !s || !s->GetFont())
         return;
     float len = s->GetFont()->SizeOf_(s->GetText());
@@ -108,13 +108,14 @@ void CUIItemInfo::Init(LPCSTR xml_name)
         LPCSTR c = uiXml.NavigateToNode(node, 0) ? uiXml.ReadAttrib(node, 0, "op22_chip", nullptr) : nullptr;
         if (!c || !c[0])
             continue;
-        string256 tex{};
+        string256 spec{};
         float h = 0.f;
-        sscanf(c, "%255[^;];%f,%f", tex, &m_op22_chip_pad[i], &h);
-        m_op22_chip[i] = xr_new<CUIFrameWindow>();
+        sscanf(c, "%255[^;];%f,%f", spec, &m_op22_chip_pad[i], &h); // «текстура,C,P;поле x,высота»
+        m_op22_chip[i] = xr_new<CUIOp22Frame9>();
         m_op22_chip[i]->SetAutoDelete(true);
         AttachChild(m_op22_chip[i]);
-        m_op22_chip[i]->Init(tex, 0.f, 0.f, 10.f, h);
+        m_op22_chip[i]->Init(0.f, 0.f, 10.f, h);
+        m_op22_chip[i]->f.init(spec);
     }
     if (uiXml.NavigateToNode("static_weight", 0))
     {

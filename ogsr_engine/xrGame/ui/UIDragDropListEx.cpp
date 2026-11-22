@@ -55,10 +55,6 @@ CUIDragDropListEx::~CUIDragDropListEx()
 {
     DestroyDragItem();
 
-    for (auto& f : m_op22_item_frame) // OP22
-        xr_delete(f);
-    xr_delete(m_op22_hl_frame);
-    xr_delete(m_op22_active_frame);
     delete_data(m_container);
 }
 
@@ -276,21 +272,6 @@ void CUIDragDropListEx::op22_frames(LPCSTR on, LPCSTR off)
     }
 }
 
-static CUIFrameWindow* op22_new_frame(LPCSTR tex)
-{
-    auto* f = xr_new<CUIFrameWindow>(); // не ребёнок: рисует список (op22_draw_frame)
-    f->Init(tex, 0.f, 0.f, 10.f, 10.f);
-    return f;
-}
-
-static void op22_draw_frame(CUIFrameWindow* f, const Frect& r, const Fvector2& pad)
-{
-    f->SetWndPos(Fvector2().set(r.x1 - pad.x, r.y1 - pad.y));
-    f->SetWidth(r.width() + 2.f * pad.x);
-    f->SetHeight(r.height() + 2.f * pad.y);
-    f->Draw();
-}
-
 void CUIDragDropListEx::op22_item_frames(LPCSTR spec, LPCSTR pad)
 {
     if (!spec || !spec[0])
@@ -308,9 +289,8 @@ void CUIDragDropListEx::op22_item_frames(LPCSTR spec, LPCSTR pad)
         for (auto [name, idx] : modes)
             if (!xr_strcmp(_Trim(tok), name) && c[1])
             {
-                xr_delete(m_op22_item_frame[idx]);
-                m_op22_item_frame[idx] = op22_new_frame(c + 1);
-                m_op22_item_frames_on = true;
+                m_op22_item_frame[idx].init(c + 1); // «текстура,C,P»
+                m_op22_item_frames_on |= m_op22_item_frame[idx].ok;
             }
     }
 }
@@ -320,8 +300,7 @@ void CUIDragDropListEx::op22_active(LPCSTR tex, LPCSTR pad)
     if (!tex || !tex[0])
         return;
     sscanf(pad, "%f,%f", &m_op22_active_pad.x, &m_op22_active_pad.y);
-    xr_delete(m_op22_active_frame);
-    m_op22_active_frame = op22_new_frame(tex);
+    m_op22_active_frame.init(tex);
 }
 
 void CUIDragDropListEx::op22_hl(LPCSTR tex, LPCSTR pad)
@@ -329,8 +308,7 @@ void CUIDragDropListEx::op22_hl(LPCSTR tex, LPCSTR pad)
     if (!tex || !tex[0])
         return;
     sscanf(pad, "%f,%f", &m_op22_hl_pad.x, &m_op22_hl_pad.y);
-    xr_delete(m_op22_hl_frame);
-    m_op22_hl_frame = op22_new_frame(tex);
+    m_op22_hl_frame.init(tex);
 }
 
 static LPCSTR op22_quick_key(int i) // OP22: короткое имя клавиши быстрого слота, как на HUD (UIMainIngameWnd::op22_qs_update)
@@ -349,11 +327,11 @@ void CUIDragDropListEx::Draw()
 {
     if (m_op22_key_lbl && m_op22_key >= 0) // OP22
         m_op22_key_lbl->SetText(op22_quick_key(m_op22_key));
-    if (m_op22_active_frame && m_op22_active) // OP22: слот активного оружия - рамка под предметом
+    if (m_op22_active_frame.ok && m_op22_active) // OP22: слот активного оружия - рамка под предметом
     {
         Frect r;
         GetAbsoluteRect(r);
-        op22_draw_frame(m_op22_active_frame, r, m_op22_active_pad);
+        m_op22_active_frame.draw(r, m_op22_active_pad);
     }
     if (m_op22_frame_on || m_op22_frame_off) // OP22: рамка слота поверх предмета
     {
@@ -364,11 +342,11 @@ void CUIDragDropListEx::Draw()
             m_op22_frame_off->Show(!has);
     }
     inherited::Draw();
-    if (m_op22_hl_frame && m_op22_hl_on) // OP22: сюда можно положить перетаскиваемый предмет - рамка вокруг слота
+    if (m_op22_hl_frame.ok && m_op22_hl_on) // OP22: сюда можно положить предмет - рамка вокруг слота
     {
         Frect r;
         GetAbsoluteRect(r);
-        op22_draw_frame(m_op22_hl_frame, r, m_op22_hl_pad);
+        m_op22_hl_frame.draw(r, m_op22_hl_pad);
     }
 
     if (0 && bDebug)
@@ -1159,17 +1137,21 @@ void CUICellContainer::Draw()
                 continue;
             seen.push_back(c.m_item);
             const u32 m = op22_item_mode(c.m_item);
-            CUIFrameWindow* f = m ? L->m_op22_item_frame[m] : nullptr;
-            if (!f && m == 7)
-                f = L->m_op22_item_frame[CellTextureTypeEquipped];
-            if (!f)
+            const op22_frame9* f = m ? &L->m_op22_item_frame[m] : nullptr;
+            if (f && !f->ok && m == 7)
+                f = &L->m_op22_item_frame[CellTextureTypeEquipped];
+            if (!f || !f->ok)
                 continue;
             Frect r;
             if (c.m_item->m_op22_grid_orig.x >= 0)
                 L->GetAbsoluteRect(r);
             else
                 c.m_item->GetAbsoluteRect(r);
-            op22_draw_frame(f, r, L->m_op22_item_frame_pad);
+            // под курсором - только пока курсор над предметом: флаг фокуса у предметов в слотах не всегда снимался
+            // (22.11, пользователь: подсветка оставалась на нескольких слотах)
+            if (m == CellTextureTypeCursorHover && !r.in(GetUICursor()->GetCursorPosition()))
+                continue;
+            f->draw(r, L->m_op22_item_frame_pad);
         }
         UI()->PopScissor();
     }

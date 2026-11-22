@@ -2,6 +2,7 @@
 
 #include "UIWindow.h"
 #include "UIWndCallback.h"
+#include "op22_frame9.h" // OP22
 
 class CUICellContainer;
 class CUIScrollBar;
@@ -84,9 +85,9 @@ public:
     // "hover:tex;selected:tex;equipped:tex;armament:tex;untradable:tex", поле op22_item_frame_pad="x,y"), клетки под ним - обычные;
     // слот, куда можно положить перетаскиваемое, - рамка вокруг списка (op22_hl_frame, op22_hl_pad="x,y");
     // деления состояния: своя текстура для обычных и узких предметов, позиция - до целого деления (op22_cond_tex, op22_cond_steps)
-    class CUIFrameWindow* m_op22_item_frame[8]{}; // индекс CellTextureType, 7 - выбранный (ui_show_selected)
+    op22_frame9 m_op22_item_frame[8]{}; // индекс CellTextureType, 7 - выбранный (ui_show_selected)
     Fvector2 m_op22_item_frame_pad{};
-    class CUIFrameWindow* m_op22_hl_frame{};
+    op22_frame9 m_op22_hl_frame{};
     Fvector2 m_op22_hl_pad{};
     bool m_op22_hl_on{};
     bool m_op22_item_frames_on{};
@@ -97,7 +98,7 @@ public:
     // без «x» и от правого нижнего угла слота (op22_count_rb="отступ справа,снизу"), и при одном предмете
     int m_op22_key{-1};
     // OP22: слот активного оружия - рамка вокруг слота (op22_active_frame, op22_active_pad), флаг ставит окно инвентаря
-    class CUIFrameWindow* m_op22_active_frame{};
+    op22_frame9 m_op22_active_frame{};
     Fvector2 m_op22_active_pad{};
     bool m_op22_active{};
     class CUIStatic* m_op22_key_lbl{};
