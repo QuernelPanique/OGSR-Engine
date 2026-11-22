@@ -36,6 +36,9 @@
 #include "../../visual_memory_manager.h"
 #include "../../weapon.h"
 #include "ai_stalker_space.h"
+#include "../../actor.h" // OP22: op22_HitEvent
+#include "../../ai_space.h" // OP22
+#include "../../script_engine.h" // OP22
 #include "../../effectorshot.h"
 #include "../../BoneProtections.h"
 #include "../../RadioactiveZone.h"
@@ -205,6 +208,22 @@ void CAI_Stalker::g_WeaponBones(int& L, int& R1, int& R2)
         L = l_finger1;
 }
 
+// OP22 (22.11): попадание пули игрока в NPC - событие для звука (op22_hit_sfx.on_hit): 1 - тело, броня пробита,
+// 2 - тело, не пробита, 3 - голова, пробита, 4 - голова, не пробита. Без брони по костям - «пробита».
+void CAI_Stalker::op22_HitEvent(const SHit* pHDS, bool blocked)
+{
+    if (!g_Alive() || pHDS->hit_type != ALife::eHitTypeFireWound || !Actor() || !pHDS->initiator() || pHDS->initiator()->ID() != Actor()->ID())
+        return;
+    bool head = false;
+    if (IKinematics* K = smart_cast<IKinematics*>(Visual()); K && pHDS->bone() != BI_NONE)
+    {
+        LPCSTR b = K->LL_BoneName(pHDS->bone());
+        head = b && (strstr(b, "head") || strstr(b, "eye") || strstr(b, "jaw") || strstr(b, "neck"));
+    }
+    if (luabind::functor<void> f; ai().script_engine().functor("op22_hit_sfx.on_hit", f))
+        f(lua_game_object(), (head ? 3 : 1) + (blocked ? 1 : 0));
+}
+
 void CAI_Stalker::Hit(SHit* pHDS)
 {
     if (invulnerable())
@@ -226,10 +245,12 @@ void CAI_Stalker::Hit(SHit* pHDS)
         float BoneArmour = m_boneHitProtection->getBoneArmour(HDS.bone());
 #endif // APPLY_ARMOR_PIERCING_TO_NPC
         float NewHitPower = HDS.damage() - BoneArmour;
-        if (NewHitPower < HDS.power * m_boneHitProtection->m_fHitFrac)
+        const bool op22_blocked = NewHitPower < HDS.power * m_boneHitProtection->m_fHitFrac; // OP22: броня не пробита
+        if (op22_blocked)
             HDS.power = HDS.power * m_boneHitProtection->m_fHitFrac;
         else
             HDS.power = NewHitPower;
+        op22_HitEvent(pHDS, op22_blocked);
 
         if (wounded())
             HDS.power = 1000.f;

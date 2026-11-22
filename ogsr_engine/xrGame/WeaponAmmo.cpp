@@ -38,6 +38,7 @@ void CCartridge::Load(LPCSTR section, u8 LocalAmmoType)
     m_kImpulse = pSettings->r_float(section, "k_impulse");
     m_kPierce = pSettings->r_float(section, "k_pierce");
     m_kAP = READ_IF_EXISTS(pSettings, r_float, section, "k_ap", 0.0f);
+    m_op22_kMutant = READ_IF_EXISTS(pSettings, r_float, section, "op22_k_mutant", 1.0f); // OP22
     m_kSpeed = READ_IF_EXISTS(pSettings, r_float, section, "k_bullet_speed", 1.0f);
     m_u8ColorID = READ_IF_EXISTS(pSettings, r_u8, section, "tracer_color_ID", 0);
 
@@ -112,6 +113,7 @@ void CWeaponAmmo::Load(LPCSTR section)
     m_kImpulse = pSettings->r_float(section, "k_impulse");
     m_kPierce = pSettings->r_float(section, "k_pierce");
     m_kAP = READ_IF_EXISTS(pSettings, r_float, section, "k_ap", 0.0f);
+    m_op22_kMutant = READ_IF_EXISTS(pSettings, r_float, section, "op22_k_mutant", 1.0f); // OP22
     m_kSpeed = READ_IF_EXISTS(pSettings, r_float, section, "k_bullet_speed", 1.0f);
     m_u8ColorID = READ_IF_EXISTS(pSettings, r_u8, section, "tracer_color_ID", 0);
 
@@ -189,6 +191,7 @@ bool CWeaponAmmo::Get(CCartridge& cartridge)
     cartridge.m_kImpulse = m_kImpulse;
     cartridge.m_kPierce = m_kPierce;
     cartridge.m_kAP = m_kAP;
+    cartridge.m_op22_kMutant = m_op22_kMutant; // OP22
     cartridge.m_kAirRes = m_kAirRes;
     cartridge.m_u8ColorID = m_u8ColorID;
     cartridge.m_flags.set(CCartridge::cfTracer, m_tracer);

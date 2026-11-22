@@ -40,6 +40,7 @@ struct SBullet
     float hit_impulse; // impulse*cartridge
     //-------------------------------------------------------------------
     float ap;
+    float op22_k_mutant{1.f}; // OP22: множитель урона по мутантам из патрона
     float air_resistance;
     //-------------------------------------------------------------------
     float max_speed; // maxspeed*cartridge

@@ -17,6 +17,7 @@ public:
         cfExplosive = (1 << 3),
     };
     float m_kDist, m_kDisp, m_kHit, m_kImpulse, m_kPierce, m_kAP, m_kAirRes, m_kSpeed;
+    float m_op22_kMutant{1.f}; // OP22: множитель урона только по мутантам (op22_k_mutant), 1 - как было
     int m_buckShot;
     float m_impair;
     float fWallmarkSize{};
@@ -56,6 +57,7 @@ public:
     bool Get(CCartridge& cartridge);
 
     float m_kDist, m_kDisp, m_kHit, m_kImpulse, m_kPierce, m_kAP, m_kAirRes, m_kSpeed;
+    float m_op22_kMutant{1.f}; // OP22: множитель урона только по мутантам (op22_k_mutant), 1 - как было
     int m_buckShot;
     float m_impair;
     float fWallmarkSize;

@@ -19,6 +19,9 @@
 #include "../xrcdb/xr_collide_defs.h"
 #include "weapon.h"
 #include "ai/monsters/BaseMonster/base_monster.h"
+#include "ai_space.h" // OP22
+#include "script_engine.h" // OP22
+#include "script_game_object.h" // OP22
 
 //константы shoot_factor, определяющие
 //поведение пули при столкновении с объектом
@@ -303,6 +306,16 @@ void CBulletManager::DynamicObjectHit(CBulletManager::_event& E)
     std::pair<float, float> hit_result = E.result; // ObjectHit(&E.bullet, E.end_point, E.R, E.tgt_material, hit_normal);
     power = hit_result.first;
     impulse = hit_result.second;
+
+    // OP22 (22.11, баланс патронов): урон по мутанту - с множителем патрона op22_k_mutant (по людям и игроку без изменений);
+    // попадание пули игрока в мутанта - событие для звука (op22_hit_sfx.on_hit, вид 0)
+    if (CBaseMonster* op22_monster = smart_cast<CBaseMonster*>(E.R.O))
+    {
+        power *= E.bullet.op22_k_mutant;
+        if (E.bullet.flags.allow_sendhit && !E.Repeated && Actor() && E.bullet.parent_id == Actor()->ID() && op22_monster->g_Alive())
+            if (luabind::functor<void> f; ai().script_engine().functor("op22_hit_sfx.on_hit", f))
+                f(op22_monster->lua_game_object(), 0);
+    }
 
     // object-space
     //вычислить координаты попадания

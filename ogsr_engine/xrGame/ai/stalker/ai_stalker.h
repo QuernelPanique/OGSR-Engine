@@ -193,6 +193,7 @@ public:
     virtual void renderable_Render(u32 context_id, IRenderable* root) override;
     virtual void Exec_Look(float dt);
     virtual void Hit(SHit* pHDS);
+    void op22_HitEvent(const SHit* pHDS, bool blocked); // OP22: звук попадания пули игрока (ai_stalker_fire.cpp)
     virtual void PHHit(SHit& H);
     virtual BOOL feel_vision_isRelevant(CObject* who);
     virtual float Radius() const;

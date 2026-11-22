@@ -48,6 +48,7 @@ void SBullet::Init(const Fvector& position, const Fvector& direction, float star
 
     pierce = cartridge.m_kPierce;
     ap = cartridge.m_kAP;
+    op22_k_mutant = cartridge.m_op22_kMutant; // OP22
     air_resistance = cartridge.m_kAirRes;
     wallmark_size = cartridge.fWallmarkSize;
     m_u8ColorID = cartridge.m_u8ColorID;

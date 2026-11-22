@@ -7,6 +7,7 @@
 #include "level.h"
 #include "game_cl_base.h"
 #include "entity_alive.h"
+#include "actor.h" // OP22
 #include "../Include/xrRender/Kinematics.h"
 #include "object_broker.h"
 
@@ -264,6 +265,10 @@ float CEntityCondition::HitOutfitEffect(float hit_power, ALife::EHitType hit_typ
         return hit_power;
 
     float new_hit_power = hit_power;
+
+    // OP22 (22.11, решение пользователя): бронебойность патронов (k_ap) - только против брони NPC; костюм игрока как раньше
+    if (smart_cast<CActor*>(m_object))
+        AP = 0.f;
 
     if (hit_type == ALife::eHitTypeFireWound)
         new_hit_power = pOutfit->HitThruArmour(hit_power, element, AP);
