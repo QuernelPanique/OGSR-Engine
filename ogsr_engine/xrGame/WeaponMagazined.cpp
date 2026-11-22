@@ -1,4 +1,5 @@
 #include "stdafx.h"
+extern float g_op22_ammo_req; // OP22: ui/UIMainIngameWnd.cpp
 #include "op22_options.h" // OP22
 #include "hudmanager.h"
 #include "WeaponMagazined.h"
@@ -1074,6 +1075,8 @@ bool CWeaponMagazined::Action(s32 cmd, u32 flags)
     switch (cmd)
     {
     case kWPN_RELOAD: {
+        if ((flags & CMD_START) && ParentIsActor()) // OP22: HUD - R показывает счётчик патронов (и при полном магазине)
+            g_op22_ammo_req = Device.fTimeGlobal;
         if (!psActorFlags.test(AF_LOCK_RELOAD) || (!ParentIsActor() || !(g_actor->get_state() & mcSprint)))
             if (flags & CMD_START)
                 if (iAmmoElapsed < iMagazineSize || (IsMisfire() && !IsGrenadeMode()))

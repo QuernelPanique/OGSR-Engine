@@ -1149,6 +1149,7 @@ void CUIMainIngameWnd::script_register(lua_State* L)
 // ---------------- OP22: HUD GAMMA 2.0 (22.11) - панель в воздухе и счётчик патронов у оружия ----------------
 // Макет design/gamma2/hud_float_20261122/Main.dc.html (доска 1600x900): числа - px макета, на экране x высота/900.
 float g_op22_actor_hit_time = -100.f; // CActor::Hit: попадание по ГГ (пуля, ранение, удар, взрыв)
+float g_op22_ammo_req = -100.f; // CWeaponMagazined::Action: нажата перезарядка (показать счётчик и при полном магазине)
 
 namespace
 {
@@ -1348,9 +1349,23 @@ void CUIMainIngameWnd::op22_xf_update()
         PIItem item = m_pActor ? m_pActor->inventory().ActiveItem() : nullptr;
         CHudItem* hi = item && item->NeedBriefInfo() ? smart_cast<CHudItem*>(item) : nullptr;
         const u32 st = hi ? hi->GetState() : u32(-1);
+        // показ: уже виден - не гаснет и не появляется заново, а держится (22.11, просьба пользователя: перезарядка - одна анимация)
+        auto show = [&] {
+            const float cu = (now - m_op22_ammo_t0) / 3.f;
+            m_op22_ammo_t0 = (cu > 0.f && cu < 1.f) ? now - 3.f * _min(cu, .1f) : now;
+        };
         if (st != m_op22_ammo_state && (st == CHUDState::eShowing || st == CHUDState::eReload))
-            m_op22_ammo_t0 = now;
+            show();
+        if (g_op22_ammo_req > m_op22_ammo_req_seen)
+        {
+            m_op22_ammo_req_seen = g_op22_ammo_req;
+            if (hi && now - g_op22_ammo_req < .3f)
+                show();
+        }
         m_op22_ammo_state = st;
+        // всю перезарядку счётчик держится (число до перезарядки), после неё - ещё 0.9 с с новым числом и гаснет
+        if (st == CHUDState::eReload && (now - m_op22_ammo_t0) / 3.f > .5f)
+            m_op22_ammo_t0 = now - 1.5f;
         const float u = hi ? (now - m_op22_ammo_t0) / 3.f : 1.f;
         if (u >= 1.f || u < 0.f)
             g.alpha = 0.f;

@@ -22,6 +22,27 @@ CUIProgressBar::CUIProgressBar()
     m_animated = !Core.Features.test(xrCore::Feature::no_progress_bar_animation);
 }
 
+CUIProgressBar::~CUIProgressBar()
+{
+    for (auto& c : m_op22_cap)
+        xr_delete(c);
+}
+
+void CUIProgressBar::op22_caps(LPCSTR tex, const Fvector3& g)
+{
+    m_op22_cap_g = g;
+    static constexpr LPCSTR sfx[3]{"_l", "_m", "_r"};
+    for (int i = 0; i < 3; ++i)
+    {
+        string256 t;
+        strconcat(sizeof(t), t, tex, sfx[i]);
+        xr_delete(m_op22_cap[i]);
+        m_op22_cap[i] = xr_new<CUIStatic>(); // не ребёнок: рисует Draw шкалы
+        m_op22_cap[i]->InitTexture(t);
+        m_op22_cap[i]->SetStretchTexture(true);
+    }
+}
+
 void CUIProgressBar::InitProgressBar(Fvector2 pos, Fvector2 size, EOrientMode mode)
 {
     m_orient_mode = mode;
@@ -102,6 +123,22 @@ void CUIProgressBar::Draw()
         UI()->PushScissor(rect);
         m_UIBackgroundItem.Draw();
         UI()->PopScissor();
+    }
+
+    if (m_op22_cap[0] && m_orient_mode == om_horz) // OP22: заливка из трёх частей
+    {
+        if (m_CurrentLength > 0.01f)
+        {
+            const Fvector3& g = m_op22_cap_g; // поле x, поле y, край
+            const float fw = _max(m_CurrentLength, 2.f * g.z), x = rect.left, y = rect.top, h = GetHeight();
+            m_op22_cap[0]->SetWndRect(Frect().set(x - g.x, y - g.y, x + g.z, y + h + g.y));
+            m_op22_cap[1]->SetWndRect(Frect().set(x + g.z, y - g.y, x + fw - g.z, y + h + g.y));
+            m_op22_cap[2]->SetWndRect(Frect().set(x + fw - g.z, y - g.y, x + fw + g.x, y + h + g.y));
+            for (auto c : m_op22_cap)
+                c->Draw();
+        }
+        m_last_render_frame = Device.dwFrame;
+        return;
     }
 
     Frect progress_rect;

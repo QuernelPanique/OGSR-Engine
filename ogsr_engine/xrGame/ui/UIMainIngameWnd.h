@@ -122,7 +122,7 @@ protected:
     int m_op22_loop{}, m_op22_shot{};
     float m_op22_loop_t0{}, m_op22_shot_t0{}, m_op22_hit_seen{}, m_op22_blend_t0{-100.f};
     Fvector m_op22_pose{}, m_op22_blend_from{};
-    float m_op22_ammo_t0{-100.f};
+    float m_op22_ammo_t0{-100.f}, m_op22_ammo_req_seen{};
     u32 m_op22_ammo_state{u32(-1)};
     Fvector2 m_op22_wpn_s{};
     bool m_op22_wpn_s_ok{};

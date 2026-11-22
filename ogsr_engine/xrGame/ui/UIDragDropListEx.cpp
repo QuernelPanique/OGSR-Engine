@@ -5,6 +5,7 @@
 #include "../object_broker.h"
 #include "UICellItem.h"
 #include "UIStatic.h" // OP22
+#include "UIFrameWindow.h" // OP22
 
 #include "UIInventoryWnd.h"
 #include "UITradeWnd.h"
@@ -53,6 +54,9 @@ CUIDragDropListEx::~CUIDragDropListEx()
 {
     DestroyDragItem();
 
+    for (auto& f : m_op22_item_frame) // OP22
+        xr_delete(f);
+    xr_delete(m_op22_hl_frame);
     delete_data(m_container);
 }
 
@@ -270,6 +274,54 @@ void CUIDragDropListEx::op22_frames(LPCSTR on, LPCSTR off)
     }
 }
 
+static CUIFrameWindow* op22_new_frame(LPCSTR tex)
+{
+    auto* f = xr_new<CUIFrameWindow>(); // не ребёнок: рисует список (op22_draw_frame)
+    f->Init(tex, 0.f, 0.f, 10.f, 10.f);
+    return f;
+}
+
+static void op22_draw_frame(CUIFrameWindow* f, const Frect& r, const Fvector2& pad)
+{
+    f->SetWndPos(Fvector2().set(r.x1 - pad.x, r.y1 - pad.y));
+    f->SetWidth(r.width() + 2.f * pad.x);
+    f->SetHeight(r.height() + 2.f * pad.y);
+    f->Draw();
+}
+
+void CUIDragDropListEx::op22_item_frames(LPCSTR spec, LPCSTR pad)
+{
+    if (!spec || !spec[0])
+        return;
+    sscanf(pad, "%f,%f", &m_op22_item_frame_pad.x, &m_op22_item_frame_pad.y);
+    static constexpr std::pair<LPCSTR, u32> modes[]{{"hover", 1}, {"equipped", 2}, {"armament", 3}, {"untradable", 4}, {"selected", 7}};
+    string1024 s;
+    xr_strcpy(s, spec);
+    for (char* tok = strtok(s, ";"); tok; tok = strtok(nullptr, ";"))
+    {
+        char* c = strchr(tok, ':');
+        if (!c)
+            continue;
+        *c = 0;
+        for (auto [name, idx] : modes)
+            if (!xr_strcmp(_Trim(tok), name) && c[1])
+            {
+                xr_delete(m_op22_item_frame[idx]);
+                m_op22_item_frame[idx] = op22_new_frame(c + 1);
+                m_op22_item_frames_on = true;
+            }
+    }
+}
+
+void CUIDragDropListEx::op22_hl(LPCSTR tex, LPCSTR pad)
+{
+    if (!tex || !tex[0])
+        return;
+    sscanf(pad, "%f,%f", &m_op22_hl_pad.x, &m_op22_hl_pad.y);
+    xr_delete(m_op22_hl_frame);
+    m_op22_hl_frame = op22_new_frame(tex);
+}
+
 void CUIDragDropListEx::Draw()
 {
     if (m_op22_frame_on || m_op22_frame_off) // OP22: рамка слота поверх предмета
@@ -281,6 +333,12 @@ void CUIDragDropListEx::Draw()
             m_op22_frame_off->Show(!has);
     }
     inherited::Draw();
+    if (m_op22_hl_frame && m_op22_hl_on) // OP22: сюда можно положить перетаскиваемый предмет - рамка вокруг слота
+    {
+        Frect r;
+        GetAbsoluteRect(r);
+        op22_draw_frame(m_op22_hl_frame, r, m_op22_hl_pad);
+    }
 
     if (0 && bDebug)
     {
@@ -386,7 +444,11 @@ void CUIDragDropListEx::SetCellsCapacity(const Ivector2 c) { m_container->SetCel
 
 void CUIDragDropListEx::SetCellsAvailable(const u32 count) { m_container->SetCellsAvailable(count); }
 
-void CUIDragDropListEx::enable_highlight(const bool enable) { m_container->enable_highlight(enable); }
+void CUIDragDropListEx::enable_highlight(const bool enable)
+{
+    m_op22_hl_on = enable; // OP22
+    m_container->enable_highlight(enable);
+}
 
 const Ivector2& CUIDragDropListEx::CellSize() { return m_container->CellSize(); }
 
@@ -883,7 +945,7 @@ CUICellContainer::CellTextureType CUICellContainer::get_select_mode(const int x,
     CUICell& ui_cell = GetCellAt(cpos);
 
     CellTextureType select_mode = CellTextureTypeNormal;
-    if (!ui_cell.Empty())
+    if (!ui_cell.Empty() && !m_pParentDragDropList->m_op22_item_frames_on) // OP22: с рамками предметов клетки под предметом обычные
     {
         if (Core.Features.test(xrCore::Feature::select_mode_1342))
         {
@@ -919,6 +981,31 @@ CUICellContainer::CellTextureType CUICellContainer::get_select_mode(const int x,
         select_mode = CellTextureTypeBlockedSlots;
 
     return select_mode;
+}
+
+u32 CUICellContainer::op22_item_mode(CUICellItem* it)
+{
+    if (Core.Features.test(xrCore::Feature::select_mode_1342))
+    {
+        if (it->m_selected)
+            return CellTextureTypeCursorHover;
+        if (it->m_select_armament)
+            return CellTextureTypeArmanent;
+        if (it->m_select_untradable)
+            return CellTextureTypeUntradable;
+        return it->m_select_equipped ? CellTextureTypeEquipped : CellTextureTypeNormal;
+    }
+    if (it->m_select_armament)
+        return CellTextureTypeArmanent;
+    if (it->m_select_untradable)
+        return CellTextureTypeUntradable;
+    if (it->m_select_equipped)
+        return CellTextureTypeEquipped;
+    if (it->m_selected && op22_show_focused)
+        return CellTextureTypeCursorHover;
+    if (op22_show_selected && it == m_pParentDragDropList->m_selected_item)
+        return 7;
+    return CellTextureTypeNormal;
 }
 
 void CUICellContainer::Draw()
@@ -1020,6 +1107,35 @@ void CUICellContainer::Draw()
     }
 
     UI()->PopScissor();
+
+    // OP22: подсветка рамкой вокруг всего предмета (предмет в слоте adjust_cells - вокруг слота), поле - под свечение
+    if (CUIDragDropListEx* L = m_pParentDragDropList; L->m_op22_item_frames_on && !m_cells_to_draw.empty())
+    {
+        Frect clip = clientArea;
+        clip.x1 -= L->m_op22_item_frame_pad.x, clip.y1 -= L->m_op22_item_frame_pad.y;
+        clip.x2 += L->m_op22_item_frame_pad.x, clip.y2 += L->m_op22_item_frame_pad.y;
+        UI()->PushScissor(clip);
+        xr_vector<CUICellItem*> seen;
+        for (const auto& c : m_cells_to_draw)
+        {
+            if (c.Empty() || std::find(seen.begin(), seen.end(), c.m_item) != seen.end())
+                continue;
+            seen.push_back(c.m_item);
+            const u32 m = op22_item_mode(c.m_item);
+            CUIFrameWindow* f = m ? L->m_op22_item_frame[m] : nullptr;
+            if (!f && m == 7)
+                f = L->m_op22_item_frame[CellTextureTypeEquipped];
+            if (!f)
+                continue;
+            Frect r;
+            if (c.m_item->m_op22_grid_orig.x >= 0)
+                L->GetAbsoluteRect(r);
+            else
+                c.m_item->GetAbsoluteRect(r);
+            op22_draw_frame(f, r, L->m_op22_item_frame_pad);
+        }
+        UI()->PopScissor();
+    }
 }
 
 void CUICellContainer::clear_select_armament()

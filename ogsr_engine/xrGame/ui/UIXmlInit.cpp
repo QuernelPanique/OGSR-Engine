@@ -618,6 +618,16 @@ bool CUIXmlInit::InitDragDropListEx(CUIXml& xml_doc, const char* path, int index
         sscanf(oc, "%f,%f,%f,%f;%f,%f,%f,%f", &a.x, &a.y, &a.z, &a.w, &b.x, &b.y, &b.z, &b.w);
     }
     pWnd->m_op22_count_at_list = !!xml_doc.ReadAttribInt(path, index, "op22_count_at_list", 0); // OP22
+    pWnd->op22_item_frames(xml_doc.ReadAttrib(path, index, "op22_item_frames", ""), xml_doc.ReadAttrib(path, index, "op22_item_frame_pad", "0,0")); // OP22
+    pWnd->op22_hl(xml_doc.ReadAttrib(path, index, "op22_hl_frame", ""), xml_doc.ReadAttrib(path, index, "op22_hl_pad", "0,0"));
+    if (LPCSTR ct = xml_doc.ReadAttrib(path, index, "op22_cond_tex", nullptr); ct && ct[0]) // OP22: текстуры делений «обычный;узкий»
+    {
+        string512 a{}, b{};
+        sscanf(ct, "%511[^;];%511s", a, b);
+        pWnd->m_op22_cond_tex[0] = a;
+        pWnd->m_op22_cond_tex[1] = b[0] ? b : a;
+    }
+    sscanf(xml_doc.ReadAttrib(path, index, "op22_cond_steps", "0;0"), "%d;%d", &pWnd->m_op22_cond_steps[0], &pWnd->m_op22_cond_steps[1]);
     pWnd->m_op22_figure = !!xml_doc.ReadAttribInt(path, index, "op22_figure", 0); // OP22
     pWnd->m_op22_untrad_a = xml_doc.ReadAttribInt(path, index, "op22_untrad_a", -1); // OP22
     pWnd->m_op22_lock = xml_doc.ReadAttrib(path, index, "op22_lock", "");
@@ -763,6 +773,12 @@ bool CUIXmlInit::InitProgressBar(CUIXml& xml_doc, LPCSTR path, int index, CUIPro
     }
 
     pWnd->InitProgressBar(pos, size, mode);
+    if (LPCSTR caps = xml_doc.ReadAttrib(path, index, "op22_caps", nullptr); caps && caps[0]) // OP22: заливка из трёх частей
+    {
+        Fvector3 g{};
+        sscanf(xml_doc.ReadAttrib(path, index, "op22_caps_g", "0,0,0"), "%f,%f,%f", &g.x, &g.y, &g.z);
+        pWnd->op22_caps(caps, g);
+    }
 
     float min = xml_doc.ReadAttribFlt(path, index, "min");
     float max = xml_doc.ReadAttribFlt(path, index, "max");

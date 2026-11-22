@@ -271,7 +271,15 @@ void CUICellItem::UpdateConditionProgressBar()
                 y = m_pParentList->GetWndSize().y - p.y - m_pConditionState->GetHeight() - 2.f;
             }
             const bool in_slot = m_op22_grid_orig.x >= 0; // OP22: GAMMA 2.0 - размеры пунктира по макету (у предмета в 1 клетку шириной - свои)
-            const Fvector4& oc = (!in_slot && GetGridSize().x <= 1 && m_pParentList->m_op22_cond_small.z > 0.f) ? m_pParentList->m_op22_cond_small : m_pParentList->m_op22_cond;
+            const bool op22_small = !in_slot && GetGridSize().x <= 1 && m_pParentList->m_op22_cond_small.z > 0.f;
+            const Fvector4& oc = op22_small ? m_pParentList->m_op22_cond_small : m_pParentList->m_op22_cond;
+            if (const shared_str& ct = m_pParentList->m_op22_cond_tex[op22_small ? 1 : 0]; ct.size() && ct != m_op22_cond_tex) // OP22: деления
+            {
+                m_op22_cond_tex = ct;
+                m_pConditionState->m_UIProgressItem.InitTexture(ct.c_str());
+                m_pConditionState->m_UIBackgroundItem.InitTexture(ct.c_str());
+            }
+            m_op22_cond_n = m_pParentList->m_op22_cond_steps[op22_small ? 1 : 0];
             if (oc.z > 0.f)
             {
                 const Fvector2 p = GetWndPos();
@@ -290,7 +298,10 @@ void CUICellItem::UpdateConditionProgressBar()
                 y = area_h - (in_slot ? p.y : 0.f) - h - oc.y;
             }
             m_pConditionState->SetWndPos({x, y});
-            m_pConditionState->SetProgressPos(itm->GetCondition() * 100.0f);
+            float op22_c = itm->GetCondition();
+            if (m_op22_cond_n > 0) // OP22: до целого деления (зелёный и красный - целыми делениями, как на макете)
+                op22_c = std::round(op22_c * m_op22_cond_n) / float(m_op22_cond_n);
+            m_pConditionState->SetProgressPos(op22_c * 100.0f);
             m_pConditionState->Show(true);
             return;
         }

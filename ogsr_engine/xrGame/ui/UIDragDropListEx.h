@@ -80,6 +80,20 @@ public:
     Fvector4 m_op22_lock_rect{}; // OP22: GAMMA 2.0 - слот костюма: картинка в полный рост и поверх неё дети списка (батарея) и пунктир состояния
     void op22_grid(LPCSTR tex);
     void op22_frames(LPCSTR on, LPCSTR off);
+    // OP22: GAMMA 2.0 (22.11, инвентарь в новом стиле) - подсветка рамкой вокруг всего предмета (op22_item_frames=
+    // "hover:tex;selected:tex;equipped:tex;armament:tex;untradable:tex", поле op22_item_frame_pad="x,y"), клетки под ним - обычные;
+    // слот, куда можно положить перетаскиваемое, - рамка вокруг списка (op22_hl_frame, op22_hl_pad="x,y");
+    // деления состояния: своя текстура для обычных и узких предметов, позиция - до целого деления (op22_cond_tex, op22_cond_steps)
+    class CUIFrameWindow* m_op22_item_frame[8]{}; // индекс CellTextureType, 7 - выбранный (ui_show_selected)
+    Fvector2 m_op22_item_frame_pad{};
+    class CUIFrameWindow* m_op22_hl_frame{};
+    Fvector2 m_op22_hl_pad{};
+    bool m_op22_hl_on{};
+    bool m_op22_item_frames_on{};
+    shared_str m_op22_cond_tex[2];
+    int m_op22_cond_steps[2]{};
+    void op22_item_frames(LPCSTR spec, LPCSTR pad);
+    void op22_hl(LPCSTR tex, LPCSTR pad);
 
 protected:
     CUIScrollBar* m_vScrollBar;
@@ -264,4 +278,5 @@ private:
         CellTextureTypeBlockedSlots, //Заблокированные клетки для артов
     };
     CellTextureType get_select_mode(const int x, const int y);
+    u32 op22_item_mode(CUICellItem* it); // OP22: режим подсветки предмета для рамки (индекс m_op22_item_frame)
 };
