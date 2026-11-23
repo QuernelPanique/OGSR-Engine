@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include <efx.h>
+#include <algorithm> // OP22: std::clamp
 
 #include "../xrCDB/cl_intersect.h"
 #include "SoundRender_Core.h"
@@ -112,10 +113,11 @@ void CSoundRender_Core::update(const Fvector& P, const Fvector& D, const Fvector
     {
         static shared_str curr_env;
 
-        if (bListenerMoved)
+        if (bListenerMoved || !m_op22_authored)
         {
             bListenerMoved = FALSE;
-            e_target = get_environment(P);
+            m_op22_authored = get_environment(P);
+            e_target = m_op22_authored;
 
             if (!curr_env.size() || curr_env != e_target->name)
             {
@@ -123,6 +125,15 @@ void CSoundRender_Core::update(const Fvector& P, const Fvector& D, const Fvector
                 MsgDbg("~ current environment sound zone name [%s]", curr_env.c_str());
             }
         }
+        // OP22 23.11: нет авторской зоны (среда по умолчанию) - динамическая акустика по лучам
+        if (psSoundFlags.test(ss_op22_acoustics) && geom_MODEL && m_op22_authored == get_environment_def())
+        {
+            op22_acoustics(P);
+            if (m_op22_ready)
+                e_target = &m_op22_env;
+        }
+        else
+            e_target = m_op22_authored;
 
         if (!e_currentPaused)
             e_current.lerp(e_current, *e_target, dt_sec);
@@ -319,4 +330,134 @@ float CSoundRender_Core::get_occlusion(Fvector& P, float R, Fvector* occ)
         }
     }
     return occ_value;
+}
+
+// OP22 23.11: динамическая акустика. 13 направлений: вверх, 4 наискосок вверх (50°), 8 по горизонтали через 45°.
+// Один луч не чаще 15 мс (поток звука seqFrameMT, не кадр), полный круг ~0,2 с; среда - смесь пресетов EAX по
+// «потолок есть / стены близко / размер / туннель», дальше её плавно ведёт штатное e_current.lerp.
+namespace
+{
+struct op22_preset
+{
+    float room, room_hf, decay, decay_hf, refl, refl_delay, reverb, reverb_delay, size, diffusion;
+};
+// значения EAX 2.0 (мБ, с): открытое место - почти сухо; двор/улица - ALLEY; комната - ROOM; зал - STONEROOM;
+// ангар/цех - HANGAR с укороченным хвостом; туннель/коллектор - SEWERPIPE
+constexpr op22_preset OP22_OPEN{-1800.f, -2500.f, 1.2f, .5f, -2600.f, .15f, -3000.f, .1f, 40.f, .2f};
+constexpr op22_preset OP22_ALLEY{-1000.f, -270.f, 1.49f, .86f, -1204.f, .007f, -4.f, .011f, 7.5f, .3f};
+constexpr op22_preset OP22_ROOM{-1000.f, -454.f, .4f, .83f, -1646.f, .002f, 53.f, .003f, 1.9f, 1.f};
+constexpr op22_preset OP22_HALL{-1000.f, -300.f, 2.31f, .64f, -711.f, .012f, 83.f, .017f, 11.6f, 1.f};
+constexpr op22_preset OP22_HANGAR{-1000.f, -1000.f, 6.f, .23f, -602.f, .02f, 198.f, .03f, 50.3f, 1.f};
+constexpr op22_preset OP22_TUNNEL{-1000.f, -1000.f, 2.81f, .14f, 429.f, .014f, 1023.f, .021f, 1.7f, .8f};
+constexpr float OP22_RANGE = 40.f;
+
+const Fvector& op22_dir(u32 i)
+{
+    static Fvector d[13];
+    static bool init = false;
+    if (!init)
+    {
+        d[0].set(0.f, 1.f, 0.f);
+        d[1].set(.64f, .77f, 0.f);
+        d[2].set(-.64f, .77f, 0.f);
+        d[3].set(0.f, .77f, .64f);
+        d[4].set(0.f, .77f, -.64f);
+        for (u32 k = 0; k < 8; ++k)
+            d[5 + k].set(_cos(PI_MUL_2 * k / 8.f), 0.f, _sin(PI_MUL_2 * k / 8.f));
+        for (auto& v : d)
+            v.normalize();
+        init = true;
+    }
+    return d[i];
+}
+} // namespace
+
+void CSoundRender_Core::op22_acoustics(const Fvector& P)
+{
+    // один луч за раз, не чаще 15 мс
+    if (fTimer_Value - m_op22_ray_t >= .015f)
+    {
+        m_op22_ray_t = fTimer_Value;
+        const Fvector& dir = op22_dir(m_op22_ray);
+        m_op22_db.ray_query(CDB::OPT_ONLYNEAREST, geom_MODEL, P, dir, OP22_RANGE);
+        m_op22_dist[m_op22_ray] = m_op22_db.r_count() ? m_op22_db.r_begin()->range : OP22_RANGE;
+        if (++m_op22_ray >= 13)
+        {
+            m_op22_ray = 0;
+            m_op22_ready = true;
+        }
+        else if (!m_op22_ready)
+            return;
+    }
+    else if (!m_op22_ready)
+        return;
+
+    const float* d = m_op22_dist;
+    auto near_ = [](float x, float full, float none) { return std::clamp((none - x) / (none - full), 0.f, 1.f); };
+    // потолок: прямо вверх весит вдвое; полностью - ближе 20 м, нет - дальше 30 м
+    float up = 2.f * near_(d[0], 20.f, 30.f);
+    for (u32 k = 1; k <= 4; ++k)
+        up += near_(d[k], 20.f, 30.f);
+    up /= 6.f;
+    // стены: доля горизонтальных лучей с препятствием ближе 20 м (нет - дальше 30 м)
+    float hor = 0.f, wall_sum = 0.f, wall_n = 0.f;
+    for (u32 k = 5; k < 13; ++k)
+    {
+        hor += near_(d[k], 20.f, 30.f);
+        if (d[k] < OP22_RANGE)
+            wall_sum += d[k], wall_n += 1.f;
+    }
+    hor /= 8.f;
+    // размер помещения: средняя дистанция до стен и высота потолка
+    const float span = wall_n > 0.f ? wall_sum / wall_n : OP22_RANGE;
+    const float size = .7f * span + .3f * _min(d[0], OP22_RANGE);
+    // туннель: в одной оси узко (сумма встречных лучей < 8 м), в другой - далеко (> 20 м), над головой потолок
+    float narrow = 1e9f, longest = 0.f;
+    for (u32 k = 0; k < 4; ++k)
+    {
+        const float pair = d[5 + k] + d[5 + k + 4];
+        narrow = _min(narrow, pair);
+        longest = _max(longest, pair);
+    }
+    const float tunnel = std::clamp((longest - 20.f) / 15.f, 0.f, 1.f) * std::clamp((8.f - narrow) / 4.f, 0.f, 1.f) * up;
+
+    const float w_open = (1.f - up) * (1.f - hor);
+    const float w_alley = (1.f - up) * hor + .5f * up * (1.f - hor);
+    const float w_in = up * hor + .5f * up * (1.f - hor);
+    // внутри: комната (до 4 м) -> зал (до 10 м) -> ангар (от 18 м)
+    const float t_hall = std::clamp((size - 4.f) / 6.f, 0.f, 1.f), t_hangar = std::clamp((size - 10.f) / 8.f, 0.f, 1.f);
+    const float w_room = w_in * (1.f - tunnel) * (1.f - t_hall);
+    const float w_hall = w_in * (1.f - tunnel) * t_hall * (1.f - t_hangar);
+    const float w_hangar = w_in * (1.f - tunnel) * t_hall * t_hangar;
+    const float w_tunnel = w_in * tunnel;
+    const float wsum = _max(w_open + w_alley + w_room + w_hall + w_hangar + w_tunnel, 1e-4f);
+
+    op22_preset r{};
+    auto acc = [&](const op22_preset& p, float w) {
+        w /= wsum;
+        r.room += p.room * w, r.room_hf += p.room_hf * w, r.decay += p.decay * w, r.decay_hf += p.decay_hf * w;
+        r.refl += p.refl * w, r.refl_delay += p.refl_delay * w, r.reverb += p.reverb * w, r.reverb_delay += p.reverb_delay * w;
+        r.size += p.size * w, r.diffusion += p.diffusion * w;
+    };
+    acc(OP22_OPEN, w_open);
+    acc(OP22_ALLEY, w_alley);
+    acc(OP22_ROOM, w_room);
+    acc(OP22_HALL, w_hall);
+    acc(OP22_HANGAR, w_hangar);
+    acc(OP22_TUNNEL, w_tunnel);
+
+    CSoundRender_Environment& e = m_op22_env;
+    e.set_default();
+    e.name = "op22_dynamic";
+    e.Room = r.room;
+    e.RoomHF = r.room_hf;
+    e.DecayTime = r.decay;
+    e.DecayHFRatio = r.decay_hf;
+    e.Reflections = r.refl;
+    e.ReflectionsDelay = r.refl_delay;
+    e.Reverb = r.reverb;
+    e.ReverbDelay = r.reverb_delay;
+    e.EnvironmentSize = r.size;
+    e.EnvironmentDiffusion = r.diffusion;
+    e.clamp();
 }

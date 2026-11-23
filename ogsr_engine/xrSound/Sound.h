@@ -34,6 +34,7 @@ enum
     //ss_Hardware = (1ul << 1ul), // Use hardware mixing only
     ss_EAX = (1ul << 2ul), // Use EAX or EFX
     ss_UseDefaultDevice = (1ul << 3ul),
+    ss_op22_acoustics = (1ul << 4ul), // OP22 23.11: динамическая акустика (лучи по геометрии уровня, где нет звуковых зон)
     ss_forcedword = u32(-1)
 };
 

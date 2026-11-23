@@ -12,7 +12,7 @@
 
 BOOL bSenvironmentXrExport{};
 int psSoundTargets = 256; // 512; //--#SM+#-- //32;
-Flags32 psSoundFlags = {/*ss_Hardware*/};
+Flags32 psSoundFlags = {ss_op22_acoustics}; // OP22: акустика включена по умолчанию
 float psSoundOcclusionScale = 0.5f;
 float psSoundLinearFadeFactor = 0.4f; //--#SM+#--
 float psSoundCull = 0.01f;

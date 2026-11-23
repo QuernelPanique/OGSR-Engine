@@ -550,6 +550,7 @@ void CCC_Register()
     CMD1(CCC_SND_Restart, "snd_restart");
     //CMD3(CCC_Mask, "snd_acceleration", &psSoundFlags, ss_Hardware);
     CMD3(CCC_Mask, "snd_efx", &psSoundFlags, ss_EAX);
+    CMD3(CCC_Mask, "snd_op22_acoustics", &psSoundFlags, ss_op22_acoustics); // OP22 23.11
     CMD4(CCC_Integer, "snd_targets", &psSoundTargets, 128, 1024);
     CMD4(CCC_Integer, "snd_cache_size", &psSoundCacheSizeMB, 32, 128);
 

@@ -46,6 +46,17 @@ protected:
     CDB::MODEL* geom_MODEL{};
     CDB::MODEL* geom_ENV{};
 
+    // OP22 23.11: динамическая акустика - где у уровня нет звуковых зон (у 53 из 65 уровней CP22), среда считается
+    // по лучам от слушателя по геометрии столкновений уровня (geom_MODEL есть у всех уровней)
+    CDB::COLLIDER m_op22_db{};
+    float m_op22_dist[13]{};
+    u32 m_op22_ray{};
+    float m_op22_ray_t{};
+    bool m_op22_ready{};
+    CSoundRender_Environment* m_op22_authored{};
+    CSoundRender_Environment m_op22_env;
+    void op22_acoustics(const Fvector& P);
+
     // Containers
     xr_vector<CSoundRender_Source*> s_sources;
     xr_vector<CSoundRender_Emitter*> s_emitters;
