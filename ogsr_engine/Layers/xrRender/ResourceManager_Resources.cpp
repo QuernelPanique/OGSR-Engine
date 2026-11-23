@@ -512,57 +512,6 @@ CTexture* CResourceManager::_CreateTexture(LPCSTR _Name)
         return T;
     }
 }
-// OP22 23.11: подмена файла текстуры. Ключ - имя как в m_textures (без расширения, строчными).
-static xr_string op22_tex_key(LPCSTR n)
-{
-    string_path s;
-    xr_strcpy(s, n);
-    fix_texture_name(s);
-    _strlwr(s);
-    return s;
-}
-
-void CResourceManager::op22_texture_remap(const char* from, const char* to)
-{
-    if (!from || !from[0])
-        return;
-    const xr_string key = op22_tex_key(from);
-    const xr_string val = (to && to[0]) ? op22_tex_key(to) : xr_string{};
-    {
-        std::unique_lock lock(m_op22_remap_lock);
-        const auto it = m_op22_remap.find(key);
-        const xr_string& was = it != m_op22_remap.end() ? it->second : key;
-        if ((val.empty() ? key : val) == was)
-            return; // тот же файл - перезагружать незачем
-        if (val.empty() || val == key)
-            m_op22_remap.erase(key);
-        else
-            m_op22_remap[key] = val;
-    }
-    // уже загруженная - перезагрузить сразу из нового файла (как прежний ITexture:load из скрипта)
-    const map_TextureIt I = m_textures.find(key.c_str());
-    if (I != m_textures.end() && I->second->flags.bLoaded)
-    {
-        I->second->Unload();
-        I->second->Load();
-    }
-}
-
-bool CResourceManager::op22_texture_remapped(const char* name, xr_string& out) const
-{
-    std::shared_lock lock(m_op22_remap_lock);
-    if (m_op22_remap.empty() || !name || !name[0])
-        return false;
-    string_path s;
-    xr_strcpy(s, name);
-    _strlwr(s);
-    const auto it = m_op22_remap.find(s);
-    if (it == m_op22_remap.end())
-        return false;
-    out = it->second;
-    return true;
-}
-
 void CResourceManager::_DeleteTexture(const CTexture* T)
 {
     // DBG_VerifyTextures	();
