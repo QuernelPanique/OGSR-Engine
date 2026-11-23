@@ -286,6 +286,10 @@ public:
     virtual ~IResourceManager() = default;
 
     virtual xr_vector<ITexture*> FindTexture(const char* Name) const = 0;
+
+    // OP22 23.11: подмена файла текстуры по имени (руки под костюм, op22_outfit_arms): текстура `from` грузится из файла
+    // `to` - и уже загруженная (сразу), и созданная позже (при загрузке). Пустое `to` - снять подмену.
+    virtual void op22_texture_remap(const char* from, const char* to) {}
 };
 
 class ShExports final

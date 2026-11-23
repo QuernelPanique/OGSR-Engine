@@ -448,7 +448,8 @@ void CSoundRender_Core::op22_acoustics(const Fvector& P)
 
     CSoundRender_Environment& e = m_op22_env;
     e.set_default();
-    e.name = "op22_dynamic";
+    static const shared_str op22_env_name{"op22_dynamic"}; // OP22: без поиска строки в общем хранилище на каждом такте звука
+    e.name = op22_env_name;
     e.Room = r.room;
     e.RoomHF = r.room_hf;
     e.DecayTime = r.decay;

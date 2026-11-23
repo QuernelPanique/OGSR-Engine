@@ -7,6 +7,7 @@
 #include "shader.h"
 #include "tss_def.h"
 #include "TextureDescrManager.h"
+#include <shared_mutex> // OP22
 
 // refs
 class dx10ConstantBuffer;
@@ -183,6 +184,16 @@ public:
     void Dump(bool bBrief) const;
 
     xr_vector<ITexture*> FindTexture(const char* Name) const override;
+
+    // OP22 23.11: подмена файла текстуры (см. IResourceManager::op22_texture_remap)
+    void op22_texture_remap(const char* from, const char* to) override;
+    bool op22_texture_remapped(const char* name, xr_string& out) const; // CTexture::Load: из какого файла грузить
+
+private:
+    mutable std::shared_mutex m_op22_remap_lock; // DeferredUpload грузит текстуры в нескольких потоках
+    xr_map<xr_string, xr_string> m_op22_remap;
+
+public:
 
 private:
     template <typename T>

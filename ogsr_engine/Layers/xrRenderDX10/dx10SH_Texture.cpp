@@ -305,7 +305,16 @@ void CTexture::Preload(const char* Name)
     m_detail_scale = DEV->m_textures_description.GetScale(Name);
 }
 
-void CTexture::Load() { Load(cName.c_str()); }
+void CTexture::Load()
+{
+    // OP22 23.11: подмена файла по имени (CResourceManager::op22_texture_remap) - руки под костюм
+    if (xr_string op22_file; DEV->op22_texture_remapped(cName.c_str(), op22_file))
+    {
+        Load(op22_file.c_str());
+        return;
+    }
+    Load(cName.c_str());
+}
 
 void CTexture::Load(const char* Name)
 {

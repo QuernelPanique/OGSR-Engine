@@ -188,18 +188,38 @@ void CActor::PickupModeUpdate()
     CFrustum frustum;
     frustum.CreateFromMatrix(Device.mFullTransform, FRUSTUM_P_LRTB | FRUSTUM_P_FAR);
 
-    // OP22 23.11: метки GAMMA вместо названий - предметы в радиусе меток, только видимые (та же проверка лучом, что у названий ОП)
+    // OP22 23.11: метки GAMMA вместо названий - предметы в радиусе меток, только видимые (та же проверка лучом, что у названий ОП).
+    // Поиск и лучи видимости - 10 раз в секунду (в месте с сотней предметов луч на каждый в каждом кадре стоил миллисекунды),
+    // положение и расстояние меток - каждый кадр. Первый кадр после нажатия F - сразу полный поиск.
     if (g_op22_pickup_mark_cfg.radius > 0.f)
     {
-        static xr_vector<CObject*> op22_near;
-        op22_near.clear();
-        Level().ObjectSpace.GetNearest(op22_near, Position(), g_op22_pickup_mark_cfg.radius, this);
-        for (CObject* o : op22_near)
+        constexpr u32 OP22_MARK_REFRESH_MS = 100;
+        static xr_vector<u16> op22_visible;
+        static u32 op22_next_scan{}, op22_last_frame{};
+        const bool op22_first = Device.dwFrame != op22_last_frame + 1;
+        op22_last_frame = Device.dwFrame;
+        if (op22_first || Device.dwTimeGlobal >= op22_next_scan)
         {
-            CInventoryItem* item = smart_cast<CInventoryItem*>(o);
-            if (!item || !item->Useful() || item->object().H_Parent())
-                continue;
-            if (!CanPickItem(frustum, Device.vCameraPosition, o))
+            op22_next_scan = Device.dwTimeGlobal + OP22_MARK_REFRESH_MS;
+            op22_visible.clear();
+            static xr_vector<CObject*> op22_near;
+            op22_near.clear();
+            Level().ObjectSpace.GetNearest(op22_near, Position(), g_op22_pickup_mark_cfg.radius, this);
+            for (CObject* o : op22_near)
+            {
+                CInventoryItem* item = smart_cast<CInventoryItem*>(o);
+                if (!item || !item->Useful() || item->object().H_Parent())
+                    continue;
+                if (!CanPickItem(frustum, Device.vCameraPosition, o))
+                    continue;
+                op22_visible.push_back(o->ID());
+            }
+        }
+        for (const u16 id : op22_visible)
+        {
+            CObject* o = Level().Objects.net_Find(id);
+            CInventoryItem* item = o && !o->getDestroy() ? smart_cast<CInventoryItem*>(o) : nullptr;
+            if (!item || item->object().H_Parent()) // подобран или удалён между поисками
                 continue;
             op22_pickup_mark_t m;
             o->Center(m.p);

@@ -212,6 +212,9 @@ luabind::object script_texture_find(const char* name)
     return table;
 }
 
+// OP22 23.11: подмена файла текстуры по имени - загруженной сразу, будущих при загрузке (op22_outfit_arms)
+void script_texture_remap(const char* from, const char* to) { Device.m_pRender->GetResourceManager()->op22_texture_remap(from, to); }
+
 void script_texture_load(ITexture* t, const char* name)
 {
     t->Unload();
@@ -220,7 +223,7 @@ void script_texture_load(ITexture* t, const char* name)
 
 void ITextureScript::script_register(lua_State* L)
 {
-    module(L)[(def("texture_find", &script_texture_find), class_<ITexture>("ITexture").def("load", &script_texture_load).def("get_name", &ITexture::GetName))];
+    module(L)[(def("texture_find", &script_texture_find), def("texture_remap", &script_texture_remap), class_<ITexture>("ITexture").def("load", &script_texture_load).def("get_name", &ITexture::GetName))];
 }
 
 void CPHCaptureScript::script_register(lua_State* L)
