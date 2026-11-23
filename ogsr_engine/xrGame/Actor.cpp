@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "ExoOutfit.h" // OP22
 #include "op22_pickup_marks.h" // OP22
+#include "op22_suppression.h" // OP22
 #include "Actor_Flags.h"
 #include "hudmanager.h"
 #ifdef DEBUG
@@ -362,6 +363,18 @@ void CActor::Load(LPCSTR section)
     g_op22_pickup_mark_cfg.px_far = READ_IF_EXISTS(pSettings, r_float, section, "op22_pickup_mark_px_far", 6.f);
     g_op22_pickup_mark_cfg.alpha_far = READ_IF_EXISTS(pSettings, r_float, section, "op22_pickup_mark_alpha_far", .7f);
     g_op22_pickup_mark_cfg.texture = READ_IF_EXISTS(pSettings, r_string, section, "op22_pickup_mark_texture", "ui\\op22_pickup_mark");
+    // OP22 23.11: подавление огнём (op22_suppression.h)
+    {
+        op22_suppress_cfg_t& c = g_op22_suppress_cfg;
+        c.add = READ_IF_EXISTS(pSettings, r_float, section, "op22_suppress_add", .3f);
+        c.hold = READ_IF_EXISTS(pSettings, r_float, section, "op22_suppress_hold", .6f);
+        c.decay = READ_IF_EXISTS(pSettings, r_float, section, "op22_suppress_decay", .35f);
+        c.vignette = READ_IF_EXISTS(pSettings, r_float, section, "op22_suppress_vignette", .8f);
+        c.gray = READ_IF_EXISTS(pSettings, r_float, section, "op22_suppress_gray", .45f);
+        c.blur = READ_IF_EXISTS(pSettings, r_float, section, "op22_suppress_blur", .5f);
+        c.sway = READ_IF_EXISTS(pSettings, r_float, section, "op22_suppress_sway", 1.f);
+        c.texture = READ_IF_EXISTS(pSettings, r_string, section, "op22_suppress_texture", "ui\\op22_suppress_vignette");
+    }
 
     character_physics_support()->in_Load(section);
 
@@ -823,6 +836,8 @@ void CActor::UpdateCL()
 
     if (g_Alive())
         PickupModeUpdate();
+    if (this == Actor())
+        op22_suppress_update(); // OP22 23.11: подавление огнём - спад, постэффект
 
     PickupModeUpdate_COD();
 

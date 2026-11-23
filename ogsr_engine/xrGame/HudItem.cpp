@@ -5,6 +5,7 @@
 
 #include "stdafx.h"
 #include "HudItem.h"
+#include "op22_suppression.h" // OP22
 #include "player_hud.h"
 #include "../xr_3da/gamemtllib.h"
 #include <array>
@@ -879,6 +880,17 @@ void CHudItem::op22_UpdateProcedural(Fvector& offs, Fvector& rot, bool aiming, u
         offs.y += 0.0010f * k * b;
         rot.x += deg2rad(0.30f) * k * b;
         rot.y += deg2rad(0.25f) * k * a;
+    }
+
+    // OP22 23.11: подавление огнём - частая дрожь модели оружия (видимая, меткость не меняется; op22_suppression.h)
+    if (g_op22_suppress > 0.f && g_op22_suppress_cfg.sway > 0.f && smart_cast<CWeapon*>(this))
+    {
+        const float s = g_op22_suppress * g_op22_suppress_cfg.sway * (aiming ? 0.6f : 1.f);
+        const float tg = Device.fTimeGlobal;
+        offs.x += 0.0010f * s * _sin(tg * PI_MUL_2 * 2.3f);
+        offs.y += 0.0009f * s * _sin(tg * PI_MUL_2 * 3.1f + 0.7f);
+        rot.x += deg2rad(0.35f) * s * _sin(tg * PI_MUL_2 * 2.7f + 1.3f);
+        rot.y += deg2rad(0.30f) * s * _sin(tg * PI_MUL_2 * 1.9f + 0.4f);
     }
 }
 

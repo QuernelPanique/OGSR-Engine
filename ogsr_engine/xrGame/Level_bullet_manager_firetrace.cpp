@@ -4,6 +4,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
+#include "op22_suppression.h" // OP22
 #include "Level_Bullet_Manager.h"
 #include "entity.h"
 #include "../xr_3da/gamemtllib.h"
@@ -126,6 +127,8 @@ BOOL CBulletManager::test_callback(const collide::ray_defs& rd, CObject* object,
                             Fvector pt;
                             pt.mad(bullet->pos, bullet->dir, dist);
                             bullet_manager.PlayWhineSound(bullet, initiator, pt);
+                            if (actor) // OP22 23.11: близкий промах - подавление огнём (op22_suppression.h)
+                                op22_suppress_near_miss(bullet->parent_id);
                         }
                     }
                     else

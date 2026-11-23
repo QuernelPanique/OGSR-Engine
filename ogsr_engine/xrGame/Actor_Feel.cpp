@@ -18,6 +18,56 @@
 op22_pickup_mark_cfg_t g_op22_pickup_mark_cfg; // OP22
 xr_vector<op22_pickup_mark_t> g_op22_pickup_marks; // OP22
 
+// OP22 23.11: подавление огнём (op22_suppression.h)
+#include "op22_suppression.h"
+#include "../xr_3da/CameraManager.h"
+#include "../xr_3da/EffectorPP.h"
+
+op22_suppress_cfg_t g_op22_suppress_cfg;
+float g_op22_suppress = 0.f;
+static float op22_suppress_t = -100.f; // время последнего близкого промаха
+static constexpr EEffectorPPType OP22_SUPPRESS_PP = static_cast<EEffectorPPType>(0x0F22);
+
+class COp22SuppressPP : public CEffectorPP
+{
+public:
+    COp22SuppressPP() : CEffectorPP(OP22_SUPPRESS_PP, 100000.f, true) {}
+    BOOL Valid() override { return g_op22_suppress > .001f; } // спало - камера удаляет постэффект, проход постпроцесса больше не нужен
+    BOOL Process(SPPInfo& pp) override
+    {
+        SPPInfo to = pp_identity;
+        to.gray = g_op22_suppress_cfg.gray;
+        to.blur = g_op22_suppress_cfg.blur;
+        pp.lerp(pp_identity, to, std::clamp(g_op22_suppress, 0.f, 1.f));
+        return TRUE;
+    }
+};
+
+void op22_suppress_near_miss(u16 shooter_id)
+{
+    CActor* a = Actor();
+    if (!a || !a->g_Alive() || shooter_id == a->ID() || g_op22_suppress_cfg.add <= 0.f)
+        return;
+    g_op22_suppress = _min(1.f, g_op22_suppress + g_op22_suppress_cfg.add);
+    op22_suppress_t = Device.fTimeGlobal;
+}
+
+void op22_suppress_update()
+{
+    CActor* a = Actor();
+    if (!a || !a->g_Alive())
+    {
+        g_op22_suppress = 0.f;
+        return;
+    }
+    if (g_op22_suppress <= 0.f)
+        return;
+    if (Device.fTimeGlobal - op22_suppress_t > g_op22_suppress_cfg.hold)
+        g_op22_suppress = _max(0.f, g_op22_suppress - g_op22_suppress_cfg.decay * Device.fTimeDelta);
+    if (g_op22_suppress > .001f && (g_op22_suppress_cfg.gray > 0.f || g_op22_suppress_cfg.blur > 0.f) && !a->Cameras().GetPPEffector(OP22_SUPPRESS_PP))
+        a->Cameras().AddPPEffector(xr_new<COp22SuppressPP>());
+}
+
 #define PICKUP_INFO_COLOR 0xFFDDDDDD
 // AAAAAA
 

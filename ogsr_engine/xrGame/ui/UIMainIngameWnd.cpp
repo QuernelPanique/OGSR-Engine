@@ -8,6 +8,7 @@
 #include "UIFrameWindow.h" // OP22
 #include "../../xr_3da/op22_uixf.h" // OP22
 #include "../op22_pickup_marks.h" // OP22
+#include "../op22_suppression.h" // OP22
 #include "../player_hud.h" // OP22
 #include "../actor_defs.h" // OP22
 #include "UIDialogWnd.h" // OP22: редактор HUD
@@ -799,6 +800,7 @@ void CUIMainIngameWnd::Draw()
     UIMotionIcon.SetNoise((s16)(0xffff & iFloor(m_pActor->m_snd_noise * 100.0f)));
     op22_xf_update(); // OP22: группы перспективы - до окон панели (главное окно и Lua op22_late)
     op22_draw_pickup_marks(); // OP22: метки предметов при зажатой F - под окнами HUD
+    op22_draw_suppress(); // OP22: подавление огнём - затемнение краёв под окнами HUD
     // OP22: подложка с op22_under уже нарисована в CUI::Render до пользовательских окон (шкалы и числа Lua - поверх неё)
     const bool op22_hide = m_op22_under && UIStaticHealth.IsShown();
     if (op22_hide)
@@ -850,6 +852,31 @@ void CUIMainIngameWnd::op22_draw_pickup_marks()
         UIRender->PushPoint(x + h, y + h, 0, col, 1, 1);
         UIRender->PushPoint(x - h, y + h, 0, col, 0, 1);
     }
+    UIRender->FlushPrimitive();
+}
+
+// OP22 23.11: подавление огнём - текстура затемнения краёв на весь экран, прозрачность = уровень подавления
+void CUIMainIngameWnd::op22_draw_suppress()
+{
+    const op22_suppress_cfg_t& c = g_op22_suppress_cfg;
+    const float a = std::clamp(g_op22_suppress * c.vignette, 0.f, 1.f);
+    if (a < .004f || !c.texture.size())
+        return;
+    if (!m_op22_supp_sh_ok)
+    {
+        m_op22_supp_sh->create("hud\\default", c.texture.c_str());
+        m_op22_supp_sh_ok = true;
+    }
+    const float w = float(Device.dwWidth), h = float(Device.dwHeight);
+    const u32 col = color_rgba(255, 255, 255, u32(255.f * a));
+    UIRender->SetShader(*m_op22_supp_sh);
+    UIRender->StartPrimitive(6, IUIRender::ptTriList, UI()->m_currentPointType);
+    UIRender->PushPoint(0, 0, 0, col, 0, 0);
+    UIRender->PushPoint(w, 0, 0, col, 1, 0);
+    UIRender->PushPoint(w, h, 0, col, 1, 1);
+    UIRender->PushPoint(0, 0, 0, col, 0, 0);
+    UIRender->PushPoint(w, h, 0, col, 1, 1);
+    UIRender->PushPoint(0, h, 0, col, 0, 1);
     UIRender->FlushPrimitive();
 }
 

@@ -138,6 +138,9 @@ protected:
     ui_shader m_op22_mark_sh; // OP22 23.11: метки предметов при зажатой F
     bool m_op22_mark_sh_ok{};
     void op22_draw_pickup_marks();
+    ui_shader m_op22_supp_sh; // OP22 23.11: подавление огнём
+    bool m_op22_supp_sh_ok{};
+    void op22_draw_suppress();
     u32 m_op22_ammo_state{u32(-1)};
     Fvector2 m_op22_wpn_s{};
     bool m_op22_wpn_s_ok{};
