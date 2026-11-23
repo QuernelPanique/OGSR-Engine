@@ -22,6 +22,7 @@ xr_vector<op22_pickup_mark_t> g_op22_pickup_marks; // OP22
 #include "op22_suppression.h"
 #include "../xr_3da/CameraManager.h"
 #include "../xr_3da/EffectorPP.h"
+#include "ActorEffector.h" // CActorCameraManager
 
 op22_suppress_cfg_t g_op22_suppress_cfg;
 float g_op22_suppress = 0.f;
