@@ -7,6 +7,7 @@
 #include "../xr_level_controller.h" // OP22
 #include "UIFrameWindow.h" // OP22
 #include "../../xr_3da/op22_uixf.h" // OP22
+#include "../op22_pickup_marks.h" // OP22
 #include "../player_hud.h" // OP22
 #include "../actor_defs.h" // OP22
 #include "UIDialogWnd.h" // OP22: редактор HUD
@@ -797,6 +798,7 @@ void CUIMainIngameWnd::Draw()
 
     UIMotionIcon.SetNoise((s16)(0xffff & iFloor(m_pActor->m_snd_noise * 100.0f)));
     op22_xf_update(); // OP22: группы перспективы - до окон панели (главное окно и Lua op22_late)
+    op22_draw_pickup_marks(); // OP22: метки предметов при зажатой F - под окнами HUD
     // OP22: подложка с op22_under уже нарисована в CUI::Render до пользовательских окон (шкалы и числа Lua - поверх неё)
     const bool op22_hide = m_op22_under && UIStaticHealth.IsShown();
     if (op22_hide)
@@ -811,6 +813,44 @@ void CUIMainIngameWnd::Draw()
     }
 
     RenderQuickInfos();
+}
+
+// OP22 23.11: метки предметов при зажатой F (op22_pickup_marks.h): точка в центре предмета, размер и яркость - от расстояния
+void CUIMainIngameWnd::op22_draw_pickup_marks()
+{
+    const auto& marks = g_op22_pickup_marks;
+    const op22_pickup_mark_cfg_t& c = g_op22_pickup_mark_cfg;
+    if (marks.empty() || c.radius <= 0.f || !c.texture.size() || !m_pActor->g_Alive())
+        return;
+    if (!m_op22_mark_sh_ok)
+    {
+        m_op22_mark_sh->create("hud\\default", c.texture.c_str());
+        m_op22_mark_sh_ok = true;
+    }
+    const float k = float(Device.dwHeight) / 1440.f;
+    constexpr float NEAR_D = 2.f; // ближе - полный размер и яркость
+    UIRender->SetShader(*m_op22_mark_sh);
+    UIRender->StartPrimitive(u32(marks.size() * 6), IUIRender::ptTriList, UI()->m_currentPointType);
+    for (const op22_pickup_mark_t& m : marks)
+    {
+        Fvector4 v;
+        Device.mFullTransform.transform(v, m.p);
+        if (v.z < 0.f || v.w < 0.f || v.x < -1.f || v.x > 1.f || v.y < -1.f || v.y > 1.f)
+            continue;
+        const float x = (1.f + v.x) * .5f * float(Device.dwWidth);
+        const float y = (1.f - v.y) * .5f * float(Device.dwHeight);
+        const float t = std::clamp((m.d - NEAR_D) / _max(c.radius - NEAR_D, .01f), 0.f, 1.f);
+        // текстура с каймой: точка - 10/12.4 ширины текстуры (кайма 1.2 px у точки 10 px)
+        const float h = .5f * (c.px + (c.px_far - c.px) * t) * 1.24f * k;
+        const u32 col = color_rgba(255, 255, 255, u32(255.f * std::clamp(1.f + (c.alpha_far - 1.f) * t, 0.f, 1.f)));
+        UIRender->PushPoint(x - h, y - h, 0, col, 0, 0);
+        UIRender->PushPoint(x + h, y - h, 0, col, 1, 0);
+        UIRender->PushPoint(x + h, y + h, 0, col, 1, 1);
+        UIRender->PushPoint(x - h, y - h, 0, col, 0, 0);
+        UIRender->PushPoint(x + h, y + h, 0, col, 1, 1);
+        UIRender->PushPoint(x - h, y + h, 0, col, 0, 1);
+    }
+    UIRender->FlushPrimitive();
 }
 
 void CUIMainIngameWnd::op22_draw_under()

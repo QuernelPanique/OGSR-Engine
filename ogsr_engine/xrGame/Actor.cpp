@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "ExoOutfit.h" // OP22
+#include "op22_pickup_marks.h" // OP22
 #include "Actor_Flags.h"
 #include "hudmanager.h"
 #ifdef DEBUG
@@ -355,6 +356,12 @@ void CActor::Load(LPCSTR section)
     character_physics_support()->movement()->SetAirControlParam(AirControlParam);
 
     m_fPickupInfoRadius = pSettings->r_float(section, "pickup_info_radius");
+    // OP22 23.11: метки предметов при зажатой F (op22_pickup_marks.h)
+    g_op22_pickup_mark_cfg.radius = READ_IF_EXISTS(pSettings, r_float, section, "op22_pickup_mark_radius", 15.f);
+    g_op22_pickup_mark_cfg.px = READ_IF_EXISTS(pSettings, r_float, section, "op22_pickup_mark_px", 10.f);
+    g_op22_pickup_mark_cfg.px_far = READ_IF_EXISTS(pSettings, r_float, section, "op22_pickup_mark_px_far", 6.f);
+    g_op22_pickup_mark_cfg.alpha_far = READ_IF_EXISTS(pSettings, r_float, section, "op22_pickup_mark_alpha_far", .7f);
+    g_op22_pickup_mark_cfg.texture = READ_IF_EXISTS(pSettings, r_string, section, "op22_pickup_mark_texture", "ui\\op22_pickup_mark");
 
     character_physics_support()->in_Load(section);
 

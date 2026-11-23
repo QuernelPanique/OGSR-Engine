@@ -13,6 +13,10 @@
 
 #include "game_cl_base.h"
 #include "Level.h"
+#include "op22_pickup_marks.h" // OP22
+
+op22_pickup_mark_cfg_t g_op22_pickup_mark_cfg; // OP22
+xr_vector<op22_pickup_mark_t> g_op22_pickup_marks; // OP22
 
 #define PICKUP_INFO_COLOR 0xFFDDDDDD
 // AAAAAA
@@ -123,6 +127,7 @@ BOOL CActor::CanPickItem(const CFrustum& frustum, const Fvector& from, CObject* 
 
 void CActor::PickupModeUpdate()
 {
+    g_op22_pickup_marks.clear(); // OP22: метки - только пока зажата F
     if (!m_bPickupMode)
         return;
 
@@ -131,6 +136,27 @@ void CActor::PickupModeUpdate()
 
     CFrustum frustum;
     frustum.CreateFromMatrix(Device.mFullTransform, FRUSTUM_P_LRTB | FRUSTUM_P_FAR);
+
+    // OP22 23.11: метки GAMMA вместо названий - предметы в радиусе меток, только видимые (та же проверка лучом, что у названий ОП)
+    if (g_op22_pickup_mark_cfg.radius > 0.f)
+    {
+        static xr_vector<CObject*> op22_near;
+        op22_near.clear();
+        Level().ObjectSpace.GetNearest(op22_near, Position(), g_op22_pickup_mark_cfg.radius, this);
+        for (CObject* o : op22_near)
+        {
+            CInventoryItem* item = smart_cast<CInventoryItem*>(o);
+            if (!item || !item->Useful() || item->object().H_Parent())
+                continue;
+            if (!CanPickItem(frustum, Device.vCameraPosition, o))
+                continue;
+            op22_pickup_mark_t m;
+            o->Center(m.p);
+            m.d = Device.vCameraPosition.distance_to(m.p);
+            g_op22_pickup_marks.push_back(m);
+        }
+        return;
+    }
 
     //. slow (ray-query test)
     for (xr_vector<CObject*>::iterator it = feel_touch.begin(); it != feel_touch.end(); it++)
