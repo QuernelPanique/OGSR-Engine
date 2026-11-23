@@ -1835,7 +1835,8 @@ void CUIMainIngameWnd::op22_xf_update()
     {
         op22_uixf_t& g = g_op22_uixf_group[2];
         PIItem item = m_pActor ? m_pActor->inventory().ActiveItem() : nullptr;
-        CHudItem* hi = item && item->NeedBriefInfo() ? smart_cast<CHudItem*>(item) : nullptr;
+        // OP22 23.11: КПК не оружие - счётчик при его доставании не всплывает (просьба пользователя 22.11)
+        CHudItem* hi = item && item->NeedBriefInfo() && !smart_cast<CPda*>(item) ? smart_cast<CHudItem*>(item) : nullptr;
         const u32 st = hi ? hi->GetState() : u32(-1);
         // показ: уже виден - не гаснет и не появляется заново, а держится (22.11, просьба пользователя: перезарядка - одна анимация)
         auto show = [&] {

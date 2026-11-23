@@ -48,6 +48,9 @@ void CUIPropertiesBox::Init(float x, float y, float width, float height)
     // OP22: меню по макету
     m_op22_sel = xml_doc.ReadAttrib("properties_box:list", 0, "op22_sel", "");
     m_op22_min_w = xml_doc.ReadAttribFlt("properties_box", 0, "op22_min_w", 0.f);
+    // OP22 23.11: высота строки меню по макету (InitListBox её не читает - строка была 20); только со своим атрибутом, другие скины как прежде
+    if (const float ih = xml_doc.ReadAttribFlt("properties_box:list", 0, "op22_item_height", 0.f); ih > 0.f)
+        m_UIListWnd.SetItemHeight(ih);
     for (auto [node, st] : {std::pair<LPCSTR, CUIStatic**>{"properties_box:op22_title", &m_op22_title}, {"properties_box:op22_line", &m_op22_line}})
         if (!*st && xml_doc.NavigateToNode(node, 0))
         {
@@ -148,7 +151,9 @@ bool CUIPropertiesBox::OnMouse(float x, float y, EUIMessages mouse_action)
 
 void CUIPropertiesBox::AutoUpdateSize()
 {
-    SetHeight(m_UIListWnd.GetItemHeight() * m_UIListWnd.GetSize() + m_UIListWnd.GetVertIndent());
+    // OP22 23.11: +0.01 - сумма строк в RecalcSize считается по одной и при дробной высоте строки бывает больше на доли,
+    // тогда появлялась полоса прокрутки поверх пунктов (скрин пользователя 06:13)
+    SetHeight(m_UIListWnd.GetItemHeight() * m_UIListWnd.GetSize() + m_UIListWnd.GetVertIndent() + 0.01f);
     m_UIListWnd.SetHeight(GetHeight());
     float f = float(m_UIListWnd.GetLongestLength() + m_UIListWnd.GetHorizIndent()) + 2;
     f = _max(f, m_op22_min_w); // OP22
