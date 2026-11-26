@@ -185,11 +185,11 @@ enum
 };
 Flags8 _flags;
 SPHBonesData saved_bones;
-u16 source_id; // for break only
+ALife::_OBJECT_ID source_id; // for break only; OP22 (id32)
 virtual void load(NET_Packet& tNetPacket);
 virtual bool need_save() const { return (!_flags.test(flNotSave)); }
 virtual void set_sorce_id(u16 si) { source_id = si; }
-virtual u16 get_source_id() { return source_id; }
+virtual ALife::_OBJECT_ID get_source_id() { return source_id; } // OP22 (id32)
 virtual CSE_Abstract* cast_abstract() { return 0; }
 
 protected:

@@ -7,6 +7,7 @@
 ////////////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
+#include "op22_id32_io.h"
 #include "../xr_3da/NET_Server_Trash/net_utils.h"
 #include "xrServer_Objects.h"
 #include "game_base_space.h"
@@ -92,7 +93,7 @@ void CSE_PHSkeleton::STATE_Read(NET_Packet& tNetPacket, u16 size)
     R_ASSERT(visual);
     tNetPacket.r_stringZ(visual->startup_animation);
     tNetPacket.r_u8(_flags.flags);
-    tNetPacket.r_u16(source_id);
+    source_id = op22_r_state_id(tNetPacket); // OP22 (id32)
     if (_flags.test(flSavedData))
     {
         data_load(tNetPacket);
@@ -105,7 +106,7 @@ void CSE_PHSkeleton::STATE_Write(NET_Packet& tNetPacket)
     R_ASSERT(visual);
     tNetPacket.w_stringZ(visual->startup_animation);
     tNetPacket.w_u8(_flags.flags);
-    tNetPacket.w_u16(source_id);
+    op22_write_id(tNetPacket, source_id); // OP22 (id32)
     ////////////////////////saving///////////////////////////////////////
     if (_flags.test(flSavedData))
     {

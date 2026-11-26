@@ -9,6 +9,9 @@
 #include "stdafx.h"
 #include "xrServer_Objects.h"
 #include "xrMessages.h"
+#include "op22_id32_io.h"
+
+bool g_op22_state_id32 = true; // OP22 (id32)
 #include "game_base_space.h"
 #include "script_value_container_impl.h"
 #include "clsid_game.h"
@@ -238,7 +241,9 @@ BOOL CSE_Abstract::Spawn_Read(NET_Packet& tNetPacket)
     u16 size;
     tNetPacket.r_u16(size); // size
     R_ASSERT((size > sizeof(size)), "cannot read object, which is not successfully saved :(", name_replace());
+    g_op22_state_id32 = id32(); // OP22 (id32): формат ID в STATE этого объекта
     STATE_Read(tNetPacket, size);
+    g_op22_state_id32 = true; // UPDATE_Read из сейва ставит свой флаг сам (CALifeObjectRegistry::get_object)
 
     return TRUE;
 }

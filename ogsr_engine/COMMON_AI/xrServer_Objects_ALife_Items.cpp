@@ -7,6 +7,7 @@
 ////////////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
+#include "op22_id32_io.h"
 #include "xrMessages.h"
 #include "../xr_3da/NET_Server_Trash/net_utils.h"
 #include "clsid_game.h"
@@ -743,7 +744,7 @@ void CSE_ALifeItemPDA::STATE_Read(NET_Packet& tNetPacket, u16 size)
 {
     inherited::STATE_Read(tNetPacket, size);
     if (m_wVersion > 58)
-        tNetPacket.r(&m_original_owner, sizeof(m_original_owner));
+        m_original_owner = op22_r_state_id(tNetPacket); // OP22 (id32)
 
     if (m_wVersion > 89)
 
@@ -765,7 +766,7 @@ void CSE_ALifeItemPDA::STATE_Read(NET_Packet& tNetPacket, u16 size)
 void CSE_ALifeItemPDA::STATE_Write(NET_Packet& tNetPacket)
 {
     inherited::STATE_Write(tNetPacket);
-    tNetPacket.w(&m_original_owner, sizeof(m_original_owner));
+    op22_write_id(tNetPacket, m_original_owner); // OP22 (id32)
 #ifdef XRGAME_EXPORTS
     tNetPacket.w_stringZ(m_specific_character);
     tNetPacket.w_stringZ(m_info_portion);

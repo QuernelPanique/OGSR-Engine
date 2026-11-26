@@ -7,6 +7,7 @@
 ////////////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
+#include "op22_id32_io.h"
 #include "../xr_3da/NET_Server_Trash/net_utils.h"
 #include "xrServer_Objects_ALife.h"
 #include "xrServer_Objects_ALife_Monsters.h"
@@ -276,14 +277,14 @@ void CSE_ALifeGroupAbstract::STATE_Read(NET_Packet& tNetPacket, u16 size)
     m_bCreateSpawnPositions = !!dwDummy;
     tNetPacket.r_u16(m_wCount);
     if (m_wVersion > 19)
-        load_data(m_tpMembers, tNetPacket);
+        op22_read_ids(tNetPacket, m_tpMembers, g_op22_state_id32); // OP22 (id32)
 };
 
 void CSE_ALifeGroupAbstract::STATE_Write(NET_Packet& tNetPacket)
 {
     tNetPacket.w_u32(m_bCreateSpawnPositions);
     tNetPacket.w_u16(m_wCount);
-    save_data(m_tpMembers, tNetPacket);
+    op22_write_ids(tNetPacket, m_tpMembers); // OP22 (id32)
 };
 
 void CSE_ALifeGroupAbstract::UPDATE_Read(NET_Packet& tNetPacket)
@@ -545,7 +546,7 @@ void CSE_ALifeObjectPhysic::STATE_Read(NET_Packet& tNetPacket, u16 size)
             tNetPacket.r_u8(_flags.flags);
 
         if (m_wVersion > 56)
-            tNetPacket.r_u16(source_id);
+            source_id = op22_r_state_id(tNetPacket); // OP22 (id32)
 
         if (m_wVersion > 60 && _flags.test(flSavedData))
         {

@@ -236,7 +236,7 @@ SERVER_ENTITY_DECLARE_END
 add_to_type_list(CSE_ALifeItemArtefact)
 #define script_type_list save_type_list(CSE_ALifeItemArtefact)
 
-    SERVER_ENTITY_DECLARE_BEGIN(CSE_ALifeItemPDA, CSE_ALifeItem) u16 m_original_owner;
+    SERVER_ENTITY_DECLARE_BEGIN(CSE_ALifeItemPDA, CSE_ALifeItem) ALife::_OBJECT_ID m_original_owner; // OP22 (id32)
 shared_str m_specific_character;
 shared_str m_info_portion;
 

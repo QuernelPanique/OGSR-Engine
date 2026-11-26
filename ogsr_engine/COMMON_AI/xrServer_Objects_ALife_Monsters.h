@@ -313,7 +313,7 @@ float fRadiation;
 u8 weapon{};
 ///////////////////////////////////////////
 u16 m_u16NumItems;
-u16 m_holderID;
+ALife::_OBJECT_ID m_holderID; // OP22 (id32)
 //	DEF_DEQUE		(PH_STATES, SPHNetState);
 SPHNetState m_AliveState{};
 //	PH_STATES						m_DeadStates;
@@ -380,7 +380,7 @@ SERVER_ENTITY_DECLARE_END
 add_to_type_list(CSE_ALifeMonsterZombie)
 #define script_type_list save_type_list(CSE_ALifeMonsterZombie)
 
-    SERVER_ENTITY_DECLARE_BEGIN2(CSE_ALifeMonsterBase, CSE_ALifeMonsterAbstract, CSE_PHSkeleton) u16 m_spec_object_id;
+    SERVER_ENTITY_DECLARE_BEGIN2(CSE_ALifeMonsterBase, CSE_ALifeMonsterAbstract, CSE_PHSkeleton) ALife::_OBJECT_ID m_spec_object_id; // OP22 (id32)
 
 CSE_ALifeMonsterBase(LPCSTR caSection); // constructor for variable initialization
 virtual ~CSE_ALifeMonsterBase();

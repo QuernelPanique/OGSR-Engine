@@ -7,6 +7,7 @@
 ////////////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
+#include "op22_id32_io.h"
 #include "alife_object_registry.h"
 #include "../xr_3da/NET_Server_Trash/net_utils.h"
 #include "ai_debug.h"
@@ -134,7 +135,9 @@ CSE_ALifeDynamicObject* CALifeObjectRegistry::get_object(IReader& file_stream)
     file_stream.r(tNetPacket.B.data, tNetPacket.B.count);
     tNetPacket.r_begin(u_id);
     R_ASSERT2(M_UPDATE == u_id, "Invalid packet ID (!= M_UPDATE)");
+    g_op22_state_id32 = tpALifeDynamicObject->id32(); // OP22 (id32): UPDATE из старого сейва - ID 2 байта
     tpALifeDynamicObject->UPDATE_Read(tNetPacket);
+    g_op22_state_id32 = true;
 
     return (tpALifeDynamicObject);
 }
