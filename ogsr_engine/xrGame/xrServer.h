@@ -17,7 +17,7 @@ class CSE_Abstract;
 const u32 NET_Latency = 50; // time in (ms)
 
 // t-defs
-typedef xr_map<u16, CSE_Abstract*> xrS_entities;
+typedef xr_map<u32, CSE_Abstract*> xrS_entities; // OP22 (id32): ключ - ID объекта (был u16: большие ID сталкивались с младшей половиной)
 
 class xrClientData : public IClient
 {

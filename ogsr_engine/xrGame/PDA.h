@@ -39,7 +39,7 @@ public:
     bool IsOn() const { return !m_bTurnedOff; }
     bool IsOff() const { return m_bTurnedOff; }
 
-    xr_map<u16, CPda*> ActivePDAContacts();
+    xr_map<u32, CPda*> ActivePDAContacts(); // OP22 (id32)
     CPda* GetPdaFromOwner(CObject* owner);
     u32 ActiveContactsNum() const { return m_active_contacts.size(); }
 

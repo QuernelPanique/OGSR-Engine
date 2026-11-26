@@ -245,9 +245,9 @@ CInventoryOwner* CPda::GetOriginalOwner() const
     return pInvOwner;
 }
 
-xr_map<u16, CPda*> CPda::ActivePDAContacts()
+xr_map<u32, CPda*> CPda::ActivePDAContacts() // OP22 (id32)
 {
-    xr_map<u16, CPda*> res;
+    xr_map<u32, CPda*> res; // OP22 (id32)
 
     for (auto* Obj : m_active_contacts)
         if (CPda* p = GetPdaFromOwner(Obj))

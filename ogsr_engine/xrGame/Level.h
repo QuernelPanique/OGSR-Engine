@@ -275,14 +275,14 @@ public:
     float GetGameDayTimeSec();
     float GetEnvironmentGameDayTimeSec();
 
-    xr_map<u16, DBG_ScriptObject*>* getScriptRenderQueue() { return &m_debug_render_queue; }
+    xr_map<u32, DBG_ScriptObject*>* getScriptRenderQueue() { return &m_debug_render_queue; }
 
 protected:
     //	CFogOfWarMngr*		m_pFogOfWarMngr;
 protected:
     CMapManager* m_map_manager;
 
-    xr_map<u16, DBG_ScriptObject*> m_debug_render_queue;
+    xr_map<u32, DBG_ScriptObject*> m_debug_render_queue;
 
     void ScriptDebugRender();
 

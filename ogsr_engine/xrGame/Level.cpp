@@ -718,8 +718,8 @@ void CLevel::ScriptDebugRender()
 
     bool hasVisibleObj = false;
 
-    xr_map<u16, DBG_ScriptObject*>::iterator it = m_debug_render_queue.begin();
-    xr_map<u16, DBG_ScriptObject*>::iterator it_e = m_debug_render_queue.end();
+    xr_map<u32, DBG_ScriptObject*>::iterator it = m_debug_render_queue.begin();
+    xr_map<u32, DBG_ScriptObject*>::iterator it_e = m_debug_render_queue.end();
     for (; it != it_e; ++it)
     {
         DBG_ScriptObject* obj = (*it).second;
