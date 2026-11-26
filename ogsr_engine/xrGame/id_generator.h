@@ -115,6 +115,7 @@ public:
 // не выдаются никогда. Предел - OP22_ID_LIMIT (16,7 млн; таблица объектов клиента растёт по наибольшему ID).
 // op22_id_test_start: тест - свежие ID с этого номера (70000 - все новые объекты сразу выше старого предела).
 extern int g_op22_id_test_start; // консоль op22_id_test_start (xrServer.cpp), 0 - выключено
+extern bool g_op22_ids_wide; // op22_id32_io.h
 
 class CID_Generator32
 {
@@ -128,7 +129,8 @@ private:
     u32 m_next_fresh{};
     u32 m_used_count{};
 
-    static bool reserved(u32 id) { return id == 0xffff || id == 0xfffe; }
+    // младшая половина 0xfffe/0xffff не выдаётся: в 16-битных полях ОП (STATE, Lua) она означает «нет объекта»
+    static bool reserved(u32 id) { return (id & 0xffff) >= 0xfffe; }
 
     void mark(u32 id)
     {
@@ -137,10 +139,16 @@ private:
         R_ASSERT2(!m_used[id], "Requesting ID has already been used!");
         m_used[id] = 1;
         ++m_used_count;
+        if (id >= 0xfffe)
+            g_op22_ids_wide = true; // с этого момента client_data и реестры сейва пишутся с 4-байтными ID
     }
 
 public:
-    CID_Generator32() { m_next_fresh = u32(std::max(0, g_op22_id_test_start)); }
+    CID_Generator32()
+    {
+        m_next_fresh = u32(std::max(0, g_op22_id_test_start));
+        g_op22_ids_wide = false; // новая игра / загрузка: снова по фактическим ID
+    }
 
     u32 tfGetID(u32 id = invalid_id)
     {

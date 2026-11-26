@@ -858,13 +858,13 @@ void CSE_ALifeCreatureAbstract::STATE_Write(NET_Packet& tNetPacket)
     tNetPacket.w_float(fHealth);
 #ifdef DSH_MOD
     xr_vector<ALife::_OBJECT_ID> tmp;
-    op22_write_ids(tNetPacket, tmp); // OP22 (id32)
-    op22_write_ids(tNetPacket, tmp);
+    op22_w_ids16(tNetPacket, tmp); // OP22 (id32)
+    op22_w_ids16(tNetPacket, tmp);
 #else
-    op22_write_ids(tNetPacket, m_dynamic_out_restrictions); // OP22 (id32): раскладка save_data, ID 4 байта
-    op22_write_ids(tNetPacket, m_dynamic_in_restrictions);
+    op22_w_ids16(tNetPacket, m_dynamic_out_restrictions); // OP22 (id32): раскладка save_data, младшие 16 бит + хвост
+    op22_w_ids16(tNetPacket, m_dynamic_in_restrictions);
 #endif
-    op22_write_id(tNetPacket, m_killer_id); // OP22 (id32)
+    op22_w_id16(tNetPacket, m_killer_id); // OP22 (id32)
     tNetPacket.w(&m_game_death_time, sizeof(m_game_death_time));
 }
 
@@ -888,15 +888,15 @@ void CSE_ALifeCreatureAbstract::STATE_Read(NET_Packet& tNetPacket, u16 size)
     {
 #ifdef DSH_MOD
         xr_vector<ALife::_OBJECT_ID> tmp1, tmp2;
-        op22_read_ids(tNetPacket, tmp1, g_op22_state_id32); // OP22 (id32)
-        op22_read_ids(tNetPacket, tmp2, g_op22_state_id32);
+        op22_r_ids16(tNetPacket, tmp1); // OP22 (id32)
+        op22_r_ids16(tNetPacket, tmp2);
 #else
-        op22_read_ids(tNetPacket, m_dynamic_out_restrictions, g_op22_state_id32); // OP22 (id32)
-        op22_read_ids(tNetPacket, m_dynamic_in_restrictions, g_op22_state_id32);
+        op22_r_ids16(tNetPacket, m_dynamic_out_restrictions); // OP22 (id32)
+        op22_r_ids16(tNetPacket, m_dynamic_in_restrictions);
 #endif
     }
     if (m_wVersion > 94)
-        m_killer_id = op22_r_state_id(tNetPacket); // OP22 (id32)
+        op22_r_id16(tNetPacket, m_killer_id); // OP22 (id32)
 
     o_torso.pitch = o_Angle.x;
     o_torso.yaw = o_Angle.y;
@@ -1048,7 +1048,7 @@ void CSE_ALifeMonsterAbstract::STATE_Write(NET_Packet& tNetPacket)
     inherited1::STATE_Write(tNetPacket);
     tNetPacket.w_stringZ(m_out_space_restrictors);
     tNetPacket.w_stringZ(m_in_space_restrictors);
-    op22_write_id(tNetPacket, m_smart_terrain_id); // OP22 (id32)
+    op22_w_id16(tNetPacket, m_smart_terrain_id); // OP22 (id32)
     tNetPacket.w(&m_task_reached, sizeof(m_task_reached));
 }
 
@@ -1063,7 +1063,7 @@ void CSE_ALifeMonsterAbstract::STATE_Read(NET_Packet& tNetPacket, u16 size)
     }
 
     if (m_wVersion > 111)
-        m_smart_terrain_id = op22_r_state_id(tNetPacket); // OP22 (id32)
+        op22_r_id16(tNetPacket, m_smart_terrain_id); // OP22 (id32)
 
     if (m_wVersion > 113)
         tNetPacket.r(&m_task_reached, sizeof(m_task_reached));
@@ -1152,7 +1152,7 @@ void CSE_ALifeCreatureActor::STATE_Read(NET_Packet& tNetPacket, u16 size)
     }
     if (m_wVersion > 88)
     {
-        m_holderID = op22_r_state_id(tNetPacket); // OP22 (id32)
+        op22_r_id16(tNetPacket, m_holderID); // OP22 (id32)
     }
 };
 
@@ -1161,7 +1161,7 @@ void CSE_ALifeCreatureActor::STATE_Write(NET_Packet& tNetPacket)
     inherited1::STATE_Write(tNetPacket);
     inherited2::STATE_Write(tNetPacket);
     inherited3::STATE_Write(tNetPacket);
-    op22_write_id(tNetPacket, m_holderID); // OP22 (id32)
+    op22_w_id16(tNetPacket, m_holderID); // OP22 (id32)
 };
 
 void CSE_ALifeCreatureActor::load(NET_Packet& tNetPacket)
@@ -1402,7 +1402,7 @@ void CSE_ALifeMonsterBase::STATE_Read(NET_Packet& tNetPacket, u16 size)
         inherited2::STATE_Read(tNetPacket, size);
 
     if (m_wVersion >= 109)
-        m_spec_object_id = op22_r_state_id(tNetPacket); // OP22 (id32)
+        op22_r_id16(tNetPacket, m_spec_object_id); // OP22 (id32)
 }
 
 void CSE_ALifeMonsterBase::STATE_Write(NET_Packet& tNetPacket)
@@ -1410,7 +1410,7 @@ void CSE_ALifeMonsterBase::STATE_Write(NET_Packet& tNetPacket)
     inherited1::STATE_Write(tNetPacket);
     inherited2::STATE_Write(tNetPacket);
 
-    op22_write_id(tNetPacket, m_spec_object_id); // OP22 (id32)
+    op22_w_id16(tNetPacket, m_spec_object_id); // OP22 (id32)
 }
 
 void CSE_ALifeMonsterBase::UPDATE_Read(NET_Packet& tNetPacket)
@@ -1484,7 +1484,7 @@ void CSE_ALifeHumanAbstract::STATE_Read(NET_Packet& tNetPacket, u16 size)
     inherited2::STATE_Read(tNetPacket, size);
     brain().on_state_read(tNetPacket);
     if ((m_wVersion >= 110) && (m_wVersion < 112))
-        m_smart_terrain_id = op22_r_state_id(tNetPacket); // OP22 (id32)
+        op22_r_id16(tNetPacket, m_smart_terrain_id); // OP22 (id32)
 }
 
 void CSE_ALifeHumanAbstract::UPDATE_Write(NET_Packet& tNetPacket)

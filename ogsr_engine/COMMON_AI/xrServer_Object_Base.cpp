@@ -11,7 +11,9 @@
 #include "xrMessages.h"
 #include "op22_id32_io.h"
 
-bool g_op22_state_id32 = true; // OP22 (id32)
+// OP22 (id32): см. op22_id32_io.h
+xr_vector<u32>* g_op22_id_wcollect = nullptr;
+xr_vector<u32*>* g_op22_id_rcollect = nullptr;
 #include "game_base_space.h"
 #include "script_value_container_impl.h"
 #include "clsid_game.h"
@@ -140,13 +142,13 @@ void CSE_Abstract::Spawn_Write(NET_Packet& tNetPacket, BOOL bLocal)
     tNetPacket.w_vec3(o_Position);
     tNetPacket.w_vec3(o_Angle);
     tNetPacket.w_u16(RespawnTime);
-    tNetPacket.w_u16(u16(ID & 0xffff)); // OP22 (id32): младшие 16 бит на старом месте, старшие - после версий
+    // OP22 (id32): ID - младшие 16 бит на старых местах (формат ОП), полные значения - хвостом после STATE (op22_id32_io.h)
+    tNetPacket.w_u16(u16(ID & 0xffff));
     tNetPacket.w_u16(u16(ID_Parent & 0xffff));
     tNetPacket.w_u16(u16(ID_Phantom & 0xffff));
 
     s_flags.set(M_SPAWN_VERSION, TRUE);
-    s_flags.set(M_SPAWN_ID32, TRUE);
-    s_flags.set(M_SPAWN_CD_ID32, m_cd_id32 || client_data.empty()); // OP22 (id32)
+    s_flags.set(M_SPAWN_CD_ID32, m_cd_id32 && !client_data.empty()); // OP22 (id32): ID в client_data - 4 байта
     if (bLocal)
         tNetPacket.w_u16(u16(s_flags.flags | M_SPAWN_OBJECT_LOCAL));
     else
@@ -155,10 +157,6 @@ void CSE_Abstract::Spawn_Write(NET_Packet& tNetPacket, BOOL bLocal)
     tNetPacket.w_u16(SPAWN_VERSION);
 
     tNetPacket.w_u16(script_server_object_version());
-
-    tNetPacket.w_u16(u16(ID >> 16)); // OP22 (id32)
-    tNetPacket.w_u16(u16(ID_Parent >> 16));
-    tNetPacket.w_u16(u16(ID_Phantom >> 16));
 
     // client object custom data serialization SAVE
     u16 client_data_size = (u16)client_data.size(); //не может быть больше 256 байт
@@ -180,10 +178,23 @@ void CSE_Abstract::Spawn_Write(NET_Packet& tNetPacket, BOOL bLocal)
     // write specific data
     u32 position = tNetPacket.w_tell();
     tNetPacket.w_u16(0);
+    xr_vector<u32> op22_ids{ID, ID_Parent, ID_Phantom}; // OP22 (id32): полные ID заголовка и STATE
+    xr_vector<u32>* op22_prev = g_op22_id_wcollect;
+    g_op22_id_wcollect = &op22_ids;
     STATE_Write(tNetPacket);
+    g_op22_id_wcollect = op22_prev;
     u16 size = u16(tNetPacket.w_tell() - position);
     R_ASSERT3((m_tClassID == CLSID_SPECTATOR) || (size > sizeof(size)), "object isn't successfully saved, get your backup :(", name_replace());
     tNetPacket.w_seek(position, &size, sizeof(u16));
+
+    // OP22 (id32): хвост с полными ID - только если есть ID > 0xffff (иначе пакет побайтно как в ОП)
+    if (std::any_of(op22_ids.begin(), op22_ids.end(), [](u32 id) { return id > 0xffff; }))
+    {
+        tNetPacket.w_u32(OP22_ID32_TAIL_MAGIC);
+        tNetPacket.w_u32(u32(op22_ids.size()));
+        for (const u32 id : op22_ids)
+            tNetPacket.w_u32(id);
+    }
 }
 
 BOOL CSE_Abstract::Spawn_Read(NET_Packet& tNetPacket)
@@ -215,13 +226,6 @@ BOOL CSE_Abstract::Spawn_Read(NET_Packet& tNetPacket)
 
     m_script_version = tNetPacket.r_u16();
 
-    if (id32()) // OP22 (id32): старшие 16 бит
-    {
-        ID |= u32(tNetPacket.r_u16()) << 16;
-        ID_Parent |= u32(tNetPacket.r_u16()) << 16;
-        ID_Phantom |= u32(tNetPacket.r_u16()) << 16;
-    }
-
     // read specific data
 
     // client object custom data serialization LOAD
@@ -238,12 +242,42 @@ BOOL CSE_Abstract::Spawn_Read(NET_Packet& tNetPacket)
 
     tNetPacket.r(&m_tSpawnID, sizeof(m_tSpawnID));
 
+    const u32 op22_block = tNetPacket.r_tell(); // OP22 (id32): начало блока STATE (с полем размера)
     u16 size;
     tNetPacket.r_u16(size); // size
     R_ASSERT((size > sizeof(size)), "cannot read object, which is not successfully saved :(", name_replace());
-    g_op22_state_id32 = id32(); // OP22 (id32): формат ID в STATE этого объекта
+
+    // OP22 (id32): хвост с полными ID лежит после блока STATE; Lua-часть STATE (se_zones, smart_terrain, ...) читает
+    // «до конца пакета» - на время чтения конец пакета ставится на конец блока
+    const u32 op22_end = op22_block + size;
+    const u32 op22_count = tNetPacket.B.count;
+    const bool op22_has_tail = op22_count >= op22_end + 8 && *(u32*)(&tNetPacket.B.data[op22_end]) == OP22_ID32_TAIL_MAGIC;
+    xr_vector<u32*> op22_fields{&ID, &ID_Parent, &ID_Phantom};
+    xr_vector<u32*>* op22_prev = g_op22_id_rcollect;
+    g_op22_id_rcollect = &op22_fields;
+    if (op22_has_tail)
+        tNetPacket.B.count = op22_end;
     STATE_Read(tNetPacket, size);
-    g_op22_state_id32 = true; // UPDATE_Read из сейва ставит свой флаг сам (CALifeObjectRegistry::get_object)
+    tNetPacket.B.count = op22_count;
+    g_op22_id_rcollect = op22_prev;
+    if (op22_has_tail)
+    {
+        tNetPacket.r_seek(op22_end + 4);
+        const u32 n = tNetPacket.r_u32();
+        if (n == op22_fields.size())
+        {
+            for (u32 i = 0; i < n; ++i)
+            {
+                const u32 full = tNetPacket.r_u32();
+                if ((full & 0xffff) == (*op22_fields[i] & 0xffff))
+                    *op22_fields[i] = full;
+                else
+                    Msg("! [OP22 id32] %s: id tail mismatch at %u (%u vs %u)", name_replace(), i, full, *op22_fields[i]);
+            }
+        }
+        else
+            Msg("! [OP22 id32] %s: id tail count %u, fields %u - tail ignored", name_replace(), n, u32(op22_fields.size()));
+    }
 
     return TRUE;
 }
@@ -268,7 +302,7 @@ void CSE_Abstract::load(NET_Packet& tNetPacket)
 #endif // DEBUG
         client_data.clear();
     }
-    m_cd_id32 = true; // OP22 (id32): client_data от клиента нового движка
+    m_cd_id32 = g_op22_ids_wide; // OP22 (id32): клиент писал ID в client_data 4 байтами, только если в игре есть ID >= 0xfffe
 }
 
 CSE_Abstract* CSE_Abstract::base() { return (this); }

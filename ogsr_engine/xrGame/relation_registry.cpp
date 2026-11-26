@@ -27,15 +27,12 @@ void RELATION_DATA::clear()
 
 void RELATION_DATA::load(IReader& stream)
 {
-    if (g_op22_alife_id32)
-        load_data(personal, stream);
-    else // OP22 (id32): старый сейв - ключ личных отношений 2 байта
-    {
+    { // OP22 (id32): ключ личных отношений 2 или 4 байта по формату сейва
         personal.clear();
         const u32 count = stream.r_u32();
         for (u32 i = 0; i < count; ++i)
         {
-            const u32 key = stream.r_u16();
+            const u32 key = op22_r_reg_id(stream);
             SRelation rel;
             load_data(rel, stream);
             personal.insert(std::make_pair(key, rel));
@@ -46,7 +43,13 @@ void RELATION_DATA::load(IReader& stream)
 
 void RELATION_DATA::save(IWriter& stream)
 {
-    save_data(personal, stream);
+    // OP22 (id32): раскладка save_data(map): u32 count, {ключ, SRelation}; ключ 2 или 4 байта по формату сейва
+    stream.w_u32(u32(personal.size()));
+    for (auto& it : personal)
+    {
+        op22_w_reg_id(stream, it.first);
+        save_data(it.second, stream);
+    }
     save_data(communities, stream);
 }
 

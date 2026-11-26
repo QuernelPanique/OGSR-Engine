@@ -93,7 +93,7 @@ void CSE_PHSkeleton::STATE_Read(NET_Packet& tNetPacket, u16 size)
     R_ASSERT(visual);
     tNetPacket.r_stringZ(visual->startup_animation);
     tNetPacket.r_u8(_flags.flags);
-    source_id = op22_r_state_id(tNetPacket); // OP22 (id32)
+    op22_r_id16(tNetPacket, source_id); // OP22 (id32)
     if (_flags.test(flSavedData))
     {
         data_load(tNetPacket);
@@ -106,7 +106,7 @@ void CSE_PHSkeleton::STATE_Write(NET_Packet& tNetPacket)
     R_ASSERT(visual);
     tNetPacket.w_stringZ(visual->startup_animation);
     tNetPacket.w_u8(_flags.flags);
-    op22_write_id(tNetPacket, source_id); // OP22 (id32)
+    op22_w_id16(tNetPacket, source_id); // OP22 (id32)
     ////////////////////////saving///////////////////////////////////////
     if (_flags.test(flSavedData))
     {

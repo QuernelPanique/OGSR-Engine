@@ -17,7 +17,9 @@ CALifeSimulatorHeader::~CALifeSimulatorHeader() {}
 void CALifeSimulatorHeader::save(IWriter& memory_stream)
 {
     memory_stream.open_chunk(ALIFE_CHUNK_DATA);
-    memory_stream.w_u32(ALIFE_VERSION);
+    // OP22 (id32): 11 и 4-байтные ID в реестрах - только если в игре есть ID >= 0xfffe; иначе сейв как раньше (10)
+    g_op22_alife_id32 = g_op22_ids_wide;
+    memory_stream.w_u32(g_op22_alife_id32 ? ALIFE_VERSION : 10);
     memory_stream.close_chunk();
 }
 

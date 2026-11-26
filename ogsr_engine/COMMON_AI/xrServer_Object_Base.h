@@ -71,11 +71,9 @@ u16 RespawnTime;
 ALife::_OBJECT_ID ID; // internal ID; OP22 (id32): u32
 ALife::_OBJECT_ID ID_Parent; // internal ParentID, 0xffff means no parent
 ALife::_OBJECT_ID ID_Phantom; // internal PhantomID, 0xffff means no phantom
-// OP22 (id32): пакет прочитан в формате с 32-битными ID (флаг M_SPAWN_ID32); запись - всегда 32 бита
-// OP22 (id32): client_data в формате с 32-битными ID (бит M_SPAWN_CD_ID32 = 1<<10); ставится, когда client_data
-// пришёл от клиента нового движка (load) или прочитан с этим битом
+// OP22 (id32): client_data записан с 4-байтными ID (бит M_SPAWN_CD_ID32 = 1<<10): ставит load() от клиента, когда
+// в игре есть ID >= 0xfffe, или Spawn_Read по биту
 bool m_cd_id32{};
-IC bool id32() const { return !!(s_flags.flags & (1 << 9)); } // M_SPAWN_ID32 (xrMessages.h)
 xrClientData* owner;
 
 // spawn data

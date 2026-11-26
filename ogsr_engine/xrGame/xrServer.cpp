@@ -14,6 +14,7 @@
 #include "..\xr_3da\XR_IOConsole.h"
 #include "ui/UIInventoryUtilities.h"
 
+bool g_op22_ids_wide = false; // OP22 (id32): в игре есть ID >= 0xfffe (op22_id32_io.h)
 int g_op22_id_test_start = 0; // OP22 (id32): тест - свежие ID объектов с этого номера (70000 - выше старого предела 65534)
 
 xrClientData::xrClientData() : IClient(Device.GetTimerGlobal())

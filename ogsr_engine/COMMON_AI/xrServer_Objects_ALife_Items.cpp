@@ -744,7 +744,7 @@ void CSE_ALifeItemPDA::STATE_Read(NET_Packet& tNetPacket, u16 size)
 {
     inherited::STATE_Read(tNetPacket, size);
     if (m_wVersion > 58)
-        m_original_owner = op22_r_state_id(tNetPacket); // OP22 (id32)
+        op22_r_id16(tNetPacket, m_original_owner); // OP22 (id32)
 
     if (m_wVersion > 89)
 
@@ -766,7 +766,7 @@ void CSE_ALifeItemPDA::STATE_Read(NET_Packet& tNetPacket, u16 size)
 void CSE_ALifeItemPDA::STATE_Write(NET_Packet& tNetPacket)
 {
     inherited::STATE_Write(tNetPacket);
-    op22_write_id(tNetPacket, m_original_owner); // OP22 (id32)
+    op22_w_id16(tNetPacket, m_original_owner); // OP22 (id32)
 #ifdef XRGAME_EXPORTS
     tNetPacket.w_stringZ(m_specific_character);
     tNetPacket.w_stringZ(m_info_portion);

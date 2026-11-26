@@ -20,8 +20,8 @@ IC CSALifeAbstractRegistry::CALifeAbstractRegistry() {}
 TEMPLATE_SPECIALIZATION
 CSALifeAbstractRegistry::~CALifeAbstractRegistry() { delete_data(m_objects); }
 
-// OP22 (id32): реестры по ID объекта (ALife::_OBJECT_ID = u32): ключ пишется 4 байта; старый сейв (версия 10) - ключ
-// 2 байта, затем поправка значений (op22_fix_old_ids). Раскладка как у общего save_data(map): u32 count, {ключ, значение}.
+// OP22 (id32): реестры по ID объекта (ALife::_OBJECT_ID = u32): ключ 2 байта (сейв 10) или 4 (сейв 11, есть ID >= 0xfffe);
+// после чтения сейва 10 - поправка значений (op22_fix_old_ids). Раскладка как у общего save_data(map): u32 count, {ключ, значение}.
 TEMPLATE_SPECIALIZATION
 void CSALifeAbstractRegistry::save(IWriter& memory_stream)
 {
@@ -30,7 +30,7 @@ void CSALifeAbstractRegistry::save(IWriter& memory_stream)
         memory_stream.w_u32((u32)m_objects.size());
         for (auto& it : m_objects)
         {
-            memory_stream.w_u32(it.first);
+            op22_w_reg_id(memory_stream, it.first); // 2 или 4 байта - по формату сейва
             save_data(it.second, memory_stream);
         }
     }

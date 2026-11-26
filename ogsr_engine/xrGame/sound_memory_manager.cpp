@@ -394,7 +394,7 @@ void CSoundMemoryManager::save(NET_Packet& packet) const
     for (; I != E; ++I)
     {
         VERIFY((*I).m_object);
-        packet.w_id((*I).m_object->ID()); // OP22 (id32)
+        op22_w_id_fmt(packet, (*I).m_object->ID(), g_op22_ids_wide); // OP22 (id32): 4 байта - только при ID >= 0xfffe в игре
         // object params
         packet.w_u32((*I).m_object_params.m_level_vertex_id);
         packet.w_vec3((*I).m_object_params.m_position);

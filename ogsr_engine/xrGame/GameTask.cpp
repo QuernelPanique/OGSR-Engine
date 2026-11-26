@@ -499,7 +499,7 @@ void SGameTaskObjective::save(IWriter& stream)
 
     save_data(description, stream);
     save_data(map_location, stream);
-    stream.w_u32(object_id); // OP22 (id32)
+    op22_w_reg_id(stream, object_id); // OP22 (id32): 2 или 4 байта по формату сейва
     save_data(task_state, stream);
     save_data(def_location_enabled, stream);
     save_data(map_hint, stream);

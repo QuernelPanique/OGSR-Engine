@@ -7,6 +7,7 @@
 ////////////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
+#include "op22_id32.h"
 
 #include <zstd.h>
 
@@ -96,7 +97,7 @@ void CALifeStorageManager::save(LPCSTR save_name, bool update_name)
     FS.update_path(temp, "$game_saves$", m_save_name);
     IWriter* writer = FS.w_open(temp);
     writer->w_u32(u32(0));
-    writer->w_u32(ALIFE_VERSION);
+    writer->w_u32(g_op22_alife_id32 ? ALIFE_VERSION : 10); // OP22 (id32): как в заголовке ALife
 
     writer->w_u32(source_count);
     writer->w(dest_data, dest_count);

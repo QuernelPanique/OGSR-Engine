@@ -37,7 +37,7 @@ struct FindLocation
 
 void SLocationKey::save(IWriter& stream)
 {
-    stream.w_u32(object_id); // OP22 (id32)
+    op22_w_reg_id(stream, object_id); // OP22 (id32): 2 или 4 байта по формату сейва
 
     stream.w_stringZ(spot_type);
     stream.w_u8(location->IsUserDefined() ? 1 : 0);
@@ -87,7 +87,7 @@ void CMapLocationRegistry::save(IWriter& stream)
             if ((*i).location->Serializable())
                 ++size;
         }
-        stream.w(&(*I).first, sizeof((*I).first));
+        op22_w_reg_id(stream, (*I).first); // OP22 (id32): ключ реестра 2 или 4 байта
         stream.w_u32(size);
         i = (*I).second.begin();
         for (; i != e; ++i)
