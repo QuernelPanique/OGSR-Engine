@@ -438,7 +438,7 @@ public:
     Fvector memory_position(const CScriptGameObject& lua_game_object);
     CScriptGameObject* best_weapon();
     void explode(u32 level_time);
-    void explode_initiator(u16);
+    void explode_initiator(u32); // OP22 (id32)
     bool is_exploded();
     bool is_ready_to_explode();
     CScriptGameObject* GetEnemy() const;
@@ -526,7 +526,7 @@ public:
     const CCoverPoint* angle_cover(const Fvector&, float, const Fvector&, float, float, u32);
     const CCoverPoint* angle_cover(const Fvector&, float, const Fvector&, float, float, u32, const luabind::functor<bool>&);
     CInifile* spawn_ini() const;
-    bool active_zone_contact(u16 id);
+    bool active_zone_contact(u32 id);
 
     ///
     void add_restrictions(LPCSTR out, LPCSTR in);

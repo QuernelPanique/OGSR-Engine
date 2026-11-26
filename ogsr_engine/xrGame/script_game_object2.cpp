@@ -59,7 +59,7 @@ void CScriptGameObject::explode(u32 level_time)
     }
 }
 
-bool CScriptGameObject::active_zone_contact(u16 id)
+bool CScriptGameObject::active_zone_contact(u32 id)
 {
     CScriptZone* script_zone = smart_cast<CScriptZone*>(&object());
     if (!script_zone)
@@ -522,7 +522,7 @@ u32 CScriptGameObject::location_on_path(float distance, Fvector* location)
     return (monster->movement().detail().location_on_path(monster, distance, *location));
 }
 
-void CScriptGameObject::explode_initiator(u16 who_id)
+void CScriptGameObject::explode_initiator(u32 who_id) // OP22 (id32)
 {
     ASSERT_FMT(!object().H_Parent(), "[%s]: cannot explode %s with parent", __FUNCTION__, cName().c_str());
     CExplosive* explosive = smart_cast<CExplosive*>(&object());

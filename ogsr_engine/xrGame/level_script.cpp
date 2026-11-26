@@ -308,14 +308,14 @@ u32 vertex_in_direction(u32 level_vertex_id, Fvector direction, float max_distan
 
 Fvector vertex_position(u32 level_vertex_id) { return (ai().level_graph().vertex_position(level_vertex_id)); }
 
-void map_add_object_spot(u16 id, LPCSTR spot_type, LPCSTR text)
+void map_add_object_spot(u32 id, LPCSTR spot_type, LPCSTR text)
 {
     CMapLocation* ml = Level().MapManager().AddMapLocation(spot_type, id);
     if (text && xr_strlen(text))
         ml->SetHint(text);
 }
 
-void map_add_object_spot_ser(u16 id, LPCSTR spot_type, LPCSTR text)
+void map_add_object_spot_ser(u32 id, LPCSTR spot_type, LPCSTR text)
 {
     CMapLocation* ml = Level().MapManager().AddMapLocation(spot_type, id);
     if (text && xr_strlen(text))
@@ -337,7 +337,7 @@ u16 map_add_user_spot(u8 level_id, Fvector position, LPCSTR spot_type, LPCSTR te
     return ml->ObjectID();
 }
 
-void map_change_spot_hint(u16 id, LPCSTR spot_type, LPCSTR text)
+void map_change_spot_hint(u32 id, LPCSTR spot_type, LPCSTR text)
 {
     CMapLocation* ml = Level().MapManager().GetMapLocation(spot_type, id);
     if (!ml)
@@ -345,7 +345,7 @@ void map_change_spot_hint(u16 id, LPCSTR spot_type, LPCSTR text)
     ml->SetHint(text);
 }
 
-void map_change_spot_ser(u16 id, LPCSTR spot_type, BOOL v)
+void map_change_spot_ser(u32 id, LPCSTR spot_type, BOOL v)
 {
     CMapLocation* ml = Level().MapManager().GetMapLocation(spot_type, id);
     if (!ml)
@@ -358,9 +358,9 @@ void prefetch_many_sounds( LPCSTR prefix ) {
 }
 
 
-void map_remove_object_spot(u16 id, LPCSTR spot_type) { Level().MapManager().RemoveMapLocation(spot_type, id); }
+void map_remove_object_spot(u32 id, LPCSTR spot_type) { Level().MapManager().RemoveMapLocation(spot_type, id); }
 
-u16 map_has_object_spot(u16 id, LPCSTR spot_type) { return Level().MapManager().HasMapLocation(spot_type, id); }
+u16 map_has_object_spot(u32 id, LPCSTR spot_type) { return Level().MapManager().HasMapLocation(spot_type, id); }
 
 bool patrol_path_exists(LPCSTR patrol_path) { return (!!ai().patrol_paths().path(patrol_path, true)); }
 
@@ -697,8 +697,8 @@ int get_actor_counts(LPCSTR sect) { return Actor()->StatisticMgr().GetSectionCou
 
 void remove_actor_points(LPCSTR sect, LPCSTR detail_key) { Actor()->StatisticMgr().RemovePoints(sect, detail_key); }
 extern int get_actor_ranking();
-extern void add_human_to_top_list(u16 id);
-extern void remove_human_from_top_list(u16 id);
+extern void add_human_to_top_list(u32 id);
+extern void remove_human_from_top_list(u32 id);
 
 #include "ActorEffector.h"
 void add_complex_effector(LPCSTR section, int id) { AddEffector(Actor(), id, section); }
@@ -1017,7 +1017,7 @@ float is_ray_intersect_sphere(Fvector pos, Fvector dir, Fvector C, float R)
     return sphere.intersect_ray(pos, dir, dist) == Fsphere::rpNone ? -1.0f : dist;
 }
 
-DBG_ScriptObject* get_object(u16 id)
+DBG_ScriptObject* get_object(u32 id)
 {
     xr_map<u16, DBG_ScriptObject*>::iterator it = Level().getScriptRenderQueue()->find(id);
     if (it == Level().getScriptRenderQueue()->end())
@@ -1026,7 +1026,7 @@ DBG_ScriptObject* get_object(u16 id)
     return it->second;
 }
 
-void remove_object(u16 id)
+void remove_object(u32 id)
 {
     DBG_ScriptObject* dbg_obj = get_object(id);
     if (!dbg_obj)
@@ -1036,7 +1036,7 @@ void remove_object(u16 id)
     Level().getScriptRenderQueue()->erase(id);
 }
 
-DBG_ScriptObject* add_object(u16 id, DebugRenderType type)
+DBG_ScriptObject* add_object(u32 id, DebugRenderType type)
 {
     remove_object(id);
     DBG_ScriptObject* dbg_obj{};

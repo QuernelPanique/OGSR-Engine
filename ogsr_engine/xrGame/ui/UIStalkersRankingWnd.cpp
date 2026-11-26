@@ -230,14 +230,14 @@ void CUIStalkersRankingWnd::Reset()
     g_all_statistic_humans.clear();
 }
 
-void remove_human_from_top_list(u16 id)
+void remove_human_from_top_list(u32 id) // OP22 (id32)
 {
     TOP_LIST::iterator it = std::find(g_all_statistic_humans.begin(), g_all_statistic_humans.end(), id);
     if (it != g_all_statistic_humans.end())
         g_all_statistic_humans.erase(it);
 }
 
-void add_human_to_top_list(u16 id)
+void add_human_to_top_list(u32 id) // OP22 (id32)
 {
     CSE_ALifeTraderAbstract* t = ch_info_get_from_id(id);
     if (t)
