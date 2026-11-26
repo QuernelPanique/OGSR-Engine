@@ -20,7 +20,7 @@ private:
     CHARACTER_GOODWILL m_iGoodwill;
 };
 
-DEFINE_MAP(u16, SRelation, PERSONAL_RELATION_MAP, PERSONAL_RELATION_MAP_IT);
+DEFINE_MAP(u32, SRelation, PERSONAL_RELATION_MAP, PERSONAL_RELATION_MAP_IT); // OP22 (id32): ключ - ID объекта
 DEFINE_MAP(CHARACTER_COMMUNITY_INDEX, SRelation, COMMUNITY_RELATION_MAP, COMMUNITY_RELATION_MAP_IT);
 
 //структура, существует для каждого персонажа в игре
@@ -33,7 +33,7 @@ struct RELATION_DATA : public IPureSerializeObject<IReader, IWriter>
 
     //личные отношения
     PERSONAL_RELATION_MAP personal;
-    xr_vector<u16> reverse_personal;
+    xr_vector<u32> reverse_personal; // OP22 (id32)
     //отношения с группировками
     COMMUNITY_RELATION_MAP communities;
 };

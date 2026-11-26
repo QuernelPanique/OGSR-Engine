@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "op22_id32.h"
 #include "GameTask.h"
 #include "ui/xrUIXmlParser.h"
 #include "encyclopedia_article.h"
@@ -439,7 +440,7 @@ void SGameTaskObjective::SetMapHint_script(LPCSTR _str) { map_hint = _str; }
 
 void SGameTaskObjective::SetMapLocation_script(LPCSTR _str) { map_location = _str; }
 
-void SGameTaskObjective::SetObjectID_script(u16 id) { object_id = id; }
+void SGameTaskObjective::SetObjectID_script(u32 id) // OP22 (id32) { object_id = id; }
 
 void SGameTaskObjective::SetIconName_script(LPCSTR _str)
 {
@@ -498,7 +499,7 @@ void SGameTaskObjective::save(IWriter& stream)
 
     save_data(description, stream);
     save_data(map_location, stream);
-    save_data(object_id, stream);
+    stream.w_u32(object_id); // OP22 (id32)
     save_data(task_state, stream);
     save_data(def_location_enabled, stream);
     save_data(map_hint, stream);
@@ -526,7 +527,7 @@ void SGameTaskObjective::load(IReader& stream)
 
     load_data(description, stream);
     load_data(map_location, stream);
-    load_data(object_id, stream);
+    object_id = op22_r_reg_id(stream); // OP22 (id32): старый сейв - 2 байта
     load_data(task_state, stream);
     load_data(def_location_enabled, stream);
     load_data(map_hint, stream);

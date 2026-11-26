@@ -26,7 +26,7 @@
 #include "visual_memory_manager.h"
 #include "location_manager.h"
 
-CMapLocation::CMapLocation(LPCSTR type, u16 object_id, bool is_user_loc)
+CMapLocation::CMapLocation(LPCSTR type, u32 object_id, bool is_user_loc) // OP22 (id32)
 {
     m_flags.zero();
     m_level_spot = NULL;
@@ -634,7 +634,7 @@ CMapSpot* CMapLocation::GetSpotBorder(CMapSpot* sp)
 
 Fvector2 CMapLocation::SpotSize() { return m_level_spot->GetWndSize(); }
 
-CRelationMapLocation::CRelationMapLocation(const shared_str& type, u16 object_id, u16 pInvOwnerActorID, u16 pInvOwnerEntityID) : CMapLocation(*type, object_id)
+CRelationMapLocation::CRelationMapLocation(const shared_str& type, u32 object_id, u32 pInvOwnerActorID, u32 pInvOwnerEntityID) // OP22 (id32) : CMapLocation(*type, object_id)
 {
     m_curr_spot_name = type;
     m_pInvOwnerEntityID = pInvOwnerEntityID;

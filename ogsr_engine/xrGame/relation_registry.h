@@ -43,18 +43,18 @@ public:
 
     //личное отношение (благосклонность) одного персонажа к другому -
     //величина от -100< (крайне враждебное) до >100 (очень дрюжелюбное)
-    CHARACTER_GOODWILL GetGoodwill(u16 from, u16 to) const;
-    void SetGoodwill(u16 from, u16 to, CHARACTER_GOODWILL goodwill);
-    void ChangeGoodwill(u16 from, u16 to, CHARACTER_GOODWILL delta_goodwill);
-    void ClearGoodwill(u16 from, u16 to);
+    CHARACTER_GOODWILL GetGoodwill(u32 from, u32 to) const;
+    void SetGoodwill(u32 from, u32 to, CHARACTER_GOODWILL goodwill);
+    void ChangeGoodwill(u32 from, u32 to, CHARACTER_GOODWILL delta_goodwill);
+    void ClearGoodwill(u32 from, u32 to);
 
     //отношения группировки к персонажу (именно так, а не наоборот)
     //т.е. персонаж сам помнит, как к нему какая группировка отностися
-    CHARACTER_GOODWILL GetCommunityGoodwill(CHARACTER_COMMUNITY_INDEX from_community, u16 to_character) const;
-    void SetCommunityGoodwill(CHARACTER_COMMUNITY_INDEX from_community, u16 to_character, CHARACTER_GOODWILL goodwill);
-    void ChangeCommunityGoodwill(CHARACTER_COMMUNITY_INDEX from_community, u16 to_character, CHARACTER_GOODWILL delta_goodwill);
+    CHARACTER_GOODWILL GetCommunityGoodwill(CHARACTER_COMMUNITY_INDEX from_community, u32 to_character) const;
+    void SetCommunityGoodwill(CHARACTER_COMMUNITY_INDEX from_community, u32 to_character, CHARACTER_GOODWILL goodwill);
+    void ChangeCommunityGoodwill(CHARACTER_COMMUNITY_INDEX from_community, u32 to_character, CHARACTER_GOODWILL delta_goodwill);
 
-    void ClearRelations(u16 person_id);
+    void ClearRelations(u32 person_id);
 
 private:
     CHARACTER_GOODWILL GetCommunityRelation(CHARACTER_COMMUNITY_INDEX, CHARACTER_COMMUNITY_INDEX) const;
@@ -80,8 +80,8 @@ public:
     struct FIGHT_DATA
     {
         FIGHT_DATA();
-        u16 attacker;
-        u16 defender;
+        u32 attacker;
+        u32 defender;
         float total_hit;
         u32 time;
         u32 time_old;
@@ -103,7 +103,7 @@ public:
         };
     };
     //зарегистрировать драку (реакция на Hit в EntityAlive)
-    void FightRegister(u16 attacker, u16 defender, ALife::ERelationType defender_to_attacker, float hit_amount);
+    void FightRegister(u32 attacker, u32 defender, ALife::ERelationType defender_to_attacker, float hit_amount);
     void UpdateFightRegister();
 
 private:
@@ -111,7 +111,7 @@ private:
     static FIGHT_VECTOR* m_fight_registry;
     static FIGHT_VECTOR& fight_registry();
 
-    FIGHT_DATA* FindFight(u16 object_id, bool by_attacker /* = true*/, u16);
+    FIGHT_DATA* FindFight(u32 object_id, bool by_attacker /* = true*/, u32);
     static RELATION_MAP_SPOTS* m_spot_names;
 
 public:
@@ -122,7 +122,7 @@ public:
 
 private:
     static CRelationRegistryWrapper* m_relation_registry;
-    static void clear_reverse_personal(u16, u16);
+    static void clear_reverse_personal(u32, u32);
 };
 
 #include "relation_registry_inline.h"

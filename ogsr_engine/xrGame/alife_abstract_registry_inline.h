@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "op22_id32.h"
+
 #define TEMPLATE_SPECIALIZATION template <typename _index_type, typename _data_type>
 #define CSALifeAbstractRegistry CALifeAbstractRegistry<_index_type, _data_type>
 
@@ -17,11 +19,44 @@ IC CSALifeAbstractRegistry::CALifeAbstractRegistry() {}
 TEMPLATE_SPECIALIZATION
 CSALifeAbstractRegistry::~CALifeAbstractRegistry() { delete_data(m_objects); }
 
+// OP22 (id32): реестры по ID объекта (ALife::_OBJECT_ID = u32): ключ пишется 4 байта; старый сейв (версия 10) - ключ
+// 2 байта, затем поправка значений (op22_fix_old_ids). Раскладка как у общего save_data(map): u32 count, {ключ, значение}.
 TEMPLATE_SPECIALIZATION
-void CSALifeAbstractRegistry::save(IWriter& memory_stream) { save_data(m_objects, memory_stream); }
+void CSALifeAbstractRegistry::save(IWriter& memory_stream)
+{
+    if constexpr (std::is_same_v<_index_type, ALife::_OBJECT_ID>)
+    {
+        memory_stream.w_u32((u32)m_objects.size());
+        for (auto& it : m_objects)
+        {
+            memory_stream.w_u32(it.first);
+            save_data(it.second, memory_stream);
+        }
+    }
+    else
+        save_data(m_objects, memory_stream);
+}
 
 TEMPLATE_SPECIALIZATION
-void CSALifeAbstractRegistry ::load(IReader& file_stream) { load_data(m_objects, file_stream); }
+void CSALifeAbstractRegistry ::load(IReader& file_stream)
+{
+    if constexpr (std::is_same_v<_index_type, ALife::_OBJECT_ID>)
+    {
+        m_objects.clear();
+        const u32 count = file_stream.r_u32();
+        for (u32 i = 0; i < count; ++i)
+        {
+            const ALife::_OBJECT_ID key = op22_r_reg_id(file_stream);
+            _data_type value{};
+            load_data(value, file_stream);
+            if (!g_op22_alife_id32)
+                op22_fix_old_ids(value);
+            m_objects.insert(std::make_pair(key, value));
+        }
+    }
+    else
+        load_data(m_objects, file_stream);
+}
 
 TEMPLATE_SPECIALIZATION
 IC const typename CSALifeAbstractRegistry::OBJECT_REGISTRY& CSALifeAbstractRegistry::objects() const { return (m_objects); }

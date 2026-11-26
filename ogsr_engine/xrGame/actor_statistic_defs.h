@@ -30,4 +30,4 @@ struct SStatSectionData : public IPureSerializeObject<IReader, IWriter>
 };
 
 typedef xr_vector<SStatSectionData> vStatSectionData;
-typedef CALifeAbstractRegistry<u16, vStatSectionData> CActorStatisticRegistry;
+typedef CALifeAbstractRegistry<ALife::_OBJECT_ID, vStatSectionData> CActorStatisticRegistry;

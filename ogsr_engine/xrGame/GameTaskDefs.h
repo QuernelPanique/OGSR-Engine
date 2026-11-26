@@ -34,17 +34,17 @@ struct SGameTaskKey : public IPureSerializeObject<IReader, IWriter>, public IPur
 
 DEFINE_VECTOR(SGameTaskKey, GameTasks, GameTasks_it);
 
-struct CGameTaskRegistry : public CALifeAbstractRegistry<u16, GameTasks>
+struct CGameTaskRegistry : public CALifeAbstractRegistry<ALife::_OBJECT_ID, GameTasks>
 {
     virtual void save(IWriter& stream)
     {
-        CALifeAbstractRegistry<u16, GameTasks>::save(stream);
+        CALifeAbstractRegistry<ALife::_OBJECT_ID, GameTasks>::save(stream);
         save_data(g_active_task_id, stream);
         save_data(g_active_task_objective_id, stream);
     };
     virtual void load(IReader& stream)
     {
-        CALifeAbstractRegistry<u16, GameTasks>::load(stream);
+        CALifeAbstractRegistry<ALife::_OBJECT_ID, GameTasks>::load(stream);
         load_data(g_active_task_id, stream);
         load_data(g_active_task_objective_id, stream);
     };

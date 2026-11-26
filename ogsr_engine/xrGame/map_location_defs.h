@@ -5,10 +5,10 @@ class CMapLocation;
 struct SLocationKey : public IPureSerializeObject<IReader, IWriter>, public IPureDestroyableObject
 {
     shared_str spot_type;
-    u16 object_id;
+    u32 object_id; // OP22 (id32)
     CMapLocation* location;
     bool actual;
-    SLocationKey(shared_str s, u16 id) : spot_type(s), object_id(id), location(NULL), actual(true){};
+    SLocationKey(shared_str s, u32 id) : spot_type(s), object_id(id), location(NULL), actual(true){};
     SLocationKey() : spot_type(NULL), object_id(0), location(NULL), actual(true){};
 
     bool operator<(const SLocationKey& key) const { return actual > key.actual; } // move non-actual to tail
@@ -20,7 +20,7 @@ struct SLocationKey : public IPureSerializeObject<IReader, IWriter>, public IPur
 
 DEFINE_VECTOR(SLocationKey, Locations, Locations_it);
 
-struct CMapLocationRegistry : public CALifeAbstractRegistry<u16, Locations>
+struct CMapLocationRegistry : public CALifeAbstractRegistry<ALife::_OBJECT_ID, Locations>
 {
     virtual void save(IWriter& stream);
 };

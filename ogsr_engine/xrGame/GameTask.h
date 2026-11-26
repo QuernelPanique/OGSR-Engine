@@ -59,7 +59,7 @@ public:
     shared_str article_id;
     shared_str map_hint;
     shared_str map_location;
-    u16 object_id;
+    u32 object_id; // OP22 (id32)
     CMapLocation* LinkedMapLocation();
     ETaskState TaskState() { return task_state; };
     ETaskState UpdateState();
@@ -88,7 +88,7 @@ public:
     int GetIDX_script() { return idx; };
     void SetMapHint_script(LPCSTR _str);
     void SetMapLocation_script(LPCSTR _str);
-    void SetObjectID_script(u16 id);
+    void SetObjectID_script(u32 id); // OP22 (id32)
 
     void SetIconName_script(LPCSTR _str);
 
@@ -107,7 +107,7 @@ public:
     void AddOnSkipedFunc_script(LPCSTR _str);
     LPCSTR GetDescription_script() const { return description.c_str(); };
     void ChangeStateCallback();
-    u16 GetObjectID_script() const { return object_id; };
+    u32 GetObjectID_script() const { return object_id; }; // OP22 (id32)
 };
 
 DEFINE_VECTOR(SGameTaskObjective, OBJECTIVE_VECTOR, OBJECTIVE_VECTOR_IT);

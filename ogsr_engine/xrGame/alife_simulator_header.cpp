@@ -8,6 +8,9 @@
 
 #include "stdafx.h"
 #include "alife_simulator_header.h"
+#include "op22_id32.h"
+
+bool g_op22_alife_id32 = true; // OP22 (id32)
 
 CALifeSimulatorHeader::~CALifeSimulatorHeader() {}
 
@@ -22,6 +25,7 @@ void CALifeSimulatorHeader::load(IReader& file_stream)
 {
     R_ASSERT2(file_stream.find_chunk(ALIFE_CHUNK_DATA), "Can't find chunk ALIFE_CHUNK_DATA");
     m_version = file_stream.r_u32();
+    g_op22_alife_id32 = m_version >= 11; // OP22 (id32): старые сейвы (10) - ID в реестрах 2 байта
 
     R_ASSERT2(m_version >= 0x0002, "ALife version mismatch! (Delete saved game and try again)");
 };

@@ -8,6 +8,11 @@
 
 #pragma once
 
-IC CALifeSimulatorHeader::CALifeSimulatorHeader(LPCSTR section) { m_version = ALIFE_VERSION; }
+extern bool g_op22_alife_id32;
+IC CALifeSimulatorHeader::CALifeSimulatorHeader(LPCSTR section)
+{
+    m_version = ALIFE_VERSION;
+    g_op22_alife_id32 = true; // OP22 (id32): новая игра
+}
 
 IC u32 CALifeSimulatorHeader::version() const { return (m_version); }

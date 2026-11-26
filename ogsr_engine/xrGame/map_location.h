@@ -36,7 +36,7 @@ protected:
     CMapSpot* m_level_map_spot_border;
     CMapSpot* m_mini_map_spot_border;
 
-    u16 m_objectID;
+    u32 m_objectID; // OP22 (id32)
     CSE_ALifeDynamicObject* m_owner_se_object;
     u16 m_refCount;
     int m_ttl;
@@ -65,7 +65,7 @@ protected:
     CMapSpot* GetSpotBorder(CMapSpot* sp);
 
 public:
-    CMapLocation(LPCSTR type, u16 object_id, bool is_user_loc = false);
+    CMapLocation(LPCSTR type, u32 object_id, bool is_user_loc = false);
     virtual ~CMapLocation();
     virtual void destroy();
     LPCSTR GetHint();
@@ -98,7 +98,7 @@ public:
         --m_refCount;
         return m_refCount;
     }
-    u16 ObjectID() { return m_objectID; }
+    u32 ObjectID() { return m_objectID; }
     virtual bool Update(); // returns actual
     Fvector GetLastPosition() { return m_position_global; };
     bool Serializable() const { return !!m_flags.test(eSerailizable); }
@@ -116,8 +116,8 @@ class CRelationMapLocation : public CMapLocation
 {
     typedef CMapLocation inherited;
     shared_str m_curr_spot_name;
-    u16 m_pInvOwnerEntityID;
-    u16 m_pInvOwnerActorID;
+    u32 m_pInvOwnerEntityID; // OP22 (id32)
+    u32 m_pInvOwnerActorID;
     ALife::ERelationType m_last_relation{};
     bool m_b_was_visible_last_frame;
 
@@ -125,7 +125,7 @@ protected:
     bool IsVisible();
 
 public:
-    CRelationMapLocation(const shared_str& type, u16 object_id, u16 pInvOwnerActorID, u16 pInvOwnerEntityID);
+    CRelationMapLocation(const shared_str& type, u32 object_id, u32 pInvOwnerActorID, u32 pInvOwnerEntityID); // OP22 (id32)
     virtual ~CRelationMapLocation();
     virtual bool Update(); // returns actual
 

@@ -10,7 +10,7 @@
 #define XRAY_ALIFE_SPACE
 
 // ALife objects, events and tasks
-#define ALIFE_VERSION 10
+#define ALIFE_VERSION 11 // OP22 (id32): 11 - ID объектов в реестрах сейва 4 байта (было 10)
 #define ALIFE_CHUNK_DATA 0x0000
 #define SPAWN_CHUNK_DATA 0x0001
 #define OBJECT_CHUNK_DATA 0x0002

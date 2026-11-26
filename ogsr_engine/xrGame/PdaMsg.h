@@ -5,6 +5,7 @@
 /////////////////////////////////////////////////////
 
 #pragma once
+#include "op22_id32.h"
 #include "alife_space.h"
 #include "pda_space.h"
 
@@ -34,11 +35,19 @@ typedef struct tagSPdaMessage
 struct TALK_CONTACT_DATA
 {
     TALK_CONTACT_DATA() : id(u16(-1)), time(0){};
-    TALK_CONTACT_DATA(u16 contact_id, ALife::_TIME_ID contact_time) : id(contact_id), time(contact_time){};
+    TALK_CONTACT_DATA(u32 contact_id, ALife::_TIME_ID contact_time) // OP22 (id32) : id(contact_id), time(contact_time){};
     //время контакта
     ALife::_TIME_ID time;
     // id персонажа с которым говорили
-    u16 id;
+    u32 id; // OP22 (id32): было u16 (в старом сейве - u16 + 2 байта выравнивания, см. op22_fix_old_ids)
 };
 
 DEFINE_VECTOR(TALK_CONTACT_DATA, TALK_CONTACT_VECTOR, TALK_CONTACT_VECTOR_IT);
+static_assert(sizeof(TALK_CONTACT_DATA) == 16, "OP22 (id32): raw save layout of TALK_CONTACT_DATA");
+
+// OP22 (id32): старый сейв - id был u16 в тех же байтах, старшие 16 бит - выравнивание (мусор)
+inline void op22_fix_old_ids(TALK_CONTACT_VECTOR& v) // перегрузка, находится по ADL при разборе реестра
+{
+    for (auto& c : v)
+        c.id &= 0xffff;
+}

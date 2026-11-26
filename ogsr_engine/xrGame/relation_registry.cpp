@@ -4,6 +4,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
+#include "op22_id32.h"
 #include "relation_registry.h"
 #include "alife_registry_wrappers.h"
 
@@ -26,7 +27,20 @@ void RELATION_DATA::clear()
 
 void RELATION_DATA::load(IReader& stream)
 {
-    load_data(personal, stream);
+    if (g_op22_alife_id32)
+        load_data(personal, stream);
+    else // OP22 (id32): старый сейв - ключ личных отношений 2 байта
+    {
+        personal.clear();
+        const u32 count = stream.r_u32();
+        for (u32 i = 0; i < count; ++i)
+        {
+            const u32 key = stream.r_u16();
+            SRelation rel;
+            load_data(rel, stream);
+            personal.insert(std::make_pair(key, rel));
+        }
+    }
     load_data(communities, stream);
 }
 
@@ -118,7 +132,7 @@ const shared_str& RELATION_REGISTRY::GetSpotName(ALife::ERelationType& type)
 
 //////////////////////////////////////////////////////////////////////////
 
-void RELATION_REGISTRY::ClearRelations(u16 person_id)
+void RELATION_REGISTRY::ClearRelations(u32 person_id)
 {
     if (relation_registry().registry().objects_ptr(person_id))
     {
@@ -145,7 +159,7 @@ void RELATION_REGISTRY::ClearRelations(u16 person_id)
     }
 }
 
-void RELATION_REGISTRY::clear_reverse_personal(u16 from, u16 to)
+void RELATION_REGISTRY::clear_reverse_personal(u32 from, u32 to)
 {
     ASSERT_FMT(to, "[%s]: actor detected clearing %u", __FUNCTION__, from);
     ASSERT_FMT(relation_registry().registry().objects_ptr(to), "[%s]: %u not found clearing %u", __FUNCTION__, to, from);
@@ -156,7 +170,7 @@ void RELATION_REGISTRY::clear_reverse_personal(u16 from, u16 to)
 }
 
 //////////////////////////////////////////////////////////////////////////
-CHARACTER_GOODWILL RELATION_REGISTRY::GetGoodwill(u16 from, u16 to) const
+CHARACTER_GOODWILL RELATION_REGISTRY::GetGoodwill(u32 from, u32 to) const
 {
     const RELATION_DATA* relation_data = relation_registry().registry().objects_ptr(from);
 
@@ -178,7 +192,7 @@ CHARACTER_GOODWILL RELATION_REGISTRY::GetGoodwill(u16 from, u16 to) const
 #include "script_game_object.h"
 #include "Actor.h"
 
-void RELATION_REGISTRY::SetGoodwill(u16 from, u16 to, CHARACTER_GOODWILL goodwill)
+void RELATION_REGISTRY::SetGoodwill(u32 from, u32 to, CHARACTER_GOODWILL goodwill)
 {
     RELATION_DATA& relation_data = relation_registry().registry().objects(from);
 
@@ -201,14 +215,14 @@ void RELATION_REGISTRY::SetGoodwill(u16 from, u16 to, CHARACTER_GOODWILL goodwil
         g_actor->callback(GameObject::eOnGoodwillChange)(from, to);
 }
 
-void RELATION_REGISTRY::ChangeGoodwill(u16 from, u16 to, CHARACTER_GOODWILL delta_goodwill)
+void RELATION_REGISTRY::ChangeGoodwill(u32 from, u32 to, CHARACTER_GOODWILL delta_goodwill)
 {
     CHARACTER_GOODWILL new_goodwill = GetGoodwill(from, to) + delta_goodwill;
     SetGoodwill(from, to, new_goodwill);
 }
 
 //////////////////////////////////////////////////////////////////////////
-CHARACTER_GOODWILL RELATION_REGISTRY::GetCommunityGoodwill(CHARACTER_COMMUNITY_INDEX from_community, u16 to_character) const
+CHARACTER_GOODWILL RELATION_REGISTRY::GetCommunityGoodwill(CHARACTER_COMMUNITY_INDEX from_community, u32 to_character) const
 {
     const RELATION_DATA* relation_data = relation_registry().registry().objects_ptr(to_character);
 
@@ -225,7 +239,7 @@ CHARACTER_GOODWILL RELATION_REGISTRY::GetCommunityGoodwill(CHARACTER_COMMUNITY_I
     return NEUTRAL_GOODWILL;
 }
 
-void RELATION_REGISTRY::SetCommunityGoodwill(CHARACTER_COMMUNITY_INDEX from_community, u16 to_character, CHARACTER_GOODWILL goodwill)
+void RELATION_REGISTRY::SetCommunityGoodwill(CHARACTER_COMMUNITY_INDEX from_community, u32 to_character, CHARACTER_GOODWILL goodwill)
 {
     static Ivector2 gw_limits = pSettings->r_ivector2(ACTIONS_POINTS_SECT, "community_goodwill_limits");
     clamp(goodwill, gw_limits.x, gw_limits.y);
@@ -234,7 +248,7 @@ void RELATION_REGISTRY::SetCommunityGoodwill(CHARACTER_COMMUNITY_INDEX from_comm
     relation_data.communities[from_community].SetGoodwill(goodwill);
 }
 
-void RELATION_REGISTRY::ChangeCommunityGoodwill(CHARACTER_COMMUNITY_INDEX from_community, u16 to_character, CHARACTER_GOODWILL delta_goodwill)
+void RELATION_REGISTRY::ChangeCommunityGoodwill(CHARACTER_COMMUNITY_INDEX from_community, u32 to_character, CHARACTER_GOODWILL delta_goodwill)
 {
     CHARACTER_GOODWILL gw = GetCommunityGoodwill(from_community, to_character) + delta_goodwill;
     SetCommunityGoodwill(from_community, to_character, gw);
@@ -264,7 +278,7 @@ CHARACTER_GOODWILL RELATION_REGISTRY::GetReputationRelation(CHARACTER_REPUTATION
 
 //////////////////////////////////////////////////////////////////////////
 
-void RELATION_REGISTRY::ClearGoodwill(u16 from, u16 to)
+void RELATION_REGISTRY::ClearGoodwill(u32 from, u32 to)
 {
     if (relation_registry().registry().objects_ptr(from))
     {
