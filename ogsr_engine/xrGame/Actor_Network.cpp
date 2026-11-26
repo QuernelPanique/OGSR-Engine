@@ -512,12 +512,12 @@ void CActor::net_Save(NET_Packet& P)
 
     pos = P.w_tell();
     m_pPhysics_support->in_NetSave(P);
-    P.w_u16(m_holderID);
+    P.w_id(m_holderID); // OP22 (id32): сервер читает 4 байта (CSE_ALifeCreatureActor::load)
     Msg("m_pPhysics_support->in_NetSave() : %d", P.w_tell() - pos);
 #else
     inherited::net_Save(P);
     m_pPhysics_support->in_NetSave(P);
-    P.w_u16(m_holderID);
+    P.w_id(m_holderID); // OP22 (id32): сервер читает 4 байта (CSE_ALifeCreatureActor::load)
 #endif
 }
 

@@ -276,7 +276,7 @@ public:
 
 protected:
     CHolderCustom* m_holder;
-    u16 m_holderID;
+    u32 m_holderID; // OP22 (id32)
     bool use_Holder(CHolderCustom* holder);
 
     bool use_Vehicle(CHolderCustom* object);
