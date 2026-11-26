@@ -338,7 +338,7 @@ void CExplosive::Explode()
     OnBeforeExplosion();
     //играем звук взрыва
     CObject* who = nullptr;
-    if (Initiator() != ALife::_OBJECT_ID(-1))
+    if (Initiator() != ALife::_OBJECT_ID(u16(-1)))
     {
         who = Level().Objects.net_Find(Initiator());
     }

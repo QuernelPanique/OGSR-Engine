@@ -1058,7 +1058,7 @@ public:
         }
 
         if (auto tpGame = smart_cast<game_sv_Single*>(Level().Server->game))
-            tpGame->alife().spawn_item(args, Actor()->Position(), Actor()->ai_location().level_vertex_id(), Actor()->ai_location().game_vertex_id(), ALife::_OBJECT_ID(-1));
+            tpGame->alife().spawn_item(args, Actor()->Position(), Actor()->ai_location().level_vertex_id(), Actor()->ai_location().game_vertex_id(), ALife::_OBJECT_ID(u16(-1)));
     }
 
     virtual void fill_tips(vecTips& tips, u32 mode)
@@ -1718,6 +1718,8 @@ void CCC_RegisterCommands()
         CMD4(CCC_Integer, "op22_ui_preload", &g_op22_ui_preload, 0, 1);
         extern int g_op22_hud_blend; // OP22: плавные переходы анимаций HUD (player_hud.cpp)
         CMD4(CCC_Integer, "op22_hud_blend", &g_op22_hud_blend, 0, 1);
+        extern int g_op22_id_test_start;
+        CMD4(CCC_Integer, "op22_id_test_start", &g_op22_id_test_start, 0, 16000000); // OP22 (id32)
     }
 
     CMD3(CCC_Mask, "g_crosshair_dbg", &psActorFlags, AF_CROSSHAIR_DBG);

@@ -137,11 +137,12 @@ void CSE_Abstract::Spawn_Write(NET_Packet& tNetPacket, BOOL bLocal)
     tNetPacket.w_vec3(o_Position);
     tNetPacket.w_vec3(o_Angle);
     tNetPacket.w_u16(RespawnTime);
-    tNetPacket.w_u16(ID);
-    tNetPacket.w_u16(ID_Parent);
-    tNetPacket.w_u16(ID_Phantom);
+    tNetPacket.w_u16(u16(ID & 0xffff)); // OP22 (id32): младшие 16 бит на старом месте, старшие - после версий
+    tNetPacket.w_u16(u16(ID_Parent & 0xffff));
+    tNetPacket.w_u16(u16(ID_Phantom & 0xffff));
 
     s_flags.set(M_SPAWN_VERSION, TRUE);
+    s_flags.set(M_SPAWN_ID32, TRUE);
     if (bLocal)
         tNetPacket.w_u16(u16(s_flags.flags | M_SPAWN_OBJECT_LOCAL));
     else
@@ -150,6 +151,10 @@ void CSE_Abstract::Spawn_Write(NET_Packet& tNetPacket, BOOL bLocal)
     tNetPacket.w_u16(SPAWN_VERSION);
 
     tNetPacket.w_u16(script_server_object_version());
+
+    tNetPacket.w_u16(u16(ID >> 16)); // OP22 (id32)
+    tNetPacket.w_u16(u16(ID_Parent >> 16));
+    tNetPacket.w_u16(u16(ID_Phantom >> 16));
 
     // client object custom data serialization SAVE
     u16 client_data_size = (u16)client_data.size(); //не может быть больше 256 байт
@@ -193,9 +198,9 @@ BOOL CSE_Abstract::Spawn_Read(NET_Packet& tNetPacket)
     tNetPacket.r_vec3(o_Position);
     tNetPacket.r_vec3(o_Angle);
     tNetPacket.r_u16(RespawnTime);
-    tNetPacket.r_u16(ID);
-    tNetPacket.r_u16(ID_Parent);
-    tNetPacket.r_u16(ID_Phantom);
+    ID = tNetPacket.r_u16(); // OP22 (id32): младшие 16 бит
+    ID_Parent = tNetPacket.r_u16();
+    ID_Phantom = tNetPacket.r_u16();
 
     tNetPacket.r_u16(s_flags.flags);
 
@@ -204,6 +209,13 @@ BOOL CSE_Abstract::Spawn_Read(NET_Packet& tNetPacket)
     ASSERT_FMT(m_wVersion && m_wVersion >= 118, "Invalid spawn version: [%u]", m_wVersion);
 
     m_script_version = tNetPacket.r_u16();
+
+    if (id32()) // OP22 (id32): старшие 16 бит
+    {
+        ID |= u32(tNetPacket.r_u16()) << 16;
+        ID_Parent |= u32(tNetPacket.r_u16()) << 16;
+        ID_Phantom |= u32(tNetPacket.r_u16()) << 16;
+    }
 
     // read specific data
 

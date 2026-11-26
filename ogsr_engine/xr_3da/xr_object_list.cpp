@@ -247,14 +247,16 @@ void CObjectList::ProcessDestroyQueue()
 
 void CObjectList::net_Register(CObject* O)
 {
-    R_ASSERT(O && O->ID() < 0xffff);
+    R_ASSERT(O && O->ID() != 0xffff);
 
+    if (O->ID() >= map_NETID.size()) // OP22 (id32)
+        map_NETID.resize(std::max<size_t>(O->ID() + 1, map_NETID.size() * 3 / 2 + 1024), nullptr);
     map_NETID[O->ID()] = O;
 }
 
 void CObjectList::net_Unregister(CObject* O)
 {
-    if (O->ID() < 0xffff) // demo_spectator can have 0xffff
+    if (O->ID() != 0xffff && O->ID() < map_NETID.size()) // demo_spectator can have 0xffff; OP22 (id32)
         map_NETID[O->ID()] = nullptr;
 }
 
@@ -273,7 +275,7 @@ u32 CObjectList::net_Export(NET_Packet* _Packet, u32 start, u32 max_object_size,
         CObject* P = (start < objects_active.size()) ? objects_active[start] : objects_sleeping[start - objects_active.size()];
         if (P->net_Relevant() && !P->getDestroy())
         {
-            Packet.w_u16(u16(P->ID()));
+            Packet.w_id(P->ID()); // OP22 (id32)
             Packet.w_chunk_open8(position);
             // Msg						("cl_export: %d '%s'",P->ID(),*P->cName());
             P->net_Export(Packet);
@@ -314,8 +316,8 @@ void CObjectList::net_Import(NET_Packet* Packet)
 
     while (!Packet->r_eof())
     {
-        u16 ID;
-        Packet->r_u16(ID);
+        u32 ID;
+        Packet->r_id(ID); // OP22 (id32)
         u8 size;
         Packet->r_u8(size);
         CObject* P = net_Find(ID);

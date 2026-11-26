@@ -58,7 +58,7 @@ bool should_process(CAI_Stalker& object, const CEntityAlive* enemy)
         return (false);
 
     ALife::_OBJECT_ID processor_id = object.agent_manager().enemy().wounded_processor(enemy);
-    if ((processor_id != ALife::_OBJECT_ID(-1)) && (processor_id != object.ID()))
+    if ((processor_id != ALife::_OBJECT_ID(u16(-1))) && (processor_id != object.ID()))
         return (false);
 
     return (true);
@@ -128,7 +128,7 @@ void CStalkerActionReachWounded::execute()
     }
 
     ALife::_OBJECT_ID processor_id = object().agent_manager().enemy().wounded_processor(enemy);
-    if (processor_id == ALife::_OBJECT_ID(-1))
+    if (processor_id == ALife::_OBJECT_ID(u16(-1)))
     {
         object().movement().set_movement_type(eMovementTypeStand);
         return;

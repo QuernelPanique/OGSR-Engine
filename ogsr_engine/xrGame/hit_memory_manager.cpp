@@ -72,7 +72,7 @@ void CHitMemoryManager::Load(LPCSTR section) {}
 void CHitMemoryManager::reinit()
 {
     m_hits = 0;
-    m_last_hit_object_id = ALife::_OBJECT_ID(-1);
+    m_last_hit_object_id = ALife::_OBJECT_ID(u16(-1));
 }
 
 void CHitMemoryManager::reload(LPCSTR section)

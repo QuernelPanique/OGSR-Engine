@@ -34,7 +34,7 @@ class CGameGraph;
 namespace ALife
 {
 typedef u64 _CLASS_ID; // Class ID
-typedef u16 _OBJECT_ID; // Object ID
+typedef u32 _OBJECT_ID; // Object ID. OP22 (id32): 32 бита, «нет объекта» по-прежнему 0xffff (старые сейвы, скрипты с 65535)
 typedef u64 _TIME_ID; // Time  ID
 typedef u32 _EVENT_ID; // Event ID
 typedef u32 _TASK_ID; // Event ID

@@ -56,7 +56,7 @@ void CObjectHandler::reinit(CAI_Stalker* object)
     if (m_r_finger2 == BI_NONE)
         Msg("!![%s] weapon_bone [%s] not found in npc section [%s], npc visual [%s]", __FUNCTION__, pSettings->r_string(planner().m_object->cNameSect().c_str(), "weapon_bone2"),
             planner().m_object->cNameSect().c_str(), planner().object().cNameVisual().c_str());
-    m_strap_object_id = ALife::_OBJECT_ID(-1);
+    m_strap_object_id = ALife::_OBJECT_ID(u16(-1));
     m_strap_bone0 = -1;
     m_strap_bone1 = -1;
     m_clutched_hammer_enabled = false;

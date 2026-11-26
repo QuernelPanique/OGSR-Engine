@@ -71,17 +71,7 @@ private:
     void SendUpdatesToAll();
 
 private:
-    typedef CID_Generator<u32, // time identifier type
-                          u8, // compressed id type
-                          u16, // id type
-                          u8, // block id type
-                          u16, // chunk id type
-                          0, // min value
-                          u16(-2), // max value
-                          256, // block size
-                          u16(-1) // invalid id
-                          >
-        id_generator_type;
+    typedef CID_Generator32 id_generator_type; // OP22 (id32): было CID_Generator<..., u16, ...>, предел 65534
 
 private:
     id_generator_type m_tID_Generator;
@@ -94,8 +84,10 @@ public:
     BOOL PerformRP(CSE_Abstract* E);
 
     IC void clear_ids() { m_tID_Generator = id_generator_type(); }
-    IC u16 PerformIDgen(u16 ID) { return (m_tID_Generator.tfGetID(ID)); }
-    IC void FreeID(u16 ID, u32 time) { return (m_tID_Generator.vfFreeID(ID, time)); }
+    IC u32 PerformIDgen(u32 ID) { return (m_tID_Generator.tfGetID(ID)); } // OP22 (id32)
+    IC void FreeID(u32 ID, u32 time) { return (m_tID_Generator.vfFreeID(ID, time)); }
+    IC u32 ID_used_count() const { return m_tID_Generator.used_count(); }
+    IC u32 ID_next_fresh() const { return m_tID_Generator.next_fresh(); }
 
     void Perform_connect_spawn(CSE_Abstract* E, xrClientData* to, NET_Packet& P);
     void Perform_transfer(NET_Packet& PR, NET_Packet& PT, CSE_Abstract* what, CSE_Abstract* from, CSE_Abstract* to);

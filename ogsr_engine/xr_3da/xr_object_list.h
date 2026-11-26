@@ -10,7 +10,7 @@ class ENGINE_API CObjectList
 {
 private:
     // data
-    CObject* map_NETID[0xffff]{};
+    xr_vector<CObject*> map_NETID; // OP22 (id32): растёт по наибольшему ID (было CObject*[0xffff])
 
     using Objects = xr_vector<CObject*>;
 
@@ -66,9 +66,9 @@ public:
     // для перебора массива объектов через range-based for
     const auto& get_objects_map() const { return map_NETID; }
 
-    ICF CObject* net_Find(u16 ID) const
+    ICF CObject* net_Find(u32 ID) const
     {
-        if (ID == u16(-1))
+        if (ID == u16(-1) || ID >= map_NETID.size()) // OP22 (id32)
             return nullptr;
 
         return map_NETID[ID];

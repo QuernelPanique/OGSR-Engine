@@ -41,6 +41,8 @@ public:
     IC void w_u64(u64 d) { w(&d, sizeof(u64)); }
     IC void w_u32(u32 d) { w(&d, sizeof(u32)); }
     IC void w_u16(u16 d) { w(&d, sizeof(u16)); }
+    void w_u16(u32) = delete; // OP22 (id32): ловит обрезание ID объекта
+    IC void w_u16(int d) { w_u16(u16(d)); }
     IC void w_u8(u8 d) { w(&d, sizeof(u8)); }
     IC void w_s64(s64 d) { w(&d, sizeof(s64)); }
     IC void w_s32(s32 d) { w(&d, sizeof(s32)); }

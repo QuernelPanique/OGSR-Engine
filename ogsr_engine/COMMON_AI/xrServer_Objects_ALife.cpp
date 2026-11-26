@@ -80,7 +80,7 @@ CSE_ALifeObject::CSE_ALifeObject(LPCSTR caSection) : CSE_Abstract(caSection)
 {
     m_bOnline = false;
     m_fDistance = 0.0f;
-    ID = ALife::_OBJECT_ID(-1);
+    ID = ALife::_OBJECT_ID(u16(-1));
     m_tGraphID = GameGraph::_GRAPH_ID(-1);
     m_tSpawnID = ALife::_SPAWN_ID(-1);
     m_bDirectControl = true;

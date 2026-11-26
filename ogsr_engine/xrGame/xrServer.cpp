@@ -14,6 +14,8 @@
 #include "..\xr_3da\XR_IOConsole.h"
 #include "ui/UIInventoryUtilities.h"
 
+int g_op22_id_test_start = 0; // OP22 (id32): тест - свежие ID объектов с этого номера (70000 - выше старого предела 65534)
+
 xrClientData::xrClientData() : IClient(Device.GetTimerGlobal())
 {
     ps = Level().Server->game->createPlayerState();

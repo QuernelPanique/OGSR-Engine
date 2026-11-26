@@ -52,7 +52,7 @@ CActor* Actor()
 
 BOOL CActor::net_Spawn(CSE_Abstract* DC)
 {
-    m_holder_id = ALife::_OBJECT_ID(-1);
+    m_holder_id = ALife::_OBJECT_ID(u16(-1));
     m_feel_touch_characters = 0;
     m_snd_noise = 0.0f;
     m_sndShockEffector = NULL;
@@ -192,7 +192,7 @@ BOOL CActor::net_Spawn(CSE_Abstract* DC)
 
     auto callback = fastdelegate::MakeDelegate(this, &CActor::on_requested_spawn);
     m_holder_id = E->m_holderID;
-    if (E->m_holderID != ALife::_OBJECT_ID(-1))
+    if (E->m_holderID != ALife::_OBJECT_ID(u16(-1)))
         Level().client_spawn_manager().add(E->m_holderID, ID(), callback);
     // F
     //-------------------------------------------------------------
@@ -222,7 +222,7 @@ void CActor::net_Destroy()
 {
     inherited::net_Destroy();
 
-    if (m_holder_id != ALife::_OBJECT_ID(-1))
+    if (m_holder_id != ALife::_OBJECT_ID(u16(-1)))
         Level().client_spawn_manager().remove(m_holder_id, ID());
 
     delete_data(m_game_task_manager);

@@ -68,9 +68,11 @@ u16 m_wVersion;
 u16 m_script_version;
 u16 RespawnTime;
 
-u16 ID; // internal ID
-u16 ID_Parent; // internal ParentID, 0xffff means no parent
-u16 ID_Phantom; // internal PhantomID, 0xffff means no phantom
+ALife::_OBJECT_ID ID; // internal ID; OP22 (id32): u32
+ALife::_OBJECT_ID ID_Parent; // internal ParentID, 0xffff means no parent
+ALife::_OBJECT_ID ID_Phantom; // internal PhantomID, 0xffff means no phantom
+// OP22 (id32): пакет прочитан в формате с 32-битными ID (флаг M_SPAWN_ID32); запись - всегда 32 бита
+IC bool id32() const { return !!(s_flags.flags & (1 << 9)); } // M_SPAWN_ID32 (xrMessages.h)
 xrClientData* owner;
 
 // spawn data
@@ -78,7 +80,7 @@ shared_str s_name;
 u8 s_gameid;
 u8 s_RP;
 Flags16 s_flags; // state flags
-xr_vector<u16> children;
+xr_vector<ALife::_OBJECT_ID> children; // OP22 (id32)
 
 // update data
 Fvector o_Position;

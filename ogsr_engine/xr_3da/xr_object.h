@@ -36,7 +36,7 @@ public:
     {
         struct
         {
-            u32 net_ID : 16;
+            u32 net_ID_unused : 16; // OP22 (id32): ID - отдельное поле m_netID
             u32 bActiveCounter : 8;
             u32 bEnabled : 1;
             u32 bVisible : 1;
@@ -53,6 +53,7 @@ public:
 private:
     // Some property variables
     ObjectProperties Props;
+    u32 m_netID{}; // OP22 (id32): как раньше net_ID:16 из Props.storage = 0
     shared_str NameObject;
     shared_str NameSection;
     shared_str NameVisual;
@@ -84,8 +85,8 @@ public:
     // Network
     ICF BOOL Local() const { return Props.net_Local; }
     ICF BOOL Remote() const { return !Props.net_Local; }
-    ICF u16 ID() const { return Props.net_ID; }
-    ICF void setID(u16 _ID) { Props.net_ID = _ID; }
+    ICF u32 ID() const { return m_netID; }
+    ICF void setID(u32 _ID) { m_netID = _ID; } // OP22 (id32)
     virtual BOOL Ready() { return Props.net_Ready; }
     BOOL GetTmpPreDestroy() const { return Props.bPreDestroy; }
     void SetTmpPreDestroy(BOOL b) { Props.bPreDestroy = b; }

@@ -814,7 +814,7 @@ CSE_ALifeCreatureAbstract::CSE_ALifeCreatureAbstract(LPCSTR caSection) : CSE_ALi
     m_ef_creature_type = pSettings->r_u32(caSection, "ef_creature_type");
     m_ef_weapon_type = READ_IF_EXISTS(pSettings, r_u32, caSection, "ef_weapon_type", u32(-1));
     m_ef_detector_type = READ_IF_EXISTS(pSettings, r_u32, caSection, "ef_detector_type", u32(-1));
-    m_killer_id = ALife::_OBJECT_ID(-1);
+    m_killer_id = ALife::_OBJECT_ID(u16(-1));
     m_game_death_time = 0;
     flags = 0;
 }

@@ -121,7 +121,7 @@ void CEntity::Hit(SHit* pHDS)
         HitSignal(lost_health, vLocalDir, pHDS->who, pHDS->boneID);
 
     // If Local() - perform some logic
-    if (Local() && !g_Alive() && !AlreadyDie() && (m_killer_id == ALife::_OBJECT_ID(-1)))
+    if (Local() && !g_Alive() && !AlreadyDie() && (m_killer_id == ALife::_OBJECT_ID(u16(-1))))
     {
         KillEntity(pHDS->whoID);
     }
@@ -150,7 +150,7 @@ BOOL CEntity::net_Spawn(CSE_Abstract* DC)
 {
     m_level_death_time = 0;
     m_game_death_time = 0;
-    m_killer_id = ALife::_OBJECT_ID(-1);
+    m_killer_id = ALife::_OBJECT_ID(u16(-1));
 
     CSE_Abstract* e = (CSE_Abstract*)(DC);
     CSE_ALifeCreatureAbstract* E = smart_cast<CSE_ALifeCreatureAbstract*>(e);
@@ -159,10 +159,10 @@ BOOL CEntity::net_Spawn(CSE_Abstract* DC)
     if (E)
     {
         SetfHealth(E->fHealth);
-        VERIFY((E->m_killer_id == ALife::_OBJECT_ID(-1)) || !g_Alive());
+        VERIFY((E->m_killer_id == ALife::_OBJECT_ID(u16(-1))) || !g_Alive());
         m_killer_id = E->m_killer_id;
         if (m_killer_id == ID())
-            m_killer_id = ALife::_OBJECT_ID(-1);
+            m_killer_id = ALife::_OBJECT_ID(u16(-1));
     }
     else
         SetfHealth(1.0f);
@@ -251,7 +251,7 @@ void CEntity::KillEntity(u16 whoID)
     if (whoID != ID())
     {
 #ifdef DEBUG
-        if (m_killer_id != ALife::_OBJECT_ID(-1))
+        if (m_killer_id != ALife::_OBJECT_ID(u16(-1)))
         {
             Msg("! Entity [%s][%s] already has killer with id %d, but new killer id arrived - %d", *cNameSect(), *cName(), m_killer_id, whoID);
 
@@ -261,13 +261,13 @@ void CEntity::KillEntity(u16 whoID)
             CObject* new_killer = Level().Objects.net_Find(whoID);
             Msg("! New killer is %s", new_killer ? *new_killer->cName() : "unknown");
 
-            VERIFY(m_killer_id == ALife::_OBJECT_ID(-1));
+            VERIFY(m_killer_id == ALife::_OBJECT_ID(u16(-1)));
         }
 #endif
     }
     else
     {
-        if (m_killer_id != ALife::_OBJECT_ID(-1))
+        if (m_killer_id != ALife::_OBJECT_ID(u16(-1)))
             return;
     }
 

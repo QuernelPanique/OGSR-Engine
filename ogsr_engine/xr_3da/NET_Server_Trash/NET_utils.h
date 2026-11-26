@@ -95,6 +95,13 @@ public:
         *(u16*)(&B.data[B.count]) = a;
         w_advance(sizeof(u16));
     }; // word (2b)
+    // OP22 (id32): ID объекта теперь u32 - запись u32 в 2 байта запрещена (ловит обрезание ID); int - как раньше
+    void w_u16(u32) = delete;
+    IC void w_u16(int a) { w_u16(u16(a)); }
+    // OP22 (id32): ID объекта в пакете - 4 байта
+    IC void w_id(u32 a) { w_u32(a); }
+    IC void r_id(u32& a) { r_u32(a); }
+    IC u32 r_id() { return r_u32(); }
     IC void w_s16(s16 a)
     {
         *(s16*)(&B.data[B.count]) = a;

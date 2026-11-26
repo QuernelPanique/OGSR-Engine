@@ -109,3 +109,83 @@ public:
         l_tID_Block.m_tTimeID = tTimeID;
     }
 };
+
+// OP22 (id32): генератор 32-битных ID объектов. Как старый CID_Generator: сначала свежие ID по возрастанию,
+// освобождённые - повторно только когда свежие кончились (старейшие первыми). 0xffff («нет объекта») и 0xfffe
+// не выдаются никогда. Предел - OP22_ID_LIMIT (16,7 млн; таблица объектов клиента растёт по наибольшему ID).
+// op22_id_test_start: тест - свежие ID с этого номера (70000 - все новые объекты сразу выше старого предела).
+extern int g_op22_id_test_start; // консоль op22_id_test_start (xrServer.cpp), 0 - выключено
+
+class CID_Generator32
+{
+public:
+    static constexpr u32 OP22_ID_LIMIT = 0x00FFFFFE;
+    static constexpr u32 invalid_id = 0xffff;
+
+private:
+    xr_vector<u8> m_used;
+    xr_deque<u32> m_freed;
+    u32 m_next_fresh{};
+    u32 m_used_count{};
+
+    static bool reserved(u32 id) { return id == 0xffff || id == 0xfffe; }
+
+    void mark(u32 id)
+    {
+        if (id >= m_used.size())
+            m_used.resize(std::max<size_t>(id + 1, m_used.size() * 3 / 2 + 4096), 0);
+        R_ASSERT2(!m_used[id], "Requesting ID has already been used!");
+        m_used[id] = 1;
+        ++m_used_count;
+    }
+
+public:
+    CID_Generator32() { m_next_fresh = u32(std::max(0, g_op22_id_test_start)); }
+
+    u32 tfGetID(u32 id = invalid_id)
+    {
+        if (id != invalid_id)
+        {
+            R_ASSERT2(id < OP22_ID_LIMIT && !reserved(id), "Requesting ID is invalid!");
+            mark(id);
+            return id;
+        }
+        while (m_next_fresh < OP22_ID_LIMIT)
+        {
+            const u32 n = m_next_fresh++;
+            if (!reserved(n) && (n >= m_used.size() || !m_used[n]))
+            {
+                mark(n);
+                return n;
+            }
+        }
+        while (!m_freed.empty())
+        {
+            const u32 n = m_freed.front();
+            m_freed.pop_front();
+            if (!m_used[n])
+            {
+                mark(n);
+                return n;
+            }
+        }
+        R_ASSERT2(false, "Not enough IDs");
+        return invalid_id;
+    }
+
+    void vfFreeID(u32 id, u32 /*time*/)
+    {
+        if (id >= m_used.size() || !m_used[id]) // старый генератор это молча терпел (VERIFY только в Debug)
+        {
+            Msg("! [OP22 id32] free of unused id %u", id);
+            return;
+        }
+        m_used[id] = 0;
+        --m_used_count;
+        if (id < m_next_fresh)
+            m_freed.push_back(id);
+    }
+
+    u32 used_count() const { return m_used_count; }
+    u32 next_fresh() const { return m_next_fresh; }
+};
