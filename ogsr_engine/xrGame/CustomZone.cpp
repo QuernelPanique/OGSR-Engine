@@ -1229,7 +1229,7 @@ void CCustomZone::OnOwnershipTake(u32 id)
     {
         NET_Packet P;
         u_EventGen(P, GE_OWNERSHIP_REJECT, ID());
-        P.w_u16(id);
+        P.w_id(id); // OP22 (id32)
         u_EventSend(P);
     }
 }

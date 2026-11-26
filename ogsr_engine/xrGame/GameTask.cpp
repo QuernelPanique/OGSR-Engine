@@ -22,7 +22,7 @@
 #include "alife_simulator_header.h"
 
 ALife::_STORY_ID story_id(LPCSTR story_id);
-u16 storyId2GameId(ALife::_STORY_ID);
+u32 storyId2GameId(ALife::_STORY_ID); // OP22 (id32)
 
 typedef xr_map<shared_str, int> STORY_PAIRS;
 extern STORY_PAIRS story_ids;
