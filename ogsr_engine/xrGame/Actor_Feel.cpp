@@ -215,7 +215,7 @@ void CActor::PickupModeUpdate()
                 op22_visible.push_back(o->ID());
             }
         }
-        for (const u16 id : op22_visible)
+        for (const u32 id : op22_visible) // OP22 (id32)
         {
             CObject* o = Level().Objects.net_Find(id);
             CInventoryItem* item = o && !o->getDestroy() ? smart_cast<CInventoryItem*>(o) : nullptr;
