@@ -22,6 +22,7 @@ class CSE_ALifeItemWeaponAmmo;
 class CWeaponMagazined;
 class CParticlesObject;
 class CUIStaticItem;
+class CUIStatic;
 
 constexpr float def_min_zoom_k = 0.3f;
 constexpr float def_zoom_step_count = 4.0f;
@@ -234,6 +235,15 @@ protected:
     float m_fZoomFactor;
     //текстура для снайперского прицела, в режиме приближения
     CUIWindow* m_UIScope;
+    // OP22 (26.11): «живой» 2D-прицел (op22_scope_live): корпус с тенью окуляра (<сетка>_open_body) и стекло с сеткой
+    // (<сетка>_open_lens) - отдельные слои; корпус отстаёт за глазом (поворот, отдача, шаг), при прицеливании проявляется
+    CUIStatic* m_op22_scope_body{};
+    CUIStatic* m_op22_scope_lens{};
+    Fvector2 m_op22_eye{}, m_op22_eye_v{};
+    Fvector m_op22_prev_dir{}, m_op22_prev_pos{};
+    float m_op22_bob{};
+    u32 m_op22_live_frame{};
+    void op22_DrawLiveScope();
     //коэффициент увеличения прицеливания
     float m_fIronSightZoomFactor;
     //коэффициент увеличения прицела

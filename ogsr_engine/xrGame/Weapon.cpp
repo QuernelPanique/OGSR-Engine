@@ -3,6 +3,7 @@
 //////////////////////////////////////////////////////////////////////
 #include "stdafx.h"
 #include "op22_options.h" // OP22
+#include "ui/UIStatic.h" // OP22: живой 2D-прицел
 
 #include "Weapon.h"
 #include "ParticlesObject.h"
@@ -82,6 +83,8 @@ CWeapon::CWeapon(LPCSTR name)
 CWeapon::~CWeapon()
 {
     xr_delete(m_UIScope);
+    xr_delete(m_op22_scope_body); // OP22
+    xr_delete(m_op22_scope_lens);
 
     laser_light_render.destroy();
     laser_dot_render.destroy();
@@ -2084,10 +2087,97 @@ void CWeapon::modify_holder_params(float& range, float& fov) const
     fov *= m_addon_holder_fov_modifier;
 }
 
+// OP22 (26.11, решение пользователя: «живые 2D-прицелы» вместо 3DSS): сетка остаётся в центре экрана - выстрел в 2D-оптике
+// идёт по направлению камеры (CActor::g_fireParams), точка попадания не меняется. Двигается только корпус: глаз отстаёт
+// от прицела при повороте/отдаче (пружина), покачивается при ходьбе; при подъёме к глазу оба слоя проявляются и поле
+// раскрывается. Множитель op22_scope_live (0 - прежний вид: одна текстура _open после поворота к прицелу).
+float g_op22_scope_live = 1.f;
+
+void CWeapon::op22_DrawLiveScope()
+{
+    float e = (m_fZoomRotationFactor - 0.35f) / 0.65f;
+    clamp(e, 0.f, 1.f);
+    e = e * e * (3.f - 2.f * e);
+    if (e <= 0.f)
+    {
+        m_op22_live_frame = 0;
+        return;
+    }
+    float dt = Device.fTimeDelta;
+    clamp(dt, 0.0005f, 0.05f);
+    const Fvector& d = Device.vCameraDirection;
+    const Fvector& p = Device.vCameraPosition;
+    Fvector2 rate{};
+    float speed = 0.f;
+    if (m_op22_live_frame && Device.dwFrame - m_op22_live_frame <= 2)
+    {
+        Fvector dd;
+        dd.sub(d, m_op22_prev_dir);
+        rate.set(dd.dotproduct(Device.vCameraRight) / dt, dd.dotproduct(Device.vCameraTop) / dt);
+        Fvector v;
+        v.sub(p, m_op22_prev_pos);
+        v.y = 0.f;
+        speed = v.magnitude() / dt;
+    }
+    else
+    {
+        m_op22_eye.set(0.f, 0.f);
+        m_op22_eye_v.set(0.f, 0.f);
+    }
+    m_op22_live_frame = Device.dwFrame;
+    m_op22_prev_dir = d;
+    m_op22_prev_pos = p;
+
+    // цель смещения корпуса - доли высоты экрана: против поворота (глаз отстаёт), ходьба - «восьмёрка»
+    const float k = g_op22_scope_live;
+    Fvector2 target;
+    target.set(-rate.x * 0.045f * k, rate.y * 0.045f * k);
+    if (speed > 0.3f && speed < 15.f)
+    {
+        m_op22_bob += dt * (2.f + speed * 0.9f) * PI;
+        const float amp = 0.010f * k * std::min(speed / 3.f, 1.5f);
+        target.x += amp * _sin(m_op22_bob);
+        target.y += amp * 0.6f * _sin(2.f * m_op22_bob);
+    }
+    clamp(target.x, -0.07f, 0.07f);
+    clamp(target.y, -0.07f, 0.07f);
+    // пружина с лёгким перелётом (w 16 рад/с, затухание 0,55)
+    constexpr float W = 16.f, Z = 0.55f;
+    Fvector2 a;
+    a.set(W * W * (target.x - m_op22_eye.x) - 2.f * Z * W * m_op22_eye_v.x, W * W * (target.y - m_op22_eye.y) - 2.f * Z * W * m_op22_eye_v.y);
+    m_op22_eye_v.x += a.x * dt;
+    m_op22_eye_v.y += a.y * dt;
+    m_op22_eye.x += m_op22_eye_v.x * dt;
+    m_op22_eye.y += m_op22_eye_v.y * dt;
+    clamp(m_op22_eye.x, -0.07f, 0.07f);
+    clamp(m_op22_eye.y, -0.07f, 0.07f);
+
+    // поле раскрывается при подъёме к глазу; корпус нарисован на 1,6 экрана (запас под сдвиг и уменьшение)
+    const float s = 0.78f + 0.22f * e;
+    const float ux = UI_BASE_WIDTH * float(Device.dwHeight) / float(Device.dwWidth); // единиц UI по X на высоту экрана
+    const u32 col = color_argb(u32(e * 255.f), 255, 255, 255);
+    const float lw = UI_BASE_WIDTH * s, lh = UI_BASE_HEIGHT * s;
+    m_op22_scope_lens->SetWndRect((UI_BASE_WIDTH - lw) * 0.5f, (UI_BASE_HEIGHT - lh) * 0.5f, lw, lh);
+    m_op22_scope_lens->SetTextureColor(col);
+    m_op22_scope_lens->Update();
+    m_op22_scope_lens->Draw();
+    const float bw = UI_BASE_WIDTH * 1.6f * s, bh = UI_BASE_HEIGHT * 1.6f * s;
+    const float cx = UI_BASE_WIDTH * 0.5f + m_op22_eye.x * ux, cy = UI_BASE_HEIGHT * 0.5f + m_op22_eye.y * UI_BASE_HEIGHT;
+    m_op22_scope_body->SetWndRect(cx - bw * 0.5f, cy - bh * 0.5f, bw, bh);
+    m_op22_scope_body->SetTextureColor(col);
+    m_op22_scope_body->Update();
+    m_op22_scope_body->Draw();
+}
+
 void CWeapon::OnDrawUI()
 {
     if (IsZoomed() && ZoomHideCrosshair())
     {
+        if (UseScopeTexture() && m_op22_scope_body && m_op22_scope_lens && g_op22_scope_live > 0.f) // OP22
+        {
+            op22_DrawLiveScope();
+            return;
+        }
         if (UseScopeTexture() && !IsRotatingToZoom())
         {
             m_UIScope->Update();

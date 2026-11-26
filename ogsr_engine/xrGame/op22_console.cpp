@@ -259,6 +259,9 @@ void op22_register_console()
         // OP22: «дыхание» сетки в 2D-оптике и задержка дыхания на левый Shift (EffectorZoomInertion.cpp), 0 - выкл
         extern float g_op22_scope_sway;
         add(xr_new<CCC_Float>("op22_scope_sway", &g_op22_scope_sway, 0.f, 3.f));
+        // OP22 (26.11): живой 2D-прицел - сила отставания корпуса (Weapon.cpp op22_DrawLiveScope), 0 - прежний вид
+        extern float g_op22_scope_live;
+        add(xr_new<CCC_Float>("op22_scope_live", &g_op22_scope_live, 0.f, 3.f));
     }
     str("bolt_visual", "bolt");
     str("hc_unarmed", "");

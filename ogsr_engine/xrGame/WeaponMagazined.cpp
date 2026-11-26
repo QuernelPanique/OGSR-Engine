@@ -1336,6 +1336,8 @@ void CWeaponMagazined::InitZoomParams(LPCSTR section, bool useTexture)
 
     if (m_UIScope)
         xr_delete(m_UIScope);
+    xr_delete(m_op22_scope_body); // OP22: живой 2D-прицел
+    xr_delete(m_op22_scope_lens);
 
     if (useTexture)
     {
@@ -1346,7 +1348,24 @@ void CWeaponMagazined::InitZoomParams(LPCSTR section, bool useTexture)
             string_path op22_fn;
             const xr_string op22_open = xr_string(scope_tex_name.c_str()) + "_open";
             if (FS.exist(op22_fn, "$game_textures$", op22_open.c_str(), ".dds"))
+            {
                 scope_tex_name = op22_open.c_str();
+                // OP22 (26.11): живой прицел - слои корпуса и стекла (tools/scopes/fresh/real.py), если оба есть
+                const xr_string body = op22_open + "_body", lens = op22_open + "_lens";
+                string_path fb, fl;
+                if (FS.exist(fb, "$game_textures$", body.c_str(), ".dds") && FS.exist(fl, "$game_textures$", lens.c_str(), ".dds"))
+                {
+                    auto mk = [](LPCSTR t) {
+                        CUIStatic* st = xr_new<CUIStatic>();
+                        st->SetWndRect(0, 0, UI_BASE_WIDTH, UI_BASE_HEIGHT);
+                        st->SetStretchTexture(true);
+                        st->InitTexture(t);
+                        return st;
+                    };
+                    m_op22_scope_body = mk(body.c_str());
+                    m_op22_scope_lens = mk(lens.c_str());
+                }
+            }
         }
         const bool scope_tex_autoresize = READ_IF_EXISTS(pSettings, r_bool, section, "scope_texture_autoresize", true);
 
