@@ -50,7 +50,7 @@ public:
     virtual void OnSwitchPhase(u32 old_phase, u32 new_phase);
 
     // Utilities
-    void u_EventGen(NET_Packet& P, u16 type, u16 dest);
+    void u_EventGen(NET_Packet& P, u16 type, u32 dest); // OP22 (id32)
     void u_EventSend(NET_Packet& P, u32 dwFlags = 0x0008);
 
     // Events

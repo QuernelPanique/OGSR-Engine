@@ -203,11 +203,11 @@ public:
     virtual void OnEvent(EVENT E, u64 P1, u64 P2);
     virtual void OnFrame(void);
     virtual void OnRender();
-    void cl_Process_Event(u16 dest, u16 type, NET_Packet& P);
+    void cl_Process_Event(u32 dest, u16 type, NET_Packet& P); // OP22 (id32)
     void cl_Process_Spawn(NET_Packet& P);
     void ProcessGameEvents();
     void ProcessGameSpawns();
-    void ProcessGameSpawnsDestroy(u16 dest, u16 type, NET_Packet& P);
+    void ProcessGameSpawnsDestroy(u32 dest, u16 type, NET_Packet& P); // OP22 (id32)
 
     // Input
     virtual void IR_OnKeyboardPress(int btn);

@@ -8,7 +8,7 @@ public:
     u16 ID;
     u32 timestamp;
     u16 type;
-    u16 destination;
+    u32 destination; // OP22 (id32)
     xr_vector<u8> data;
 
 public:
@@ -26,7 +26,7 @@ public:
         case M_EVENT: {
             P.r_u32(timestamp);
             P.r_u16(type);
-            P.r_u16(destination);
+            P.r_id(destination); // OP22 (id32)
         }
         break;
         default: {
@@ -48,7 +48,7 @@ public:
         P.w_begin(ID);
         P.w_u32(timestamp);
         P.w_u16(type);
-        P.w_u16(destination);
+        P.w_id(destination); // OP22 (id32)
         if (data.size())
             P.w(&*data.begin(), (u32)data.size());
     }
@@ -81,7 +81,7 @@ public:
 
         return TRUE;
     }
-    IC void get(u16& ID, u16& dest, u16& type, NET_Packet& P)
+    IC void get(u16& ID, u32& dest, u16& type, NET_Packet& P) // OP22 (id32)
     {
         const NET_Event& E = *queue.begin();
         ID = E.ID;

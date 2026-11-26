@@ -171,12 +171,12 @@ void game_sv_GameState::Create(shared_str& options)
 {
 }
 
-void game_sv_GameState::u_EventGen(NET_Packet& P, u16 type, u16 dest)
+void game_sv_GameState::u_EventGen(NET_Packet& P, u16 type, u32 dest) // OP22 (id32)
 {
     P.w_begin(M_EVENT);
     P.w_u32(Level().timeServer()); // Device.TimerAsync());
     P.w_u16(type);
-    P.w_u16(dest);
+    P.w_id(dest);
 }
 
 void game_sv_GameState::u_EventSend(NET_Packet& P, u32 dwFlags) { m_server->SendBroadcast(BroadcastCID, P, dwFlags); }

@@ -71,7 +71,7 @@ public:
     void StartStopMenu(CUIDialogWnd* pDialog, bool bDoHideIndicators);
     virtual void shedule_Update(u32 dt);
 
-    void u_EventGen(NET_Packet& P, u16 type, u16 dest);
+    void u_EventGen(NET_Packet& P, u16 type, u32 dest); // OP22 (id32)
     void u_EventSend(NET_Packet& P);
 
     virtual bool IsServerControlHits() { return m_bServerControlHits; };

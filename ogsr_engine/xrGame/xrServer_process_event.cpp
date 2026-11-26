@@ -20,7 +20,7 @@ void xrServer::Process_event(NET_Packet& P, ClientID sender)
 
     u32 timestamp;
     u16 type;
-    u16 destination;
+    u32 destination; // OP22 (id32)
     u32 MODE = net_flags(TRUE, TRUE);
 
     // correct timestamp with server-unique-time (note: direct message correction)
@@ -28,7 +28,7 @@ void xrServer::Process_event(NET_Packet& P, ClientID sender)
 
     // read generic info
     P.r_u16(type);
-    P.r_u16(destination);
+    P.r_id(destination); // OP22 (id32)
 
     CSE_Abstract* receiver = game->get_entity_from_eid(destination);
     if (receiver)

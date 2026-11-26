@@ -322,7 +322,7 @@ int CLevel::get_RPID(LPCSTR /**name/**/)
 
 BOOL g_bDebugEvents = FALSE;
 
-void CLevel::cl_Process_Event(u16 dest, u16 type, NET_Packet& P)
+void CLevel::cl_Process_Event(u32 dest, u16 type, NET_Packet& P) // OP22 (id32)
 {
     //			Msg				("--- event[%d] for [%d]",type,dest);
     CObject* O = Objects.net_Find(dest);
@@ -363,7 +363,8 @@ void CLevel::ProcessGameEvents()
 
         while (game_events->available(svT))
         {
-            u16 ID, dest, type;
+            u16 ID, type;
+            u32 dest; // OP22 (id32)
             game_events->get(ID, dest, type, P);
 
             switch (ID)
