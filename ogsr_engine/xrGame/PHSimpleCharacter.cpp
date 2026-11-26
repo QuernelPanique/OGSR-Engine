@@ -1662,7 +1662,7 @@ CObject* CPHSimpleCharacter::DamageInitiator() const
     VERIFY(m_phys_ref_object);
     if (m_collision_damage_info.m_dmc_type == SCollisionDamageInfo::ctStatic)
         return (CObject*)(m_phys_ref_object);
-    u16 initiator_id = DamageInitiatorID();
+    u32 initiator_id = DamageInitiatorID(); // OP22 (id32)
     VERIFY(initiator_id != u16(-1));
     if (initiator_id == m_phys_ref_object->ID())
         return static_cast<CObject*>(m_phys_ref_object);
