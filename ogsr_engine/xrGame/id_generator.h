@@ -128,6 +128,7 @@ private:
     xr_deque<u32> m_freed;
     u32 m_next_fresh{};
     u32 m_used_count{};
+    u32 m_max_used{}; // наибольший выданный ID (для перебора объектов в скриптах)
 
     // младшая половина 0xfffe/0xffff не выдаётся: в 16-битных полях ОП (STATE, Lua) она означает «нет объекта»
     static bool reserved(u32 id) { return (id & 0xffff) >= 0xfffe; }
@@ -139,6 +140,8 @@ private:
         R_ASSERT2(!m_used[id], "Requesting ID has already been used!");
         m_used[id] = 1;
         ++m_used_count;
+        if (id > m_max_used)
+            m_max_used = id;
         if (id >= 0xfffe)
             g_op22_ids_wide = true; // с этого момента client_data и реестры сейва пишутся с 4-байтными ID
     }
@@ -195,5 +198,6 @@ public:
     }
 
     u32 used_count() const { return m_used_count; }
+    u32 max_used() const { return m_max_used; }
     u32 next_fresh() const { return m_next_fresh; }
 };

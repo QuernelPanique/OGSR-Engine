@@ -53,6 +53,12 @@ CSE_ALifeDynamicObject* alife_object(const CALifeSimulator* self, ALife::_OBJECT
     return (self->objects().object(object_id, true));
 }
 
+// OP22 (id32): верхняя граница перебора ID в скриптах (циклы ОП `for i=1,65534 do alife():object(i)`): наибольший
+// выданный ID, не меньше старого предела 65534 - пока больших ID нет, перебор как в ОП. Скрипты зовут через
+// op22_compat.max_object_id (на старом движке функции нет - остаётся 65534).
+u32 op22_max_id(const CALifeSimulator* self) { return std::max<u32>(65534, self->server().ID_max_used()); }
+u32 op22_ids_used(const CALifeSimulator* self) { return self->server().ID_used_count(); }
+
 bool valid_object_id(const CALifeSimulator* self, ALife::_OBJECT_ID object_id)
 {
     VERIFY(self);
@@ -405,6 +411,8 @@ void CALifeSimulator::script_register(lua_State* L)
 {
     module(L)[(class_<CALifeSimulator>("alife_simulator")
                   .def("valid_object_id", &valid_object_id)
+                  .def("op22_max_id", &op22_max_id) // OP22 (id32)
+                  .def("op22_ids_used", &op22_ids_used)
                   .def("level_id", &get_level_id)
                   .def("level_id", &get_level_id_by_name)
                   .def("level_name", &get_level_name)

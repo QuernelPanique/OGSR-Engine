@@ -87,6 +87,7 @@ public:
     IC u32 PerformIDgen(u32 ID) { return (m_tID_Generator.tfGetID(ID)); } // OP22 (id32)
     IC void FreeID(u32 ID, u32 time) { return (m_tID_Generator.vfFreeID(ID, time)); }
     IC u32 ID_used_count() const { return m_tID_Generator.used_count(); }
+    IC u32 ID_max_used() const { return m_tID_Generator.max_used(); }
     IC u32 ID_next_fresh() const { return m_tID_Generator.next_fresh(); }
 
     void Perform_connect_spawn(CSE_Abstract* E, xrClientData* to, NET_Packet& P);
