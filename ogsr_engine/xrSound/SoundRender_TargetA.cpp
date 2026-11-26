@@ -40,7 +40,12 @@ BOOL CSoundRender_TargetA::_initialize()
     }
 }
 
-void CSoundRender_TargetA::alAuxInit(ALuint slot) { A_CHK(alSource3i(pSource, AL_AUXILIARY_SEND_FILTER, slot, 0, AL_FILTER_NULL)); }
+void CSoundRender_TargetA::alAuxInit(ALuint slot)
+{
+    A_CHK(alSource3i(pSource, AL_AUXILIARY_SEND_FILTER, slot, 0, AL_FILTER_NULL));
+    m_op22_slot = slot; // OP22
+    m_op22_dry = false;
+}
 
 void CSoundRender_TargetA::_destroy()
 {
@@ -206,6 +211,13 @@ void CSoundRender_TargetA::fill_parameters(CSoundRender_Core* core)
 
     VERIFY2(m_pEmitter, SE->source()->file_name());
     A_CHK(alSourcei(pSource, AL_SOURCE_RELATIVE, m_pEmitter->b2D));
+
+    // OP22 (26.11): 2D-звук (в голове игрока) не уходит в эффект помещения; цель общая - переключаем по эмиттеру
+    if (bEFX && m_op22_slot != AL_EFFECTSLOT_NULL && !!m_pEmitter->b2D != m_op22_dry)
+    {
+        m_op22_dry = !!m_pEmitter->b2D;
+        A_CHK(alSource3i(pSource, AL_AUXILIARY_SEND_FILTER, m_op22_dry ? AL_EFFECTSLOT_NULL : m_op22_slot, 0, AL_FILTER_NULL));
+    }
 
     A_CHK(alSourcef(pSource, AL_ROLLOFF_FACTOR, psSoundRolloff));
 

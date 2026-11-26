@@ -53,6 +53,12 @@ protected:
     u32 m_op22_ray{};
     float m_op22_ray_t{};
     bool m_op22_ready{};
+    float m_op22_open{1.f};
+
+public:
+    float op22_openness() const override { return m_op22_open; }
+
+protected:
     CSoundRender_Environment* m_op22_authored{};
     CSoundRender_Environment m_op22_env;
     void op22_acoustics(const Fvector& P);

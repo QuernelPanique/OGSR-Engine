@@ -680,6 +680,7 @@ float add_cam_effector2(LPCSTR fn, int id, bool cyclic, LPCSTR cb_func)
 void remove_cam_effector(int id) { Actor()->Cameras().RemoveCamEffector((ECamEffectorType)id); }
 
 float get_snd_volume() { return psSoundVFactor; }
+float op22_sound_openness() { return ::Sound->op22_openness(); } // OP22 26.11: 1 - улица, 0 - помещение
 
 void set_snd_volume(float v)
 {
@@ -1182,7 +1183,7 @@ void CLevel::script_register(lua_State* L)
 
             def("get_bounding_volume", &get_bounding_volume),
 
-            def("iterate_sounds", &iterate_sounds1), def("iterate_sounds", &iterate_sounds2), def("physics_world", &physics_world), def("get_snd_volume", &get_snd_volume),
+            def("iterate_sounds", &iterate_sounds1), def("iterate_sounds", &iterate_sounds2), def("physics_world", &physics_world), def("get_snd_volume", &get_snd_volume), def("op22_sound_openness", &op22_sound_openness),
             def("set_snd_volume", &set_snd_volume), def("add_cam_effector", &add_cam_effector), def("add_cam_effector2", &add_cam_effector2),
             def("remove_cam_effector", &remove_cam_effector), def("add_pp_effector", &add_pp_effector), def("set_pp_effector_factor", &set_pp_effector_factor),
             def("set_pp_effector_factor", &set_pp_effector_factor2), def("remove_pp_effector", &remove_pp_effector),

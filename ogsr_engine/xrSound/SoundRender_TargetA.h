@@ -38,4 +38,9 @@ public:
     virtual void fill_parameters(CSoundRender_Core* core);
 
     virtual void alAuxInit(ALuint slot) override;
+
+private:
+    // OP22 (26.11): звуки «в голове» (2D: КПК, интерфейс) - без эффекта помещения (эхо от писка КПК)
+    ALuint m_op22_slot = 0;
+    bool m_op22_dry = false;
 };

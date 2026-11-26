@@ -302,6 +302,8 @@ public:
     virtual void play_no_feedback(ref_sound& S, CObject* O, u32 flags = 0, float delay = 0.f, Fvector* pos = 0, float* vol = 0, float* freq = 0, Fvector2* range = 0) = 0;
 
     virtual void set_master_volume(float f = 1.f) = 0;
+    // OP22 (26.11): открытость места у слушателя 0..1 (динамическая акустика; 1 - улица, 0 - помещение) для хвостов выстрела
+    virtual float op22_openness() const { return 1.f; }
     virtual void set_geometry_env(IReader* I) = 0;
     virtual void set_geometry_som(IReader* I) = 0;
     virtual void set_geometry_occ(CDB::MODEL* M) = 0;

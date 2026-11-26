@@ -133,7 +133,11 @@ void CSoundRender_Core::update(const Fvector& P, const Fvector& D, const Fvector
                 e_target = &m_op22_env;
         }
         else
+        {
             e_target = m_op22_authored;
+            // авторская зона ОП: открытость по силе её реверберации (-3000 мБ и тише - улица, 0 - зал)
+            m_op22_open = m_op22_authored ? std::clamp(-m_op22_authored->Reverb / 3000.f, 0.f, 1.f) : 1.f;
+        }
 
         if (!e_currentPaused)
             e_current.lerp(e_current, *e_target, dt_sec);
@@ -394,20 +398,27 @@ void CSoundRender_Core::op22_acoustics(const Fvector& P)
 
     const float* d = m_op22_dist;
     auto near_ = [](float x, float full, float none) { return std::clamp((none - x) / (none - full), 0.f, 1.f); };
-    // потолок: прямо вверх весит вдвое; полностью - ближе 20 м, нет - дальше 30 м
-    float up = 2.f * near_(d[0], 20.f, 30.f);
+    // OP22 (26.11, пользователь: «эхо даже на открытых пространствах», Армейские склады и др.): прежние пороги 20-30 м
+    // считали забор/склон сбоку стеной, а диагональные лучи в холмы - потолком.
+    // Потолок - только если закрыто прямо вверх (ближе 12 м полностью, дальше 22 м - нет); диагонали лишь уточняют.
+    float diag = 0.f;
     for (u32 k = 1; k <= 4; ++k)
-        up += near_(d[k], 20.f, 30.f);
-    up /= 6.f;
-    // стены: доля горизонтальных лучей с препятствием ближе 20 м (нет - дальше 30 м)
+        diag += near_(d[k], 12.f, 22.f);
+    float up = near_(d[0], 12.f, 22.f) * (.6f + .4f * diag / 4.f);
+    // стены: доля горизонтальных лучей с препятствием ближе 10 м (нет - дальше 20 м); «подворотня» - только когда
+    // закрыто большинство сторон (плавно от 35 до 80 %), один забор или склон эха не даёт
     float hor = 0.f, wall_sum = 0.f, wall_n = 0.f;
     for (u32 k = 5; k < 13; ++k)
     {
-        hor += near_(d[k], 20.f, 30.f);
+        hor += near_(d[k], 10.f, 20.f);
         if (d[k] < OP22_RANGE)
             wall_sum += d[k], wall_n += 1.f;
     }
     hor /= 8.f;
+    {
+        float t = std::clamp((hor - .35f) / .45f, 0.f, 1.f);
+        hor = t * t * (3.f - 2.f * t);
+    }
     // размер помещения: средняя дистанция до стен и высота потолка
     const float span = wall_n > 0.f ? wall_sum / wall_n : OP22_RANGE;
     const float size = .7f * span + .3f * _min(d[0], OP22_RANGE);
@@ -431,6 +442,7 @@ void CSoundRender_Core::op22_acoustics(const Fvector& P)
     const float w_hangar = w_in * (1.f - tunnel) * t_hall * t_hangar;
     const float w_tunnel = w_in * tunnel;
     const float wsum = _max(w_open + w_alley + w_room + w_hall + w_hangar + w_tunnel, 1e-4f);
+    m_op22_open = std::clamp((w_open + .5f * w_alley) / wsum, 0.f, 1.f); // OP22 26.11: для хвостов выстрела
 
     op22_preset r{};
     auto acc = [&](const op22_preset& p, float w) {
