@@ -34,7 +34,7 @@
 #define CAR_BODY_XML "carbody_new.xml"
 #define CARBODY_ITEM_XML "carbody_item.xml"
 
-void move_item(u32 from_id, u32 to_id, u32 what_id) // OP22 (id32);
+void move_item(u32 from_id, u32 to_id, u32 what_id); // OP22 (id32)
 
 CUICarBodyWnd::CUICarBodyWnd()
 {
@@ -1054,12 +1054,12 @@ void move_item(u32 from_id, u32 to_id, u32 what_id) // OP22 (id32)
     NET_Packet P;
     CGameObject::u_EventGen(P, GE_TRANSFER_REJECT, from_id);
 
-    P.w_u16(what_id);
+    P.w_id(what_id); // OP22 (id32)
     CGameObject::u_EventSend(P);
 
     //другому инвентарю - взять вещь
     CGameObject::u_EventGen(P, GE_TRANSFER_TAKE, to_id);
-    P.w_u16(what_id);
+    P.w_id(what_id); // OP22 (id32)
     CGameObject::u_EventSend(P);
 }
 

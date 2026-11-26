@@ -83,8 +83,8 @@ void IInventoryBox::ProcessEvent(CGameObject* O, NET_Packet& P, u16 type)
 #include "inventory_item.h"
 void IInventoryBox::AddAvailableItems(TIItemContainer& items_container) const
 {
-    xr_vector<u16>::const_iterator it = m_items.begin();
-    xr_vector<u16>::const_iterator it_e = m_items.end();
+    xr_vector<u32>::const_iterator it = m_items.begin();
+    xr_vector<u32>::const_iterator it_e = m_items.end();
 
     for (; it != it_e; ++it)
     {

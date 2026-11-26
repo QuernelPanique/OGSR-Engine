@@ -138,7 +138,7 @@ public:
     xr_deque<CSE_Abstract*> game_spawn_queue;
     xrServer* Server;
     GlobalFeelTouch m_feel_deny;
-    xr_vector<u16> m_just_destroyed;
+    xr_vector<u32> m_just_destroyed; // OP22 (id32)
 
 private:
     // preload sounds registry

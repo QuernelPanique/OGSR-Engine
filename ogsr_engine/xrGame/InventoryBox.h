@@ -5,7 +5,7 @@
 class IInventoryBox
 {
 protected:
-    xr_vector<u16> m_items;
+    xr_vector<u32> m_items; // OP22 (id32)
 
     void ProcessEvent(CGameObject* O, NET_Packet& P, u16 type);
 

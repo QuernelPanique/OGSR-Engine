@@ -194,7 +194,7 @@ void CActor::PickupModeUpdate()
     if (g_op22_pickup_mark_cfg.radius > 0.f)
     {
         constexpr u32 OP22_MARK_REFRESH_MS = 100;
-        static xr_vector<u16> op22_visible;
+        static xr_vector<u32> op22_visible; // OP22 (id32)
         static u32 op22_next_scan{}, op22_last_frame{};
         const bool op22_first = Device.dwFrame != op22_last_frame + 1;
         op22_last_frame = Device.dwFrame;

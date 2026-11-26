@@ -571,8 +571,8 @@ void xrServer::verify_entity(const CSE_Abstract* entity) const
                 "SERVER : Parent/Children relationship mismatch - Object has parent, but corresponding parent doesn't have children", (*J).second->name_replace());
     }
 
-    xr_vector<u16>::const_iterator I = entity->children.begin();
-    xr_vector<u16>::const_iterator E = entity->children.end();
+    xr_vector<ALife::_OBJECT_ID>::const_iterator I = entity->children.begin();
+    xr_vector<ALife::_OBJECT_ID>::const_iterator E = entity->children.end();
     for (; I != E; ++I)
     {
         VERIFY3(*I != 0xffff, "SERVER : Invalid entity children id - 0xffff", entity->name_replace());

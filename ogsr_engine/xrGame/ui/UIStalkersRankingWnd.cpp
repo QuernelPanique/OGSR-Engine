@@ -20,7 +20,7 @@
 #define STALKERS_RANKING_XML "stalkers_ranking.xml"
 #define STALKERS_RANKING_CHARACTER_XML "stalkers_ranking_character.xml"
 
-typedef xr_vector<u16> TOP_LIST;
+typedef xr_vector<u32> TOP_LIST; // OP22 (id32)
 TOP_LIST g_all_statistic_humans;
 
 void CUIStalkersRankingWnd::Init()

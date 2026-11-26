@@ -12,8 +12,8 @@ void xrServer::Perform_transfer(NET_Packet& PR, NET_Packet& PT, CSE_Abstract* wh
     u32 time = Device.dwTimeGlobal;
 
     // 2. Detach "FROM"
-    xr_vector<u16>& C = from->children;
-    xr_vector<u16>::iterator c = std::find(C.begin(), C.end(), what->ID);
+    xr_vector<ALife::_OBJECT_ID>& C = from->children; // OP22 (id32)
+    xr_vector<ALife::_OBJECT_ID>::iterator c = std::find(C.begin(), C.end(), what->ID);
     R_ASSERT(C.end() != c);
     C.erase(c);
     PR.w_begin(M_EVENT);

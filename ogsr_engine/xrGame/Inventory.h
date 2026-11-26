@@ -80,7 +80,7 @@ public:
     // Ищет на поясе или в рюкзаке IItem с указанным именем (cName())
     PIItem Get(const char* name, bool bSearchRuck) const;
     // Ищет на поясе или в рюкзаке IItem с указанным именем (id)
-    PIItem Get(const u16 id, bool bSearchRuck) const;
+    PIItem Get(const u32 id, bool bSearchRuck) const; // OP22 (id32)
     // Ищет на поясе или в рюкзаке IItem с указанным CLS_ID
     PIItem Get(CLASS_ID cls_id, bool bSearchRuck) const;
     PIItem GetAny(const char* name) const;

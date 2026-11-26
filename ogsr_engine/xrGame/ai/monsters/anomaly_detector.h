@@ -20,7 +20,7 @@ private:
     xr_vector<CLASS_ID> m_ignore_clsids;
     struct SAnomalyInfo
     {
-        u16 id;
+        u32 id; // OP22 (id32)
         bool ignored;
         u32 time_registered;
     };
@@ -51,5 +51,5 @@ public:
     void activate(bool = false);
     void deactivate(bool = false);
     void remove_all_restrictions();
-    void remove_restriction(u16);
+    void remove_restriction(u32); // OP22 (id32)
 };

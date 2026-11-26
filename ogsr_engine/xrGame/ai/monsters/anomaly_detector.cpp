@@ -43,8 +43,8 @@ void CAnomalyDetector::update_schedule()
     if (m_storage.empty())
         return;
 
-    xr_vector<u16> temp_out_restrictors;
-    xr_vector<u16> temp_in_restrictors;
+    xr_vector<ALife::_OBJECT_ID> temp_out_restrictors; // OP22 (id32)
+    xr_vector<ALife::_OBJECT_ID> temp_in_restrictors;
 
     temp_in_restrictors.reserve(m_storage.size());
 
@@ -150,8 +150,8 @@ void CAnomalyDetector::deactivate(bool force)
 
 void CAnomalyDetector::remove_all_restrictions()
 {
-    xr_vector<u16> temp_out_restrictors;
-    xr_vector<u16> temp_in_restrictors;
+    xr_vector<ALife::_OBJECT_ID> temp_out_restrictors; // OP22 (id32)
+    xr_vector<ALife::_OBJECT_ID> temp_in_restrictors;
 
     temp_in_restrictors.reserve(m_storage.size());
     for (ANOMALY_INFO_VEC_IT it = m_storage.begin(); it != m_storage.end(); it++)
@@ -160,14 +160,14 @@ void CAnomalyDetector::remove_all_restrictions()
     m_storage.clear();
 }
 
-void CAnomalyDetector::remove_restriction(u16 id)
+void CAnomalyDetector::remove_restriction(u32 id)
 {
     auto it = std::find_if(m_storage.begin(), m_storage.end(), [id](const auto& it) { return it.id == id; });
 
     if (it != m_storage.end())
     {
-        xr_vector<u16> temp_out_restrictors;
-        xr_vector<u16> temp_in_restrictors;
+        xr_vector<ALife::_OBJECT_ID> temp_out_restrictors; // OP22 (id32)
+        xr_vector<ALife::_OBJECT_ID> temp_in_restrictors;
         temp_in_restrictors.push_back(it->id);
         m_object->movement().restrictions().remove_restrictions(temp_out_restrictors, temp_in_restrictors);
         m_storage.erase(it);
