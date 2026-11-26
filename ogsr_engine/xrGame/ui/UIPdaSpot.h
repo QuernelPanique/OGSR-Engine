@@ -20,14 +20,14 @@ class CUIPdaSpot : public CUIDialogWnd, public CUIWndCallback
     bool m_mainWnd;
     LPCSTR m_levelName;
     Fvector m_position;
-    u16 m_spotID;
+    u32 m_spotID; // OP22 (id32)
     shared_str m_spotType;
 
 public:
     CUIPdaSpot();
     ~CUIPdaSpot() = default;
 
-    void Init(u16 spot_id, LPCSTR level_name, Fvector pos, bool main_wnd);
+    void Init(u32 spot_id, LPCSTR level_name, Fvector pos, bool main_wnd);
     void InitControls();
 
     void OnAdd(CUIWindow* w, void* d);

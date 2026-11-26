@@ -365,7 +365,7 @@ struct GRASS_SHADER_DATA
 {
     size_t index{};
     s8 anim[GRASS_SHADER_DATA_COUNT]{};
-    u16 id[GRASS_SHADER_DATA_COUNT]{};
+    u32 id[GRASS_SHADER_DATA_COUNT]{}; // OP22 (id32)
 
     Fvector4 pos[GRASS_SHADER_DATA_COUNT]{}; //x,y,z - pos, w - radius_curr
     Fvector4 dir[GRASS_SHADER_DATA_COUNT]{}; // x,y,z - dir, w - str

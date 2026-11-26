@@ -44,7 +44,7 @@ public:
     CUICharacterInfo* m_op22_character{};
     float m_op22_row_height{85.f};
     CUI3tButton* m_op22_map_button{};
-    u16 m_op22_selected{u16(-1)};
+    u32 m_op22_selected{u16(-1)}; // OP22 (id32)
     u32 m_op22_bio_color{0xffffffff};
 
 protected:

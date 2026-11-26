@@ -22,7 +22,7 @@ CUIPdaSpot::CUIPdaSpot()
     InitControls();
 }
 
-void CUIPdaSpot::Init(u16 spot_id, LPCSTR level_name, Fvector pos, bool main_wnd)
+void CUIPdaSpot::Init(u32 spot_id, LPCSTR level_name, Fvector pos, bool main_wnd) // OP22 (id32)
 {
     m_mainWnd = main_wnd;
     m_levelName = level_name;
