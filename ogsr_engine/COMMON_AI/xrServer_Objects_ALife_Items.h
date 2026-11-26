@@ -62,7 +62,7 @@ virtual CSE_ALifeInventoryItem* cast_inventory_item() { return this; };
 virtual u32 update_rate() const;
 // end of the virtual inheritance dependant code
 
-IC bool attached() const { return (base()->ID_Parent < 0xffff); }
+IC bool attached() const { return (base()->ID_Parent != 0xffff); } // OP22 (id32): было < 0xffff - владелец с ID > 0xffff считался «нет владельца»
 virtual bool bfUseful();
 
 /////////// network ///////////////
