@@ -273,6 +273,16 @@ static class cl_fakescope_params3 final : public R_constant_setup
     void setup(CBackend& cmd_list, R_constant* C) override { cmd_list.set_c(C, ps_scope3_params.x, ps_scope3_params.y, ps_scope3_params.z, ps_scope3_params.w); }
 } binder_fakescope_params3;
 
+// OP22 (26.11): живой 2D-прицел
+static class cl_op22_scope2d final : public R_constant_setup
+{
+    void setup(CBackend& cmd_list, R_constant* C) override
+    {
+        const Fvector4& v = Device.op22_scope2d;
+        cmd_list.set_c(C, v.x, v.y, v.z, v.w);
+    }
+} binder_op22_scope2d;
+
 // D-Light0
 static class cl_sun0_color final : public R_constant_setup
 {
@@ -880,6 +890,7 @@ void CBlender_Compile::SetMapping() const
     r_Constant("laser_params", &binder_laser_params);
 
     r_Constant("fakescope", &binder_fakescope);
+    r_Constant("op22_scope2d", &binder_op22_scope2d); // OP22
     r_Constant("fakescope_params1", &binder_fakescope_params1);
     r_Constant("fakescope_params2", &binder_fakescope_params2);
     r_Constant("fakescope_params3", &binder_fakescope_params3);

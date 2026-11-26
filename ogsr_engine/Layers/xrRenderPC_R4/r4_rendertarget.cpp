@@ -322,6 +322,7 @@ CRenderTarget::CRenderTarget()
     s_dof.create("ogsr_dof");
     s_gasmask_dudv.create("ogsr_gasmask");
     s_fakescope.create("ogsr_fakescope"); // crookr
+    s_op22_scope2d.create("op22_scope2d"); // OP22: живой 2D-прицел (shaders/r3/op22_scope2d.s)
     s_nightvision.create("ogsr_nightvision");
     s_heatvision.create("ogsr_heatvision");
     s_flare.create("effects\\lensflare", "shaders\\lensflare");

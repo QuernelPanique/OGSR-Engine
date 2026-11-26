@@ -2157,10 +2157,18 @@ void CWeapon::op22_DrawLiveScope()
     const float ux = UI_BASE_WIDTH * float(Device.dwHeight) / float(Device.dwWidth); // единиц UI по X на высоту экрана
     const u32 col = color_argb(u32(e * 255.f), 255, 255, 255);
     const float lw = UI_BASE_WIDTH * s, lh = UI_BASE_HEIGHT * s;
+    // оптика с круглым полем: тень, дисторсия, аберрация и тёмный окуляр - шейдер над миром (кадр следующего рендера)
+    if (m_op22_scope_r > 0.f)
+    {
+        Device.op22_scope2d.set(m_op22_eye.x, m_op22_eye.y, m_op22_scope_r * s, e);
+        Device.op22_scope2d_frame = Device.dwFrame;
+    }
     m_op22_scope_lens->SetWndRect((UI_BASE_WIDTH - lw) * 0.5f, (UI_BASE_HEIGHT - lh) * 0.5f, lw, lh);
     m_op22_scope_lens->SetTextureColor(col);
     m_op22_scope_lens->Update();
     m_op22_scope_lens->Draw();
+    if (m_op22_scope_r > 0.f)
+        return;
     const float bw = UI_BASE_WIDTH * 1.6f * s, bh = UI_BASE_HEIGHT * 1.6f * s;
     const float cx = UI_BASE_WIDTH * 0.5f + m_op22_eye.x * ux, cy = UI_BASE_HEIGHT * 0.5f + m_op22_eye.y * UI_BASE_HEIGHT;
     m_op22_scope_body->SetWndRect(cx - bw * 0.5f, cy - bh * 0.5f, bw, bh);

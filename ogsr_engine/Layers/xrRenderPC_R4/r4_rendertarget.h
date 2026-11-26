@@ -180,6 +180,7 @@ private:
     ref_shader s_rain_drops;
     ref_shader s_gasmask_dudv;
     ref_shader s_fakescope; //crookr
+    ref_shader s_op22_scope2d; // OP22: живой 2D-прицел
     ref_shader s_nightvision;
     ref_shader s_heatvision;
 

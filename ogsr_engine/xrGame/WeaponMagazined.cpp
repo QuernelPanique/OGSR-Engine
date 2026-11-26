@@ -1338,6 +1338,7 @@ void CWeaponMagazined::InitZoomParams(LPCSTR section, bool useTexture)
         xr_delete(m_UIScope);
     xr_delete(m_op22_scope_body); // OP22: живой 2D-прицел
     xr_delete(m_op22_scope_lens);
+    m_op22_scope_r = 0.f;
 
     if (useTexture)
     {
@@ -1364,6 +1365,14 @@ void CWeaponMagazined::InitZoomParams(LPCSTR section, bool useTexture)
                     };
                     m_op22_scope_body = mk(body.c_str());
                     m_op22_scope_lens = mk(lens.c_str());
+                    // оптика с круглым полем: радиус поля -> шейдер op22_scope2d рисует оптику над миром вместо слоя корпуса
+                    string_path fi;
+                    const xr_string scope_ltx = op22_open + "_scope";
+                    if (FS.exist(fi, "$game_textures$", scope_ltx.c_str(), ".ltx"))
+                    {
+                        CInifile ini(fi);
+                        m_op22_scope_r = READ_IF_EXISTS(&ini, r_float, "scope", "r", 0.f);
+                    }
                 }
             }
         }

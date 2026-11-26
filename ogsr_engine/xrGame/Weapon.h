@@ -243,6 +243,7 @@ protected:
     Fvector m_op22_prev_dir{}, m_op22_prev_pos{};
     float m_op22_bob{};
     u32 m_op22_live_frame{};
+    float m_op22_scope_r{}; // радиус поля для оптики-шейдера (<сетка>_open_scope.ltx), 0 - только слои UI
     void op22_DrawLiveScope();
     //коэффициент увеличения прицеливания
     float m_fIronSightZoomFactor;

@@ -260,6 +260,14 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
         phase_fakescope(cmd_list); // crookr
 */
 
+    // OP22 (26.11): живой 2D-прицел - оптика над изображением мира (до маски/ПНВ: они ближе к глазу, чем прицел)
+    if (Device.op22_scope2d.w > 0.f && Device.op22_scope2d.z > 0.f && Device.dwFrame - Device.op22_scope2d_frame <= 1)
+    {
+        PIX_EVENT(phase_op22_scope2d);
+        RenderScreenTriangle(cmd_list, rt_Generic_combine, s_op22_scope2d->E[0]);
+        HW.get_context(cmd_list.context_id)->CopyResource(rt_Postprocess_0->pSurface, rt_Generic_combine->pSurface);
+    }
+
 #pragma todo("Simp: эффект шлема багует в прицеле, надо бы придумать решение получше")
     extern bool Is3dssZoomed;
     if (!Is3dssZoomed &&

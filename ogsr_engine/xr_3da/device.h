@@ -57,6 +57,12 @@ public:
     Fvector vCameraTop{};
     Fvector vCameraRight{};
 
+    // OP22 (26.11): живой 2D-прицел - оптика над изображением мира (пишет xrGame Weapon.cpp op22_DrawLiveScope, читает
+    // рендер r4_rendertarget_phase_combine.cpp): x, y - смещение глаза (доли высоты экрана, y вниз), z - радиус поля
+    // (доля высоты), w - сила 0..1; кадр записи - чтобы эффект не залипал, когда прицел больше не рисуется
+    Fvector4 op22_scope2d{};
+    u32 op22_scope2d_frame{};
+
     Fmatrix mView{};
     Fmatrix mInvView{};
     Fmatrix mProject{};
