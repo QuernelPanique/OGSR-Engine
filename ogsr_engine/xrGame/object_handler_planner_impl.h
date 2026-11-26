@@ -8,8 +8,8 @@
 
 #pragma once
 
-IC bool CObjectHandlerPlanner::object_action(u32 action_id, CObject* object) { return ((action_id >> 16) == object->ID()); }
+IC bool CObjectHandlerPlanner::object_action(u32 action_id, CObject* object) { return (op22_global(action_id >> 16) == object->ID()); } // OP22 (id32)
 
 IC u32 CObjectHandlerPlanner::current_action_object_id() const { return (action_object_id(current_action_id())); }
 
-IC u32 CObjectHandlerPlanner::action_object_id(_condition_type action_id) const { return (action_id >> 16); }
+IC u32 CObjectHandlerPlanner::action_object_id(_condition_type action_id) const { return op22_global(action_id >> 16); } // OP22 (id32)

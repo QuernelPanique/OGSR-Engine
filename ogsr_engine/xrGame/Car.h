@@ -580,7 +580,7 @@ public:
     // Hits
     virtual void HitSignal(float /**HitAmount/**/, Fvector& /**local_dir/**/, CObject* /**who/**/, s16 /**element/**/){};
     virtual void g_fireParams(CHudItem* /**pHudItem/**/, Fvector& /**P/**/, Fvector& /**D/**/, const bool for_cursor = false) override {}
-    virtual u16 Initiator();
+    virtual u32 Initiator(); // OP22 (id32)
     // HUD
     virtual void OnHUDDraw(CCustomHUD* hud, u32 context_id, IRenderable* root) override;
 

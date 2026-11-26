@@ -15,7 +15,7 @@ public:
     IC CALifeRegistryWrapper() { holder_id = 0xffff; }
     virtual ~CALifeRegistryWrapper() { delete_data(local_registry); }
 
-    IC void init(u16 id) { holder_id = id; }
+    IC void init(u32 id) { holder_id = id; } // OP22 (id32)
 
     typename _registry_type::_data& objects();
     const typename _registry_type::_data* objects_ptr();
@@ -28,7 +28,7 @@ public:
 
 private:
     // id - владельца реестра
-    u16 holder_id;
+    u32 holder_id; // OP22 (id32)
 
     //реестр на случай, если нет ALife (для отладки)
     //	typename _registry_type::_data	local_registry;

@@ -538,6 +538,32 @@ void CObjectHandlerPlanner::update()
 //Вынесено из object_handler_planner_impl.h
 /*IC*/ CObjectHandlerPlanner::_condition_type CObjectHandlerPlanner::uid(const u32 id0, const u32 id1) const
 {
-    VERIFY(!((id0 << 16) & id1));
-    return ((id0 << 16) | id1);
+    const u32 local = op22_local(id0); // OP22 (id32)
+    VERIFY(!((local << 16) & id1));
+    return ((local << 16) | id1);
+}
+
+u32 CObjectHandlerPlanner::op22_local(u32 id) const
+{
+    if (id < 0xfffe || id == 0xffff)
+    {
+        if (id != 0xffff && m_op22_local2big.find(id) != m_op22_local2big.end())
+            Msg("! [OP22 id32] object handler planner: local index %u of a big id collides with object %u", id, id);
+        return id;
+    }
+    const auto it = m_op22_big2local.find(id);
+    if (it != m_op22_big2local.end())
+        return it->second;
+    u32 local = 0xfffd;
+    while (m_op22_local2big.find(local) != m_op22_local2big.end())
+        --local;
+    m_op22_big2local[id] = local;
+    m_op22_local2big[local] = id;
+    return local;
+}
+
+u32 CObjectHandlerPlanner::op22_global(u32 local) const
+{
+    const auto it = m_op22_local2big.find(local);
+    return it != m_op22_local2big.end() ? it->second : local;
 }

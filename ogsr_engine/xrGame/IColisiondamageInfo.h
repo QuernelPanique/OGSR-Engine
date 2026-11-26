@@ -7,7 +7,7 @@ public:
     virtual float ContactVelocity() const = 0;
     virtual void HitDir(Fvector& dir) const = 0;
     virtual const Fvector& HitPos() const = 0;
-    virtual u16 DamageInitiatorID() const = 0;
+    virtual u32 DamageInitiatorID() const = 0; // OP22 (id32)
     virtual CObject* DamageInitiator() const = 0;
     virtual ALife::EHitType HitType() const = 0;
     virtual ICollisionHitCallback* HitCallback() const = 0;

@@ -4,7 +4,7 @@
 class CBolt : public CMissile, public IDamageSource
 {
     typedef CMissile inherited;
-    u16 m_thrower_id;
+    u32 m_thrower_id; // OP22 (id32)
 
 public:
     CBolt(void);
@@ -16,8 +16,8 @@ public:
     virtual bool Activate(bool = false);
     virtual void Deactivate(bool = false);
 
-    virtual void SetInitiator(u16 id);
-    virtual u16 Initiator();
+    virtual void SetInitiator(u32 id);
+    virtual u32 Initiator(); // OP22 (id32)
 
     virtual void Throw();
     virtual bool Action(s32 cmd, u32 flags);

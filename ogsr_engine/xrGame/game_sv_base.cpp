@@ -46,7 +46,7 @@ ClientID game_sv_GameState::get_it_2_id(u32 it)
 
 u32 game_sv_GameState::get_players_count() { return m_server->client_Count(); }
 
-u16 game_sv_GameState::get_id_2_eid(ClientID id)
+u32 game_sv_GameState::get_id_2_eid(ClientID id) // OP22 (id32)
 {
     xrClientData* C = (xrClientData*)m_server->ID_to_client(id);
     if (0 == C)
@@ -57,7 +57,7 @@ u16 game_sv_GameState::get_id_2_eid(ClientID id)
     return E->ID;
 }
 
-void* game_sv_GameState::get_client(u16 id) // if exist
+void* game_sv_GameState::get_client(u32 id) // if exist
 {
     CSE_Abstract* entity = get_entity_from_eid(id);
     if (entity && entity->owner && entity->owner->ps && entity->owner->ps->GameID == id)
@@ -77,7 +77,7 @@ void* game_sv_GameState::get_client(u16 id) // if exist
     return NULL;
 }
 
-CSE_Abstract* game_sv_GameState::get_entity_from_eid(u16 id) { return m_server->ID_to_entity(id); }
+CSE_Abstract* game_sv_GameState::get_entity_from_eid(u32 id) { return m_server->ID_to_entity(id); }
 
 void game_sv_GameState::signal_Syncronize() { sv_force_sync = TRUE; }
 
@@ -277,13 +277,13 @@ void game_sv_GameState::ProcessDelayedEvent()
     }
 }
 
-void game_sv_GameState::teleport_object(NET_Packet& packet, u16 id) {}
+void game_sv_GameState::teleport_object(NET_Packet& packet, u32 id) {}
 
-void game_sv_GameState::add_restriction(NET_Packet& packet, u16 id) {}
+void game_sv_GameState::add_restriction(NET_Packet& packet, u32 id) {}
 
-void game_sv_GameState::remove_restriction(NET_Packet& packet, u16 id) {}
+void game_sv_GameState::remove_restriction(NET_Packet& packet, u32 id) {}
 
-void game_sv_GameState::remove_all_restrictions(NET_Packet& packet, u16 id) {}
+void game_sv_GameState::remove_all_restrictions(NET_Packet& packet, u32 id) {}
 
 shared_str game_sv_GameState::level_name(const shared_str& server_options) const
 {

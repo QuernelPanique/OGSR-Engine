@@ -34,7 +34,7 @@ ALife::_STORY_ID story_id(LPCSTR story_id)
     return I != story_ids.end() ? ALife::_STORY_ID((*I).second) : INVALID_STORY_ID;
 }
 
-u16 storyId2GameId(ALife::_STORY_ID id)
+u32 storyId2GameId(ALife::_STORY_ID id) // OP22 (id32)
 {
     if (ai().get_alife())
     {

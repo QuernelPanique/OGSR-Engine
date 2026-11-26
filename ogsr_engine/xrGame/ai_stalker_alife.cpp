@@ -32,7 +32,7 @@ IC bool CAI_Stalker::CTradeItem::operator<(const CTradeItem& trade_item) const {
 
 IC bool CAI_Stalker::CTradeItem::operator==(u16 id) const { return (m_item->object().ID() == id); }
 
-bool CAI_Stalker::tradable_item(CInventoryItem* inventory_item, const u16& current_owner_id)
+bool CAI_Stalker::tradable_item(CInventoryItem* inventory_item, const u32& current_owner_id)
 {
     if (!inventory_item->useful_for_NPC())
         return (false);

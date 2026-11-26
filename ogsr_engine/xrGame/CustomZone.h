@@ -66,7 +66,7 @@ public:
     virtual void Postprocess(float val) {}
     virtual void net_Relcase(CObject* O);
     virtual void OnEvent(NET_Packet& P, u16 type);
-    void OnOwnershipTake(u16 id);
+    void OnOwnershipTake(u32 id);
 
     float GetMaxPower() { return m_fMaxPower; }
     void SetMaxPower(float p) { m_fMaxPower = p; }
@@ -301,7 +301,7 @@ protected:
     DEFINE_VECTOR(SZoneObjectInfo, OBJECT_INFO_VEC, OBJECT_INFO_VEC_IT);
     OBJECT_INFO_VEC m_ObjectInfoMap;
 
-    void CreateHit(u16 id_to, u16 id_from, const Fvector& hit_dir, float hit_power, s16 bone_id, const Fvector& pos_in_bone, float hit_impulse, ALife::EHitType hit_type);
+    void CreateHit(u32 id_to, u32 id_from, const Fvector& hit_dir, float hit_power, s16 bone_id, const Fvector& pos_in_bone, float hit_impulse, ALife::EHitType hit_type);
 
     virtual void Hit(SHit* pHDS);
 

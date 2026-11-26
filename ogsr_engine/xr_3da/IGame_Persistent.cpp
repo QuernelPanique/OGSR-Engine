@@ -237,7 +237,7 @@ void IGame_Persistent::ProcessParticlesCreate()
     }
 }
 
-void IGame_Persistent::GrassBendersUpdate(const u16 id, size_t& data_idx, u32& data_frame, const Fvector& position, const float init_radius, const float init_str)
+void IGame_Persistent::GrassBendersUpdate(const u32 id, size_t& data_idx, u32& data_frame, const Fvector& position, const float init_radius, const float init_str)
 {
     if (ps_ssfx_grass_interactive.y < 1.f) // Interactive grass disabled
         return;
@@ -308,7 +308,7 @@ void IGame_Persistent::GrassBendersUpdate(const u16 id, size_t& data_idx, u32& d
     }
 }
 
-void IGame_Persistent::GrassBendersAddExplosion(const u16 id, const Fvector& position, const Fvector3& dir, const float fade, const float speed, const float intensity, const float radius)
+void IGame_Persistent::GrassBendersAddExplosion(const u32 id, const Fvector& position, const Fvector3& dir, const float fade, const float speed, const float intensity, const float radius)
 {
     if (ps_ssfx_grass_interactive.y < 1.f)
         return;
@@ -326,7 +326,7 @@ void IGame_Persistent::GrassBendersAddExplosion(const u16 id, const Fvector& pos
     }
 }
 
-void IGame_Persistent::GrassBendersAddShot(const u16 id, const Fvector& position, const Fvector3& dir, const float fade, const float speed, const float intensity, const float radius)
+void IGame_Persistent::GrassBendersAddShot(const u32 id, const Fvector& position, const Fvector3& dir, const float fade, const float speed, const float intensity, const float radius)
 {
     // Is disabled?
     if (ps_ssfx_grass_interactive.y < 1.f || intensity <= 0.0f)
@@ -486,7 +486,7 @@ void IGame_Persistent::GrassBendersRemoveByIndex(size_t& idx)
     }
 }
 
-void IGame_Persistent::GrassBendersRemoveById(const u16 id)
+void IGame_Persistent::GrassBendersRemoveById(const u32 id)
 {
     // Search by Object ID ( Used when removing benders CPHMovementControl::DestroyCharacter() )
     for (size_t idx = 1; idx < std::size(grass_shader_data.id); ++idx)
@@ -501,7 +501,7 @@ void IGame_Persistent::GrassBendersReset(const size_t idx)
     grass_shader_data.str_target[idx] = 0;
 }
 
-void IGame_Persistent::GrassBendersSet(const size_t idx, const u16 id, const Fvector& position, const Fvector3& dir, const float fade, const float speed, const float intensity, const float radius, const GrassBenders_Anim anim, const bool resetTime)
+void IGame_Persistent::GrassBendersSet(const size_t idx, const u32 id, const Fvector& position, const Fvector3& dir, const float fade, const float speed, const float intensity, const float radius, const GrassBenders_Anim anim, const bool resetTime)
 {
     // Set values
     const float saved_radius = grass_shader_data.pos[idx].w;

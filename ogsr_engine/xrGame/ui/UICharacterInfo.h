@@ -68,7 +68,7 @@ public:
 
     void Init(float x, float y, float width, float height, CUIXml* xml_doc);
     void Init(float x, float y, float width, float height, const char* xml_name);
-    void InitCharacter(u16 id);
+    void InitCharacter(u32 id);
     void ClearInfo();
     void op22_SetSelected(bool selected);
     void op22_NameOnly(const char* name); // OP22: карточка без портрета и его оформления, только имя (тайник)

@@ -170,7 +170,7 @@ public:
     void SetIcon(const char* iconName) { CharacterInfo().m_SpecificCharacter.data()->m_icon_name = iconName; }
 
     //для работы с relation system
-    u16 object_id() const;
+    u32 object_id() const; // OP22 (id32)
     CHARACTER_COMMUNITY_INDEX Community() const { return CharacterInfo().Community().index(); };
     CHARACTER_RANK_VALUE Rank() const { return CharacterInfo().Rank().value(); };
     CHARACTER_REPUTATION_VALUE Reputation() const { return CharacterInfo().Reputation().value(); };

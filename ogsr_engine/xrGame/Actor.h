@@ -110,7 +110,7 @@ public:
     virtual CCharacterPhysicsSupport* character_physics_support() const { return m_pPhysics_support; }
     virtual CPHDestroyable* ph_destroyable();
     CHolderCustom* Holder() { return m_holder; }
-    u16 HolderID() { return m_holder_id; }
+    u32 HolderID() { return m_holder_id; } // OP22 (id32)
 
 public:
     virtual void Load(LPCSTR section);
@@ -657,8 +657,8 @@ public:
     virtual bool use_center_to_aim() const;
 
 protected:
-    u16 m_iLastHitterID;
-    u16 m_iLastHittingWeaponID;
+    u32 m_iLastHitterID; // OP22 (id32)
+    u32 m_iLastHittingWeaponID;
     s16 m_s16LastHittedElement;
     Fvector m_vLastHitDir;
     Fvector m_vLastHitPos;
@@ -689,7 +689,7 @@ private:
     CActorMemory* m_memory;
 
 public:
-    void SetActorVisibility(u16 who, float value);
+    void SetActorVisibility(u32 who, float value);
     IC CActorMemory& memory() const
     {
         VERIFY(m_memory);

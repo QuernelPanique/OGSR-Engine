@@ -34,7 +34,7 @@ protected:
         void Reinit();
         dContact m_damege_contact;
         ICollisionHitCallback* m_hit_callback;
-        u16 m_obj_id;
+        u32 m_obj_id; // OP22 (id32)
         float m_dmc_signum;
         enum
         {
@@ -157,7 +157,7 @@ private:
     virtual float ContactVelocity() const { return m_collision_damage_info.ContactVelocity(); }
     virtual void HitDir(Fvector& dir) const { return m_collision_damage_info.HitDir(dir); }
     virtual const Fvector& HitPos() const { return m_collision_damage_info.HitPos(); }
-    virtual u16 DamageInitiatorID() const;
+    virtual u32 DamageInitiatorID() const; // OP22 (id32)
     virtual CObject* DamageInitiator() const;
     virtual ALife::EHitType HitType() const;
     virtual void SetInitiated();

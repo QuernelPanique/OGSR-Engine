@@ -46,7 +46,7 @@ xr_string m_character_name, m_character_name_translated;
 
 #ifdef XRGAME_EXPORTS
 //для работы с relation system
-u16 object_id() const;
+u32 object_id() const; // OP22 (id32)
 CHARACTER_COMMUNITY_INDEX Community() const;
 LPCSTR CommunityName() const;
 CHARACTER_RANK_VALUE Rank();

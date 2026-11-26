@@ -34,15 +34,15 @@ public:
     virtual ~game_sv_GameState();
 
     // Main accessors
-    virtual void* get_client(u16 id); // if exist
+    virtual void* get_client(u32 id); // if exist
     virtual game_PlayerState* get_it(u32 it);
     virtual game_PlayerState* get_id(ClientID id);
     
-    virtual u16 get_id_2_eid(ClientID id);
+    virtual u32 get_id_2_eid(ClientID id); // OP22 (id32)
     virtual ClientID get_it_2_id(u32 it);
 
     virtual u32 get_players_count();
-    CSE_Abstract* get_entity_from_eid(u16 id);
+    CSE_Abstract* get_entity_from_eid(u32 id);
 
     // Signals
     virtual void signal_Syncronize();
@@ -55,10 +55,10 @@ public:
 
     // Events
     virtual BOOL OnPreCreate(CSE_Abstract* E) { return TRUE; };
-    virtual void OnCreate(u16 id_who){};
-    virtual void OnPostCreate(u16 id_who){};
-    virtual BOOL OnTouch(u16 eid_who, u16 eid_target, BOOL bForced = FALSE) = 0; // TRUE=allow ownership, FALSE=denied
-    virtual void OnDetach(u16 eid_who, u16 eid_target) = 0;
+    virtual void OnCreate(u32 id_who){};
+    virtual void OnPostCreate(u32 id_who){};
+    virtual BOOL OnTouch(u32 eid_who, u32 eid_target, BOOL bForced = FALSE) = 0; // TRUE=allow ownership, FALSE=denied
+    virtual void OnDetach(u32 eid_who, u32 eid_target) = 0;
 
     // Main
     virtual void Create(shared_str& options);
@@ -76,11 +76,11 @@ public:
     void AddDelayedEvent(NET_Packet& tNetPacket, u16 type, u32 time, ClientID sender);
     void ProcessDelayedEvent();
     
-    virtual void teleport_object(NET_Packet& packet, u16 id);
+    virtual void teleport_object(NET_Packet& packet, u32 id);
 
-    virtual void add_restriction(NET_Packet& packet, u16 id);
-    virtual void remove_restriction(NET_Packet& packet, u16 id);
-    virtual void remove_all_restrictions(NET_Packet& packet, u16 id);
+    virtual void add_restriction(NET_Packet& packet, u32 id);
+    virtual void remove_restriction(NET_Packet& packet, u32 id);
+    virtual void remove_all_restrictions(NET_Packet& packet, u32 id);
 
     virtual bool custom_sls_default() { return false; };
     virtual void sls_default(){};

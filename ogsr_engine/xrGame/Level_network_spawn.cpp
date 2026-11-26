@@ -165,7 +165,7 @@ void CLevel::g_sv_Spawn(CSE_Abstract* E)
     //---------------------------------------------------------
 }
 
-CSE_Abstract* CLevel::spawn_item(LPCSTR section, const Fvector& position, u32 level_vertex_id, u16 parent_id, bool return_item)
+CSE_Abstract* CLevel::spawn_item(LPCSTR section, const Fvector& position, u32 level_vertex_id, u32 parent_id, bool return_item)
 {
     CSE_Abstract* abstract = F_entity_Create(section);
     R_ASSERT3(abstract, "Cannot find item with section", section);

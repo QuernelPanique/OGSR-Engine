@@ -24,7 +24,7 @@
 
 using namespace InventoryUtilities;
 
-CSE_ALifeTraderAbstract* ch_info_get_from_id(u16 id)
+CSE_ALifeTraderAbstract* ch_info_get_from_id(u32 id)
 {
     if (ai().get_alife() && ai().get_game_graph())
     {
@@ -196,7 +196,7 @@ void CUICharacterInfo::Init(float x, float y, float width, float height, const c
     Init(x, y, width, height, &uiXml);
 }
 
-void CUICharacterInfo::InitCharacter(u16 id)
+void CUICharacterInfo::InitCharacter(u32 id)
 {
     m_ownerID = id;
 

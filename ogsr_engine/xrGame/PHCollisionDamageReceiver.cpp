@@ -53,7 +53,7 @@ void CPHCollisionDamageReceiver::CollisionCallback(bool& do_colide, bool bo1, dC
     CPhysicsShellHolder* o_damager = NULL;
     if (ud_damager)
         o_damager = ud_damager->ph_ref_object;
-    u16 source_id = o_damager ? o_damager->ID() : u16(-1);
+    u32 source_id = o_damager ? o_damager->ID() : u32(u16(-1)); // OP22 (id32)
     CPHCollisionDamageReceiver* dr = o_self->PHCollisionDamageReceiver();
     VERIFY2(dr, "wrong callback");
 

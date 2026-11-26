@@ -168,7 +168,7 @@ protected:
     float m_fDeltaTime{};
     //кто нанес последний хит
     CObject* m_pWho;
-    u16 m_iWhoID;
+    u32 m_iWhoID; // OP22 (id32)
 
     //для передачи параметров из DamageManager
     float m_fHitBoneScale;

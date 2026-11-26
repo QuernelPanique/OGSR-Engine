@@ -252,7 +252,7 @@ void CUICarBodyWnd::InitCarBody(CInventoryOwner* pOur, IInventoryBox* pInvBox)
     m_pInventoryBox = pInvBox;
     m_pInventoryBox->m_in_use = true;
 
-    u16 our_id = smart_cast<CGameObject*>(m_pOurObject)->ID();
+    u32 our_id = smart_cast<CGameObject*>(m_pOurObject)->ID();
     m_pUICharacterInfoLeft->InitCharacter(our_id);
     if (m_op22_our_name) // OP22
         m_op22_our_name->SetText(m_pOurObject->Name());
@@ -283,8 +283,8 @@ void CUICarBodyWnd::InitCarBody(CInventoryOwner* pOur, CInventoryOwner* pOthers)
     m_pOthersObject = pOthers;
     m_pInventoryBox = NULL;
 
-    u16 our_id = smart_cast<CGameObject*>(m_pOurObject)->ID();
-    u16 other_id = smart_cast<CGameObject*>(m_pOthersObject)->ID();
+    u32 our_id = smart_cast<CGameObject*>(m_pOurObject)->ID();
+    u32 other_id = smart_cast<CGameObject*>(m_pOthersObject)->ID();
 
     m_pUICharacterInfoLeft->InitCharacter(our_id);
     if (m_op22_our_name) // OP22
@@ -601,7 +601,7 @@ void CUICarBodyWnd::SetCurrentItem(CUICellItem* itm)
 void CUICarBodyWnd::TakeAll()
 {
     u32 cnt = m_pUIOthersBagList->ItemsCount();
-    u16 tmp_id = 0;
+    u32 tmp_id = 0;
     if (m_pInventoryBox)
     {
         tmp_id = (smart_cast<CGameObject*>(m_pOurObject))->ID();
@@ -640,7 +640,7 @@ void CUICarBodyWnd::TakeAll()
 
 void CUICarBodyWnd::MoveItems(CUICellItem* itm)
 {
-    u16 tmp_id = 0;
+    u32 tmp_id = 0;
     if (m_pInventoryBox)
     {
         tmp_id = (smart_cast<CGameObject*>(m_pOurObject))->ID();
@@ -713,7 +713,7 @@ void CUICarBodyWnd::MoveItems(CUICellItem* itm)
     PlaySnd(eInvItemMove);
 }
 
-void SendEvent_Item_Drop(u16 from_id, PIItem pItem)
+void SendEvent_Item_Drop(u32 from_id, PIItem pItem)
 {
     pItem->SetDropManual(TRUE);
 
@@ -739,7 +739,7 @@ void CUICarBodyWnd::DropItemsfromCell(bool b_all)
 
     CUIDragDropListEx* old_owner = ci->OwnerList();
 
-    u16 from_id = 0;
+    u32 from_id = 0;
     if (old_owner == m_pUIOthersBagList)
     {
         from_id = (m_pInventoryBox) ? m_pInventoryBox->object().ID() : smart_cast<CGameObject*>(m_pOthersObject)->ID();
@@ -950,7 +950,7 @@ void CUICarBodyWnd::EatItem()
     CUIDragDropListEx* owner_list = CurrentItem()->OwnerList();
     if (owner_list == m_pUIOthersBagList)
     {
-        u16 owner_id = (m_pInventoryBox) ? m_pInventoryBox->object().ID() : smart_cast<CGameObject*>(m_pOthersObject)->ID();
+        u32 owner_id = (m_pInventoryBox) ? m_pInventoryBox->object().ID() : smart_cast<CGameObject*>(m_pOthersObject)->ID();
 
         move_item(owner_id, // from
                   Actor()->ID(), // to
@@ -1022,7 +1022,7 @@ void CUICarBodyWnd::MoveItem(CUICellItem* itm)
     }
     else
     {
-        u16 tmp_id = (smart_cast<CGameObject*>(m_pOurObject))->ID();
+        u32 tmp_id = (smart_cast<CGameObject*>(m_pOurObject))->ID();
 
         move_item(bMoveDirection ? m_pInventoryBox->object().ID() : tmp_id, bMoveDirection ? tmp_id : m_pInventoryBox->object().ID(), p_itm->object().ID());
 

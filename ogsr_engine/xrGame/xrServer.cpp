@@ -60,7 +60,7 @@ xrServer::~xrServer()
 
 //--------------------------------------------------------------------
 
-CSE_Abstract* xrServer::ID_to_entity(u16 ID)
+CSE_Abstract* xrServer::ID_to_entity(u32 ID)
 {
     // #pragma todo("??? to all : ID_to_entity - must be replaced to 'game->entity_from_eid()'")
     if (0xffff == ID)

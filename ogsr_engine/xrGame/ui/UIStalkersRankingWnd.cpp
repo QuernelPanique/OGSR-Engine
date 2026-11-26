@@ -98,7 +98,7 @@ void CUIStalkersRankingWnd::Show(bool status)
         FillList();
 }
 
-extern CSE_ALifeTraderAbstract* ch_info_get_from_id(u16 id);
+extern CSE_ALifeTraderAbstract* ch_info_get_from_id(u32 id);
 
 bool GreaterRankPred(const u16& h1, const u16& h2)
 {
@@ -178,7 +178,7 @@ void CUIStalkersRankingWnd::FillList()
     }
 }
 
-void CUIStalkersRankingWnd::ShowHumanInfo(u16 id) { UICharacterInfo->InitCharacter(m_op22_actor_card ? Actor()->ID() : id); }
+void CUIStalkersRankingWnd::ShowHumanInfo(u32 id) { UICharacterInfo->InitCharacter(m_op22_actor_card ? Actor()->ID() : id); }
 
 void CUIStalkersRankingWnd::AddStalkerItem(CUIXml* xml, int num, CSE_ALifeTraderAbstract* t)
 {

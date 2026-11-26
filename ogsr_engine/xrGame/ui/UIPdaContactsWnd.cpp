@@ -221,7 +221,7 @@ void CUIPdaContactsWnd::Reset()
 
 CUIPdaContactItem::~CUIPdaContactItem() {}
 
-extern CSE_ALifeTraderAbstract* ch_info_get_from_id(u16 id);
+extern CSE_ALifeTraderAbstract* ch_info_get_from_id(u32 id);
 
 #include "UICharacterInfo.h"
 #include "..\game_object_space.h"

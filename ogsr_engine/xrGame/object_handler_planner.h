@@ -62,6 +62,12 @@ public:
 
 public:
     /*IC*/ _condition_type uid(const u32 id1, const u32 id0) const;
+    // OP22 (id32): идентификатор свойства = (ID объекта << 16) | свойство, на ID 16 бит. ID < 0xfffe - как в ОП (сам ID),
+    // большие ID - локальный индекс сверху вниз (0xfffd, 0xfffc, ...), у одного NPC предметов заведомо меньше
+    mutable xr_map<u32, u32> m_op22_big2local;
+    mutable xr_map<u32, u32> m_op22_local2big;
+    u32 op22_local(u32 id) const;
+    u32 op22_global(u32 local) const;
     IC bool object_action(_condition_type action_id, CObject* object);
     IC u32 current_action_object_id() const;
     IC u32 current_action_state_id() const;

@@ -40,7 +40,7 @@ protected:
 
 public:
     CUIScrollView& GetTopList() { return *UIList; }
-    void ShowHumanInfo(u16 id);
+    void ShowHumanInfo(u32 id);
     virtual void Reset();
 };
 

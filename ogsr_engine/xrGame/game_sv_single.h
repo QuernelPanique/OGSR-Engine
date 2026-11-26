@@ -20,9 +20,9 @@ public:
     virtual LPCSTR type_name() const { return "single"; };
     virtual void Create(shared_str& options);
 
-    virtual void OnCreate(u16 id_who);
-    virtual BOOL OnTouch(u16 eid_who, u16 eid_what, BOOL bForced = FALSE);
-    virtual void OnDetach(u16 eid_who, u16 eid_what);
+    virtual void OnCreate(u32 id_who);
+    virtual BOOL OnTouch(u32 eid_who, u32 eid_what, BOOL bForced = FALSE);
+    virtual void OnDetach(u32 eid_who, u32 eid_what);
 
     // Main
     virtual void Update();
@@ -37,11 +37,11 @@ public:
     virtual void save_game(NET_Packet& net_packet, ClientID sender);
     virtual bool load_game(NET_Packet& net_packet, ClientID sender);
     virtual void switch_distance(NET_Packet& net_packet, ClientID sender);
-    virtual void teleport_object(NET_Packet& packet, u16 id);
+    virtual void teleport_object(NET_Packet& packet, u32 id);
 
-    virtual void add_restriction(NET_Packet& packet, u16 id);
-    virtual void remove_restriction(NET_Packet& packet, u16 id);
-    virtual void remove_all_restrictions(NET_Packet& packet, u16 id);
+    virtual void add_restriction(NET_Packet& packet, u32 id);
+    virtual void remove_restriction(NET_Packet& packet, u32 id);
+    virtual void remove_all_restrictions(NET_Packet& packet, u32 id);
 
     virtual bool custom_sls_default() { return !!m_alife_simulator; };
     virtual void sls_default();

@@ -32,7 +32,7 @@ void game_sv_Single::Create(shared_str& options)
 }
 
 /**
-CSE_Abstract*		game_sv_Single::get_entity_from_eid		(u16 id)
+CSE_Abstract*		game_sv_Single::get_entity_from_eid		(u32 id)
 {
     if (!ai().get_alife())
         return			(inherited::get_entity_from_eid(id));
@@ -45,7 +45,7 @@ CSE_Abstract*		game_sv_Single::get_entity_from_eid		(u16 id)
 }
 /**/
 
-void game_sv_Single::OnCreate(u16 id_who)
+void game_sv_Single::OnCreate(u32 id_who)
 {
     if (!ai().get_alife())
         return;
@@ -81,7 +81,7 @@ void game_sv_Single::OnCreate(u16 id_who)
         alife().create(alife_object);
 }
 
-BOOL game_sv_Single::OnTouch(u16 eid_who, u16 eid_what, BOOL bForced)
+BOOL game_sv_Single::OnTouch(u32 eid_who, u32 eid_what, BOOL bForced)
 {
     CSE_Abstract* e_who = get_entity_from_eid(eid_who);
     VERIFY(e_who);
@@ -106,7 +106,7 @@ BOOL game_sv_Single::OnTouch(u16 eid_who, u16 eid_what, BOOL bForced)
     return TRUE;
 }
 
-void game_sv_Single::OnDetach(u16 eid_who, u16 eid_what)
+void game_sv_Single::OnDetach(u32 eid_who, u32 eid_what)
 {
     if (ai().get_alife())
     {
@@ -130,7 +130,7 @@ void game_sv_Single::OnDetach(u16 eid_who, u16 eid_what)
         {
             if (!ai().alife().objects().object(e_what->ID, true))
             {
-                u16 id = l_tpALifeInventoryItem->base()->ID_Parent;
+                u32 id = l_tpALifeInventoryItem->base()->ID_Parent; // OP22 (id32)
                 l_tpALifeInventoryItem->base()->ID_Parent = 0xffff;
 
                 CSE_ALifeDynamicObject* dynamic_object = smart_cast<CSE_ALifeDynamicObject*>(e_what);
@@ -232,7 +232,7 @@ void game_sv_Single::switch_distance(NET_Packet& net_packet, ClientID sender)
     alife().set_switch_distance(net_packet.r_float());
 }
 
-void game_sv_Single::teleport_object(NET_Packet& net_packet, u16 id)
+void game_sv_Single::teleport_object(NET_Packet& net_packet, u32 id)
 {
     if (!ai().get_alife())
         return;
@@ -248,7 +248,7 @@ void game_sv_Single::teleport_object(NET_Packet& net_packet, u16 id)
     alife().teleport_object(id, game_vertex_id, level_vertex_id, position);
 }
 
-void game_sv_Single::add_restriction(NET_Packet& packet, u16 id)
+void game_sv_Single::add_restriction(NET_Packet& packet, u32 id)
 {
     if (!ai().get_alife())
         return;
@@ -262,7 +262,7 @@ void game_sv_Single::add_restriction(NET_Packet& packet, u16 id)
     alife().add_restriction(id, restriction_id, restriction_type);
 }
 
-void game_sv_Single::remove_restriction(NET_Packet& packet, u16 id)
+void game_sv_Single::remove_restriction(NET_Packet& packet, u32 id)
 {
     if (!ai().get_alife())
         return;
@@ -276,7 +276,7 @@ void game_sv_Single::remove_restriction(NET_Packet& packet, u16 id)
     alife().remove_restriction(id, restriction_id, restriction_type);
 }
 
-void game_sv_Single::remove_all_restrictions(NET_Packet& packet, u16 id)
+void game_sv_Single::remove_all_restrictions(NET_Packet& packet, u32 id)
 {
     if (!ai().get_alife())
         return;

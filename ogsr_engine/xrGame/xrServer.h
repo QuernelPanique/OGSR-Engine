@@ -134,7 +134,7 @@ public:
     void entity_Destroy(CSE_Abstract*& P);
 
     xrClientData* ID_to_client(ClientID ID, bool ScanAll = false) { return (xrClientData*)(IPureServer::ID_to_client(ID, ScanAll)); }
-    CSE_Abstract* ID_to_entity(u16 ID);
+    CSE_Abstract* ID_to_entity(u32 ID);
 
     // main
     virtual EConnect Connect(shared_str& session_name);

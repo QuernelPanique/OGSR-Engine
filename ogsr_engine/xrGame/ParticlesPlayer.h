@@ -22,7 +22,7 @@ public:
         // Fvector				dir;
         // Fmatrix				x_form;
         Fvector angles;
-        u16 sender_id; // id - объекта, который запустил партиклы
+        u32 sender_id; // OP22 (id32); id - объекта, который запустил партиклы
         u32 life_time; //время жизни партикла (-1) - бесконечно
 
         // int					cur_time;	//текущее время существования партикла
@@ -42,7 +42,7 @@ public:
         SBoneInfo(u16 idx, const Fvector& offs) : index(idx), offset(offs) { ; }
         SParticlesInfo* AppendParticles(CObject* object, const shared_str& ps_name);
         void StopParticles(const shared_str& ps_name, bool bDestroy);
-        void StopParticles(u16 sender_id, bool bDestroy);
+        void StopParticles(u32 sender_id, bool bDestroy);
     };
     DEFINE_VECTOR(SBoneInfo, BoneInfoVec, BoneInfoVecIt);
 
@@ -80,13 +80,13 @@ public:
 
     void UpdateParticles();
 
-    void StartParticles(const shared_str& ps_name, u16 bone_num, const Fvector& dir, u16 sender_id, int life_time = -1, bool auto_stop = true);
-    void StartParticles(const shared_str& ps_name, const Fvector& dir, u16 sender_id, int life_time = -1, bool auto_stop = true);
+    void StartParticles(const shared_str& ps_name, u16 bone_num, const Fvector& dir, u32 sender_id, int life_time = -1, bool auto_stop = true);
+    void StartParticles(const shared_str& ps_name, const Fvector& dir, u32 sender_id, int life_time = -1, bool auto_stop = true);
 
-    void StartParticles(const shared_str& ps_name, u16 bone_num, const Fmatrix& dir, u16 sender_id, int life_time = -1, bool auto_stop = true);
-    void StartParticles(const shared_str& ps_name, const Fmatrix& dir, u16 sender_id, int life_time = -1, bool auto_stop = true);
+    void StartParticles(const shared_str& ps_name, u16 bone_num, const Fmatrix& dir, u32 sender_id, int life_time = -1, bool auto_stop = true);
+    void StartParticles(const shared_str& ps_name, const Fmatrix& dir, u32 sender_id, int life_time = -1, bool auto_stop = true);
 
-    void StopParticles(u16 sender_ID, u16 bone_id, bool bDestroy);
+    void StopParticles(u32 sender_ID, u16 bone_id, bool bDestroy);
     void StopParticles(const shared_str& particles_name, u16 bone_id, bool bDestroy);
     void AutoStopParticles(const shared_str& ps_name, u16 bone_id, u32 life_time);
 

@@ -30,8 +30,8 @@ struct SBullet
     Fvector dir;
     float speed; //текущая скорость
 
-    u16 parent_id; // ID персонажа который иницировал действие
-    u16 weapon_id; // ID оружия из которого была выпущены пуля
+    u32 parent_id; // OP22 (id32); ID персонажа который иницировал действие
+    u32 weapon_id; // OP22 (id32); ID оружия из которого была выпущены пуля
 
     float fly_dist; //дистанция которую пуля пролетела
 
@@ -58,7 +58,7 @@ struct SBullet
     ref_sound m_whine_snd;
     ref_sound m_mtl_snd;
     //---------------------------------
-    u16 targetID;
+    u32 targetID; // OP22 (id32)
     bool operator==(u32 ID) { return ID == m_dwID; }
 
     bool m_on_bullet_hit;
@@ -67,7 +67,7 @@ public:
     SBullet();
     ~SBullet();
 
-    void Init(const Fvector& position, const Fvector& direction, float start_speed, float power, float impulse, u16 sender_id, u16 sendersweapon_id, ALife::EHitType e_hit_type,
+    void Init(const Fvector& position, const Fvector& direction, float start_speed, float power, float impulse, u32 sender_id, u32 sendersweapon_id, ALife::EHitType e_hit_type,
               float maximum_distance, const CCartridge& cartridge, bool SendHit);
 
     bool isOnBulletHit() { return m_on_bullet_hit; }
@@ -176,7 +176,7 @@ public:
 
     void Load();
     void Clear();
-    SBullet& AddBullet(const Fvector& position, const Fvector& direction, float starting_speed, float power, float impulse, u16 sender_id, u16 sendersweapon_id,
+    SBullet& AddBullet(const Fvector& position, const Fvector& direction, float starting_speed, float power, float impulse, u32 sender_id, u32 sendersweapon_id,
                        ALife::EHitType e_hit_type, float maximum_distance, const CCartridge& cartridge, bool SendHit, bool AimBullet = false);
 
     void CommitEvents(); // @ the start of frame

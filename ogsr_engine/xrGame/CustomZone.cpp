@@ -1210,7 +1210,7 @@ void CCustomZone::OnEvent(NET_Packet& P, u16 type)
     }
     inherited::OnEvent(P, type);
 };
-void CCustomZone::OnOwnershipTake(u16 id)
+void CCustomZone::OnOwnershipTake(u32 id)
 {
     CGameObject* GO = smart_cast<CGameObject*>(Level().Objects.net_Find(id));
     VERIFY(GO);
@@ -1482,7 +1482,7 @@ u32 CCustomZone::ef_weapon_type() const
     return (m_ef_weapon_type);
 }
 
-void CCustomZone::CreateHit(u16 id_to, u16 id_from, const Fvector& hit_dir, float hit_power, s16 bone_id, const Fvector& pos_in_bone, float hit_impulse, ALife::EHitType hit_type)
+void CCustomZone::CreateHit(u32 id_to, u32 id_from, const Fvector& hit_dir, float hit_power, s16 bone_id, const Fvector& pos_in_bone, float hit_impulse, ALife::EHitType hit_type)
 {
     {
         if (m_owner_id != u32(-1))

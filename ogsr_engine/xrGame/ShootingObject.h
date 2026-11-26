@@ -29,7 +29,7 @@ protected:
     void Load(LPCSTR section);
 
     // ID персонажа который иницировал действие
-    u16 m_iCurrentParentID;
+    u32 m_iCurrentParentID; // OP22 (id32)
 
     //////////////////////////////////////////////////////////////////////////
     // Fire Params
@@ -37,7 +37,7 @@ protected:
 protected:
     virtual void LoadFireParams(LPCSTR section, LPCSTR prefix);
     virtual bool SendHitAllowed(CObject* pUser);
-    virtual void FireBullet(const Fvector& pos, const Fvector& dir, float fire_disp, const CCartridge& cartridge, u16 parent_id, u16 weapon_id, bool send_hit);
+    virtual void FireBullet(const Fvector& pos, const Fvector& dir, float fire_disp, const CCartridge& cartridge, u32 parent_id, u32 weapon_id, bool send_hit);
 
     virtual void FireStart();
     virtual void FireEnd();

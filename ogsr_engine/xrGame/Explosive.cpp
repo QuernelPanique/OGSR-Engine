@@ -756,7 +756,7 @@ void CExplosive::net_Relcase(CObject* O)
     }
 }
 
-u16 CExplosive::Initiator()
+u32 CExplosive::Initiator() /* OP22 (id32) */
 {
     u16 initiator = CurrentParentID();
     if (initiator == u16(-1))

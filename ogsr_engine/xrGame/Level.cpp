@@ -783,7 +783,7 @@ void CLevel::GetGameTimeForShaders(u32& hours, u32& minutes, u32& seconds, u32& 
 
 void CLevel::OnSessionTerminate(LPCSTR reason) { MainMenu()->OnSessionTerminate(reason); }
 
-void CLevel::OnDestroyObject(u16 id) { m_just_destroyed.push_back(id); }
+void CLevel::OnDestroyObject(u32 id) { m_just_destroyed.push_back(id); }
 
 void CLevel::OnChangeCurrentWeather(const char* sect)
 {

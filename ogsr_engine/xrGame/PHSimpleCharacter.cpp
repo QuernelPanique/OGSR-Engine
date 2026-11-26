@@ -1639,9 +1639,9 @@ void CPHSimpleCharacter::AddControlVel(const Fvector& vel)
 }
 void CPHSimpleCharacter::SetInitiated() { m_collision_damage_info.is_initiated = true; }
 bool CPHSimpleCharacter::IsInitiated() const { return m_collision_damage_info.is_initiated; }
-u16 CPHSimpleCharacter::DamageInitiatorID() const
+u32 CPHSimpleCharacter::DamageInitiatorID() const // OP22 (id32)
 {
-    u16 ret = u16(-1); // m_collision_damage_info.DamageInitiatorID();
+    u32 ret = u16(-1); // OP22 (id32); m_collision_damage_info.DamageInitiatorID();
 
     CPhysicsShellHolder* object = static_cast<CPhysicsShellHolder*>(Level().Objects.net_Find(m_collision_damage_info.m_obj_id));
     if (object && !object->getDestroy())

@@ -85,7 +85,7 @@ public:
 
     virtual void OnChangeCurrentWeather(const char* sect) {}
 
-    virtual void OnDestroyObject(u16 id) = 0;
+    virtual void OnDestroyObject(u32 id) = 0;
 
     virtual void GetGameTimeForShaders(u32& hours, u32& minutes, u32& seconds, u32& milliseconds) = 0;
 

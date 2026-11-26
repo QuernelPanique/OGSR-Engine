@@ -41,7 +41,7 @@ void CParticlesPlayer::SBoneInfo::StopParticles(const shared_str& ps_name, bool 
     }
 }
 
-void CParticlesPlayer::SBoneInfo::StopParticles(u16 sender_id, bool bDestroy)
+void CParticlesPlayer::SBoneInfo::StopParticles(u32 sender_id, bool bDestroy)
 {
     for (ParticlesInfoListIt it = particles.begin(); it != particles.end(); it++)
         if (it->sender_id == sender_id)
@@ -116,13 +116,13 @@ CParticlesPlayer::SBoneInfo* CParticlesPlayer::get_nearest_bone_info(IKinematics
     return get_bone_info(play_bone);
 }
 
-void CParticlesPlayer::StartParticles(const shared_str& particles_name, u16 bone_num, const Fvector& dir, u16 sender_id, int life_time, bool auto_stop)
+void CParticlesPlayer::StartParticles(const shared_str& particles_name, u16 bone_num, const Fvector& dir, u32 sender_id, int life_time, bool auto_stop)
 {
     Fmatrix xform;
     generate_orthonormal_basis(dir, xform);
     StartParticles(particles_name, bone_num, xform, sender_id, life_time, auto_stop);
 }
-void CParticlesPlayer::StartParticles(const shared_str& particles_name, u16 bone_num, const Fmatrix& xform, u16 sender_id, int life_time, bool auto_stop)
+void CParticlesPlayer::StartParticles(const shared_str& particles_name, u16 bone_num, const Fmatrix& xform, u32 sender_id, int life_time, bool auto_stop)
 {
     VERIFY(fis_zero(xform.c.magnitude()));
     R_ASSERT(*particles_name);
@@ -151,7 +151,7 @@ void CParticlesPlayer::StartParticles(const shared_str& particles_name, u16 bone
     m_bActiveBones = true;
 }
 
-void CParticlesPlayer::StartParticles(const shared_str& ps_name, const Fmatrix& xform, u16 sender_id, int life_time, bool auto_stop)
+void CParticlesPlayer::StartParticles(const shared_str& ps_name, const Fmatrix& xform, u32 sender_id, int life_time, bool auto_stop)
 {
     CObject* object = m_self_object;
     VERIFY(object);
@@ -175,14 +175,14 @@ void CParticlesPlayer::StartParticles(const shared_str& ps_name, const Fmatrix& 
     m_bActiveBones = true;
 }
 
-void CParticlesPlayer::StartParticles(const shared_str& ps_name, const Fvector& dir, u16 sender_id, int life_time, bool auto_stop)
+void CParticlesPlayer::StartParticles(const shared_str& ps_name, const Fvector& dir, u32 sender_id, int life_time, bool auto_stop)
 {
     Fmatrix xform;
     generate_orthonormal_basis(dir, xform);
     StartParticles(ps_name, xform, sender_id, life_time, auto_stop);
 }
 
-void CParticlesPlayer::StopParticles(u16 sender_id, u16 bone_id, bool bDestroy)
+void CParticlesPlayer::StopParticles(u32 sender_id, u16 bone_id, bool bDestroy)
 {
     if (BI_NONE == bone_id)
     {

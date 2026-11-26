@@ -331,7 +331,7 @@ protected:
     void transfer_item(CInventoryItem* item, CGameObject* old_owner, CGameObject* new_owner);
 
     void update_sell_info();
-    bool tradable_item(CInventoryItem* inventory_item, const u16& current_owner_id);
+    bool tradable_item(CInventoryItem* inventory_item, const u32& current_owner_id);
     bool can_sell(CInventoryItem const* item);
     bool can_take(CInventoryItem const* item);
 

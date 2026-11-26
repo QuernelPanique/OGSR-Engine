@@ -300,7 +300,7 @@ public:
     // by Mad Max
     //bool IsServer();
     //bool IsClient();
-    CSE_Abstract* spawn_item(LPCSTR section, const Fvector& position, u32 level_vertex_id, u16 parent_id, bool return_item = false);
+    CSE_Abstract* spawn_item(LPCSTR section, const Fvector& position, u32 level_vertex_id, u32 parent_id, bool return_item = false);
 
 protected:
     u32 m_dwCL_PingDeltaSend;
@@ -317,7 +317,7 @@ public:
     bool is_removing_objects() const override { return m_is_removing_objects; }
     void remove_objects();
     virtual void OnSessionTerminate(LPCSTR reason);
-    void OnDestroyObject(u16 id) override;
+    void OnDestroyObject(u32 id) override;
     virtual void OnChangeCurrentWeather(const char* sect) override;
 
     DECLARE_SCRIPT_REGISTER_FUNCTION

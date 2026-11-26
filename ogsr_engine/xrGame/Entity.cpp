@@ -246,7 +246,7 @@ void CEntity::net_Destroy()
     inherited::net_Destroy();
 }
 
-void CEntity::KillEntity(u16 whoID)
+void CEntity::KillEntity(u32 whoID)
 {
     if (whoID != ID())
     {

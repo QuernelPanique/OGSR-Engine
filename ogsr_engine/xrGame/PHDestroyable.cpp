@@ -129,7 +129,7 @@ void CPHDestroyable::PhysicallyRemovePart(CPHDestroyableNotificate* dn)
     s->DisableCollision();
 }
 
-void CPHDestroyable::Destroy(u16 source_id /*=u16(-1)*/, LPCSTR section /*="ph_skeleton_object"*/)
+void CPHDestroyable::Destroy(u32 source_id /*=u16(-1)*/, LPCSTR section /*="ph_skeleton_object"*/)
 {
     if (!CanDestroy())
         return;

@@ -24,7 +24,7 @@ SBullet::SBullet() : m_on_bullet_hit(false) {}
 
 SBullet::~SBullet() {}
 
-void SBullet::Init(const Fvector& position, const Fvector& direction, float starting_speed, float power, float impulse, u16 sender_id, u16 sendersweapon_id,
+void SBullet::Init(const Fvector& position, const Fvector& direction, float starting_speed, float power, float impulse, u32 sender_id, u32 sendersweapon_id,
                    ALife::EHitType e_hit_type, float maximum_distance, const CCartridge& cartridge, bool SendHit)
 {
     flags._storage = 0;
@@ -143,7 +143,7 @@ void CBulletManager::Clear() //Вызывается при загрузке и �
     m_Events.clear();
 }
 
-SBullet& CBulletManager::AddBullet(const Fvector& position, const Fvector& direction, float starting_speed, float power, float impulse, u16 sender_id, u16 sendersweapon_id,
+SBullet& CBulletManager::AddBullet(const Fvector& position, const Fvector& direction, float starting_speed, float power, float impulse, u32 sender_id, u32 sendersweapon_id,
                                    ALife::EHitType e_hit_type, float maximum_distance, const CCartridge& cartridge, bool SendHit, bool AimBullet)
 {
     VERIFY(u16(-1) != cartridge.bullet_material_idx);

@@ -447,7 +447,7 @@ shared_str CSE_ALifeTraderAbstract::character_profile() { return m_sCharacterPro
 #ifdef XRGAME_EXPORTS
 
 //для работы с relation system
-u16 CSE_ALifeTraderAbstract::object_id() const { return base()->ID; }
+u32 CSE_ALifeTraderAbstract::object_id() const { return base()->ID; } // OP22 (id32)
 
 CHARACTER_COMMUNITY_INDEX CSE_ALifeTraderAbstract::Community() const { return m_community_index; }
 

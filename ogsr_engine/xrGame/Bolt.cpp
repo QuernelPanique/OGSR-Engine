@@ -102,9 +102,9 @@ void CBolt::activate_physic_shell()
     m_pPhysicsShell->SetAirResistance(.0001f);
 }
 
-void CBolt::SetInitiator(u16 id) { m_thrower_id = id; }
+void CBolt::SetInitiator(u32 id) { m_thrower_id = id; }
 
-u16 CBolt::Initiator() { return m_thrower_id; }
+u32 CBolt::Initiator() /* OP22 (id32) */ { return m_thrower_id; }
 
 void CBolt::GetBriefInfo(xr_string& str_name, xr_string& icon_sect_name, xr_string& str_count)
 {

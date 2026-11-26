@@ -1926,7 +1926,7 @@ DLL_Pure* CCar::_construct()
     return (this);
 }
 
-u16 CCar::Initiator()
+u32 CCar::Initiator() /* OP22 (id32) */
 {
     if (g_Alive() && Owner())
     {

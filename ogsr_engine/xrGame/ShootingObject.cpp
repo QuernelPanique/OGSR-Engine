@@ -416,7 +416,7 @@ bool CShootingObject::SendHitAllowed(CObject* pUser)
     }
 };
 
-void CShootingObject::FireBullet(const Fvector& pos, const Fvector& shot_dir, float fire_disp, const CCartridge& cartridge, u16 parent_id, u16 weapon_id, bool send_hit)
+void CShootingObject::FireBullet(const Fvector& pos, const Fvector& shot_dir, float fire_disp, const CCartridge& cartridge, u32 parent_id, u32 weapon_id, bool send_hit)
 {
     Fvector dir;
     dir.random_dir(shot_dir, fire_disp);

@@ -100,7 +100,7 @@ public:
 
     virtual void Die(CObject* who);
     //			void			KillEntity			(CObject* who);
-    void KillEntity(u16 whoID);
+    void KillEntity(u32 whoID);
 
     // Events
     virtual void OnEvent(NET_Packet& P, u16 type);
@@ -118,7 +118,7 @@ private:
     ALife::_OBJECT_ID m_killer_id;
 
 public:
-    IC u16 killer_id() const { return m_killer_id; };
+    IC u32 killer_id() const { return m_killer_id; }; // OP22 (id32)
     virtual bool use_simplified_visual() const { return false; };
 
 public:
