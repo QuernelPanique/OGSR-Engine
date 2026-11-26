@@ -1371,7 +1371,7 @@ void CWeaponMagazined::InitZoomParams(LPCSTR section, bool useTexture)
                     if (FS.exist(fi, "$game_textures$", scope_ltx.c_str(), ".ltx"))
                     {
                         CInifile ini(fi);
-                        m_op22_scope_r = READ_IF_EXISTS(&ini, r_float, "scope", "r", 0.f);
+                        m_op22_scope_r = ini.line_exist("scope", "r") ? ini.r_float("scope", "r") : 0.f;
                     }
                 }
             }
