@@ -11,6 +11,70 @@
 
 player_hud* g_player_hud{};
 
+// OP22: плавные переходы анимаций HUD (26.11). Смешивание по S-кривой (CBlend::set_eased) вместо линейного и своя
+// длительность у каждого действия: секция [op22_hud_blend] (секунды; 0 или нет ключа - время из анимации).
+// Выстрел и прочие вызовы без смешивания (bMixIn = false) не трогаются. Консоль: op22_hud_blend 0/1.
+int g_op22_hud_blend = 1;
+
+namespace
+{
+enum
+{
+    op22bIdle,
+    op22bAim,
+    op22bMoving,
+    op22bSprint,
+    op22bShow,
+    op22bHide,
+    op22bReload,
+    op22bBore,
+    op22bCount
+};
+
+float op22_hud_blend_time(const char* anm)
+{
+    static float times[op22bCount]{};
+    static bool loaded{};
+    if (!loaded)
+    {
+        loaded = true;
+        constexpr const char* keys[op22bCount] = {"idle", "aim", "moving", "sprint", "show", "hide", "reload", "bore"};
+        constexpr const char* sect = "op22_hud_blend";
+        if (pSettings->section_exist(sect))
+            for (int i = 0; i < op22bCount; i++)
+                times[i] = READ_IF_EXISTS(pSettings, r_float, sect, keys[i], 0.f);
+    }
+    if (strstr(anm, "shoot") || strstr(anm, "shot"))
+        return 0.f;
+    int c = -1;
+    if (strstr(anm, "sprint"))
+        c = op22bSprint;
+    else if (strstr(anm, "moving"))
+        c = op22bMoving;
+    else if (strstr(anm, "bore"))
+        c = op22bBore;
+    else if (strstr(anm, "draw") || strstr(anm, "show"))
+        c = op22bShow;
+    else if (strstr(anm, "holster") || strstr(anm, "hide"))
+        c = op22bHide;
+    else if (strstr(anm, "reload") || strstr(anm, "open") || strstr(anm, "add_cartridge") || strstr(anm, "close"))
+        c = op22bReload;
+    else if (strstr(anm, "aim"))
+        c = op22bAim;
+    else if (strstr(anm, "idle"))
+        c = op22bIdle;
+    return c >= 0 ? times[c] : 0.f;
+}
+
+// новая и угасающие анимации части - по S-кривой
+void op22_ease_part(IKinematicsAnimated* ka, u16 pid)
+{
+    for (u32 i = 0, n = ka->LL_PartBlendsCount(pid); i < n; i++)
+        if (CBlend* B = ka->LL_PartBlend(pid, i))
+            B->set_eased();
+}
+} // namespace
+
 
 // Рассчитать стартовую секунду анимации --#SM+#--
 float CalculateMotionStartSeconds(float fStartFromTime, float fMotionLength)
@@ -700,8 +764,19 @@ u32 attachable_hud_item::anim_play(const shared_str& anm_name_b, BOOL bMixIn, co
         u16 pc = ka->partitions().count();
         for (u16 pid = 0; pid < pc; ++pid)
         {
-            CBlend* B = ka->PlayCycle(pid, M2, bMixIn);
+            // OP22: своя длительность и S-кривая перехода (op22_hud_blend)
+            const float op22_t = (g_op22_hud_blend && bMixIn) ? op22_hud_blend_time(anm_name_b.c_str()) : 0.f;
+            CBlend* B;
+            if (op22_t > 0.f)
+            {
+                const CMotionDef* d = ka->LL_GetMotionDef(M2);
+                B = ka->LL_PlayCycle(pid, M2, TRUE, 1.f / op22_t, 1.f / op22_t, d->Speed(), d->StopAtEnd(), nullptr, nullptr);
+            }
+            else
+                B = ka->PlayCycle(pid, M2, bMixIn);
             R_ASSERT(B);
+            if (g_op22_hud_blend && bMixIn)
+                op22_ease_part(ka, pid);
             B->speed *= speed;
             B->timeCurrent = CalculateMotionStartSeconds(anm->params.start_k, B->timeTotal);
         }
@@ -1294,6 +1369,8 @@ u32 player_hud::anim_play(u16 part, const motion_params& P, const motion_descr& 
                 {
                     CBlend* B = m_model->PlayCycle(pid, M.mid, bMixIn);
                     R_ASSERT(B);
+                    if (g_op22_hud_blend && bMixIn) // OP22: S-кривая перехода
+                        op22_ease_part(m_model, pid);
                     B->speed *= speed;
                     B->timeCurrent = CalculateMotionStartSeconds(P.start_k, B->timeTotal);
                 }
@@ -1301,6 +1378,8 @@ u32 player_hud::anim_play(u16 part, const motion_params& P, const motion_descr& 
                 {
                     CBlend* B = m_model_2->PlayCycle(pid, M.mid, bMixIn);
                     R_ASSERT(B);
+                    if (g_op22_hud_blend && bMixIn) // OP22: S-кривая перехода
+                        op22_ease_part(m_model_2, pid);
                     B->speed *= speed;
                     B->timeCurrent = CalculateMotionStartSeconds(P.start_k, B->timeTotal);
                 }
@@ -1317,6 +1396,8 @@ u32 player_hud::anim_play(u16 part, const motion_params& P, const motion_descr& 
                 {
                     CBlend* B = m_model->PlayCycle(pid, M.mid, bMixIn);
                     R_ASSERT(B);
+                    if (g_op22_hud_blend && bMixIn) // OP22: S-кривая перехода
+                        op22_ease_part(m_model, pid);
                     B->speed *= speed;
                     B->timeCurrent = CalculateMotionStartSeconds(P.start_k, B->timeTotal);
                 }
@@ -1332,6 +1413,8 @@ u32 player_hud::anim_play(u16 part, const motion_params& P, const motion_descr& 
                 {
                     CBlend* B = m_model_2->PlayCycle(pid, M.mid, bMixIn);
                     R_ASSERT(B);
+                    if (g_op22_hud_blend && bMixIn) // OP22: S-кривая перехода
+                        op22_ease_part(m_model_2, pid);
                     B->speed *= speed;
                     B->timeCurrent = CalculateMotionStartSeconds(P.start_k, B->timeTotal);
                 }

@@ -266,6 +266,8 @@ void CKinematicsAnimated::IBlendSetup(CBlend& B, u16 part, u8 channel, MotionID 
     B.blendAccrue = blendAccrue;
     B.blendFalloff = 0; // blendFalloff used for previous cycles
     B.blendPower = 1;
+    B.blendLinear = B.blendAmount; // OP22: S-кривую включает HUD (player_hud.cpp), по умолчанию линейно
+    B.eased = FALSE;
     B.speed = Speed;
     B.motionID = motion_ID;
     B.timeCurrent = 0;
@@ -293,6 +295,8 @@ void CKinematicsAnimated::IFXBlendSetup(CBlend& B, MotionID motion_ID, float ble
     B.blendAccrue = blendAccrue;
     B.blendFalloff = blendFalloff;
     B.blendPower = Power;
+    B.blendLinear = B.blendAmount; // OP22: FX всегда линейно
+    B.eased = FALSE;
     B.speed = Speed;
     B.motionID = motion_ID;
     B.timeCurrent = 0;

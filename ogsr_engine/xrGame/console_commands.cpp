@@ -1716,6 +1716,8 @@ void CCC_RegisterCommands()
     {
         extern int g_op22_ui_preload; // OP22: предзагрузка текстур окон (UITextureMaster.cpp)
         CMD4(CCC_Integer, "op22_ui_preload", &g_op22_ui_preload, 0, 1);
+        extern int g_op22_hud_blend; // OP22: плавные переходы анимаций HUD (player_hud.cpp)
+        CMD4(CCC_Integer, "op22_hud_blend", &g_op22_hud_blend, 0, 1);
     }
 
     CMD3(CCC_Mask, "g_crosshair_dbg", &psActorFlags, AF_CROSSHAIR_DBG);

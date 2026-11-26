@@ -53,6 +53,27 @@ public:
 
     u32 dwFrame;
 
+    // OP22: S-кривая веса смешивания (HUD, player_hud.cpp op22_hud_blend): blendAmount = power * smoothstep(blendLinear / power)
+    float blendLinear;
+    BOOL eased;
+
+    // вес -> линейная доля, обратная smoothstep: при включении S-кривой на уже идущем смешивании вес не прыгает
+    IC void set_eased()
+    {
+        if (eased)
+            return;
+        float y = blendPower > EPS_S ? blendAmount / blendPower : 0.f;
+        clamp(y, 0.f, 1.f);
+        blendLinear = blendPower * (0.5f - sinf(asinf(1.f - 2.f * y) / 3.f));
+        eased = TRUE;
+    }
+    IC void apply_ease()
+    {
+        float x = blendPower > EPS_S ? blendLinear / blendPower : 0.f;
+        clamp(x, 0.f, 1.f);
+        blendAmount = blendPower * x * x * (3.f - 2.f * x);
+    }
+
     u32 mem_usage() { return sizeof(*this); }
     IC bool update_time(float dt);
     IC void update_play(float dt, PlayCallback _Callback);
@@ -68,7 +89,7 @@ public:
         :
 
           blendAmount(0), timeCurrent(0), timeTotal(0), motionID(), bone_or_part(0), channel(0), blend(eFREE_SLOT), blendAccrue(0), blendFalloff(0), blendPower(0), speed(0),
-          playing(0), stop_at_end_callback(0), stop_at_end(0), fall_at_end(0), Callback(0), CallbackParam(0), dwFrame(0)
+          playing(0), stop_at_end_callback(0), stop_at_end(0), fall_at_end(0), Callback(0), CallbackParam(0), dwFrame(0), blendLinear(0), eased(FALSE)
     {}
 
     CBlend(const CBlend& r) { *this = r; }
@@ -94,6 +115,8 @@ public:
         Callback = r.Callback;
         CallbackParam = r.CallbackParam;
         dwFrame = r.dwFrame;
+        blendLinear = r.blendLinear;
+        eased = r.eased;
         return *this;
     }
 
@@ -114,9 +137,17 @@ IC void CBlend::update_play(float dt, PlayCallback _Callback)
         }
     }
 
-    blendAmount += pow_dt * blendAccrue * blendPower;
-
-    clamp(blendAmount, 0.f, blendPower);
+    if (eased) // OP22
+    {
+        blendLinear += pow_dt * blendAccrue * blendPower;
+        clamp(blendLinear, 0.f, blendPower);
+        apply_ease();
+    }
+    else
+    {
+        blendAmount += pow_dt * blendAccrue * blendPower;
+        clamp(blendAmount, 0.f, blendPower);
+    }
 
     if (!update_time(dt)) // reached end
         return;
@@ -176,6 +207,15 @@ IC bool CBlend::update_falloff(float dt)
     update_time(dt);
 
     // if(  dt<0.f || timeCurrent >= blendAccrue )
+    if (eased) // OP22
+    {
+        blendLinear -= dt * blendFalloff * blendPower;
+        const bool ret = blendLinear <= 0;
+        clamp(blendLinear, 0.f, blendPower);
+        apply_ease();
+        return ret;
+    }
+
     blendAmount -= dt * blendFalloff * blendPower;
 
     bool ret = blendAmount <= 0;
