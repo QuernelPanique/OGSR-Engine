@@ -1669,12 +1669,12 @@ void CCar::OnEvent(NET_Packet& P, u16 type)
     CExplosive::OnEvent(P, type);
 
     //обработка сообщений, нужных для работы с багажником машины
-    u16 id;
+    u32 id; // OP22 (id32)
     switch (type)
     {
     case GE_OWNERSHIP_TAKE:
     case GE_TRANSFER_TAKE: {
-        P.r_u16(id);
+        P.r_id(id); // OP22 (id32)
         CObject* O = Level().Objects.net_Find(id);
         if (GetInventory()->CanTakeItem(smart_cast<CInventoryItem*>(O)))
         {
@@ -1687,14 +1687,14 @@ void CCar::OnEvent(NET_Packet& P, u16 type)
                 return;
             NET_Packet _P;
             u_EventGen(_P, GE_OWNERSHIP_REJECT, ID());
-            _P.w_u16(u16(O->ID()));
+            _P.w_id(O->ID()); // OP22 (id32)
             u_EventSend(_P);
         }
     }
     break;
     case GE_OWNERSHIP_REJECT:
     case GE_TRANSFER_REJECT: {
-        P.r_u16(id);
+        P.r_id(id); // OP22 (id32)
         CObject* O = Level().Objects.net_Find(id);
 
         if (!O)

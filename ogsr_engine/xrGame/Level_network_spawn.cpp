@@ -156,7 +156,7 @@ void CLevel::g_sv_Spawn(CSE_Abstract* E)
             NET_Packet GEN;
             GEN.write_start();
             GEN.read_start();
-            GEN.w_u16(u16(O->ID()));
+            GEN.w_id(O->ID()); // OP22 (id32)
             cl_Process_Event(E->ID_Parent, GE_OWNERSHIP_TAKE, GEN);
         }
     }

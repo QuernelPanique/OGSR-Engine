@@ -303,7 +303,7 @@ void CEntityAlive::Die(CObject* who)
     {
         NET_Packet P;
         u_EventGen(P, GE_ASSIGN_KILLER, ID());
-        P.w_u16(who ? who->ID() : u16(-1));
+        P.w_id(who ? who->ID() : u32(u16(-1))); // OP22 (id32)
         u_EventSend(P);
     }
 

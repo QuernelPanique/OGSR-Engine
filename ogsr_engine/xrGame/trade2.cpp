@@ -92,7 +92,7 @@ void CTrade::TransferItem(CInventoryItem* pItem, bool bBuying, bool change_money
 
     NET_Packet P;
     O1->u_EventGen(P, GE_TRADE_SELL, O1->ID());
-    P.w_u16(pItem->object().ID());
+    P.w_id(pItem->object().ID()); // OP22 (id32)
     O1->u_EventSend(P);
 
     if (change_money)
@@ -105,7 +105,7 @@ void CTrade::TransferItem(CInventoryItem* pItem, bool bBuying, bool change_money
 
     // взять у партнера
     O2->u_EventGen(P, GE_TRADE_BUY, O2->ID());
-    P.w_u16(pItem->object().ID());
+    P.w_id(pItem->object().ID()); // OP22 (id32)
     O2->u_EventSend(P);
 
     if (change_money)

@@ -431,7 +431,7 @@ void CArtefact::OnAnimationEnd(u32 state)
             SwitchState(eHiding);
             NET_Packet P;
             u_EventGen(P, GEG_PLAYER_ACTIVATEARTEFACT, H_Parent()->ID());
-            P.w_u16(ID());
+            P.w_id(ID()); // OP22 (id32)
             u_EventSend(P);
         }
     }
@@ -514,7 +514,7 @@ void SArtefactActivation::Start()
 
     NET_Packet P;
     CGameObject::u_EventGen(P, GE_OWNERSHIP_REJECT, m_af->H_Parent()->ID());
-    P.w_u16(m_af->ID());
+    P.w_id(m_af->ID()); // OP22 (id32)
     CGameObject::u_EventSend(P);
     m_light->set_active(true);
     ChangeEffects();

@@ -98,9 +98,9 @@ public:
     void Process_update(NET_Packet& P, ClientID sender);
     void Process_save(NET_Packet& P, ClientID sender);
     void Process_event(NET_Packet& P, ClientID sender);
-    void Process_event_ownership(NET_Packet& P, ClientID sender, u32 time, u16 ID, BOOL bForced = FALSE);
-    bool Process_event_reject(NET_Packet& P, const ClientID sender, const u32 time, const u16 id_parent, const u16 id_entity, bool send_message = true);
-    void Process_event_destroy(NET_Packet& P, ClientID sender, u32 time, u16 ID, NET_Packet* pEPack);
+    void Process_event_ownership(NET_Packet& P, ClientID sender, u32 time, u32 ID, BOOL bForced = FALSE); // OP22 (id32)
+    bool Process_event_reject(NET_Packet& P, const ClientID sender, const u32 time, const u32 id_parent, const u32 id_entity, bool send_message = true); // OP22 (id32)
+    void Process_event_destroy(NET_Packet& P, ClientID sender, u32 time, u32 ID, NET_Packet* pEPack); // OP22 (id32)
 
     xrClientData* SelectBestClientToMigrateTo(CSE_Abstract* E, BOOL bForceAnother = FALSE);
     void SendConnectResult(IClient* CL, u8 res, u8 res1, const char* ResultStr);
@@ -150,7 +150,7 @@ public:
     void create_direct_client();
 
 public:
-    xr_string ent_name_safe(u16 eid);
+    xr_string ent_name_safe(u32 eid);
 
 #ifdef DEBUG
     bool verify_entities() const;

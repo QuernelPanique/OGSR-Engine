@@ -129,7 +129,7 @@ void CWeaponRG6::LaunchGrenade(const Fvector& p1, const Fvector& d1)
         {
             NET_Packet P;
             u_EventGen(P, GE_LAUNCH_ROCKET, ID());
-            P.w_u16(u16(getCurrentRocket()->ID()));
+            P.w_id(getCurrentRocket()->ID()); // OP22 (id32)
             u_EventSend(P);
         }
         dropCurrentRocket();
@@ -162,18 +162,18 @@ void CWeaponRG6::OnEvent(NET_Packet& P, u16 type)
 {
     inheritedSG::OnEvent(P, type);
 
-    u16 id;
+    u32 id; // OP22 (id32)
     switch (type)
     {
     case GE_OWNERSHIP_TAKE: {
-        P.r_u16(id);
+        P.r_id(id); // OP22 (id32)
         inheritedRL::AttachRocket(id, this);
     }
     break;
     case GE_OWNERSHIP_REJECT:
     case GE_LAUNCH_ROCKET: {
         bool bLaunch = (type == GE_LAUNCH_ROCKET);
-        P.r_u16(id);
+        P.r_id(id); // OP22 (id32)
         inheritedRL::DetachRocket(id, bLaunch);
     }
     break;

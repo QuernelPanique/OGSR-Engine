@@ -271,7 +271,7 @@ void CALifeSimulator__release(CALifeSimulator* self, CSE_Abstract* object, bool)
         packet.w_begin(M_EVENT);
         packet.w_u32(Level().timeServer());
         packet.w_u16(GE_DESTROY);
-        packet.w_u16(object->ID);
+        packet.w_id(object->ID); // OP22 (id32)
         Level().Send(packet, net_flags(TRUE, TRUE));
     }
 }

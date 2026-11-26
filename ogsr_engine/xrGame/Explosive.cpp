@@ -554,8 +554,8 @@ void CExplosive::OnEvent(NET_Packet& P, u16 type)
             break;
 
         Fvector pos, normal;
-        u16 parent_id;
-        P.r_u16(parent_id);
+        u32 parent_id; // OP22 (id32)
+        P.r_id(parent_id); // OP22 (id32)
         P.r_vec3(pos);
         P.r_vec3(normal);
 
@@ -589,7 +589,7 @@ void CExplosive::GenExplodeEvent(const Fvector& pos, const Fvector& normal)
 
     NET_Packet P;
     cast_game_object()->u_EventGen(P, GE_GRENADE_EXPLODE, cast_game_object()->ID());
-    P.w_u16(Initiator());
+    P.w_id(Initiator()); // OP22 (id32)
     P.w_vec3(pos);
     P.w_vec3(normal);
     cast_game_object()->u_EventSend(P);

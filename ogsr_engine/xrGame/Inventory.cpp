@@ -716,7 +716,7 @@ void CInventory::UpdateDropItem(PIItem pIItem)
 
         NET_Packet P;
         pIItem->object().u_EventGen(P, GE_OWNERSHIP_REJECT, pIItem->object().H_Parent()->ID());
-        P.w_u16(u16(pIItem->object().ID()));
+        P.w_id(pIItem->object().ID()); // OP22 (id32)
         pIItem->object().u_EventSend(P);
     } // dropManual
 }
@@ -926,7 +926,7 @@ bool CInventory::Eat(PIItem pIItem)
     {
         NET_Packet P;
         CGameObject::u_EventGen(P, GE_OWNERSHIP_REJECT, entity_alive->ID());
-        P.w_u16(pIItem->object().ID());
+        P.w_id(pIItem->object().ID()); // OP22 (id32)
         CGameObject::u_EventSend(P);
 
         CGameObject::u_EventGen(P, GE_DESTROY, pIItem->object().ID());

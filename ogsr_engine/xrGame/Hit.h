@@ -48,20 +48,20 @@ struct SHit
     void Write_Packet(NET_Packet& P);
     void Write_Packet_Cont(NET_Packet& P);
 
-    void GenHeader(u16 PacketType, u16 ID);
+    void GenHeader(u16 PacketType, u32 ID); // OP22 (id32)
     // private:
     // GE_HIT
     u32 Time{};
     u16 PACKET_TYPE;
-    u16 DestID{};
+    u32 DestID{}; // OP22 (id32)
 
     float power;
     Fvector dir;
     CObject* who;
     void set_hit_initiator(CScriptGameObject* script_obj);
     CScriptGameObject* get_hit_initiator() const;
-    u16 whoID;
-    u16 weaponID{};
+    u32 whoID; // OP22 (id32)
+    u32 weaponID{}; // OP22 (id32)
     u16 boneID;
     Fvector p_in_bone_space;
     float impulse;

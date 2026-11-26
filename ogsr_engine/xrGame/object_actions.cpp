@@ -632,7 +632,7 @@ void CObjectActionDrop::initialize()
 
     NET_Packet P;
     m_object->u_EventGen(P, GE_OWNERSHIP_REJECT, m_object->ID());
-    P.w_u16(u16(m_item->object().ID()));
+    P.w_id(m_item->object().ID()); // OP22 (id32)
     m_object->u_EventSend(P);
 }
 

@@ -34,7 +34,7 @@
 #define CAR_BODY_XML "carbody_new.xml"
 #define CARBODY_ITEM_XML "carbody_item.xml"
 
-void move_item(u16 from_id, u16 to_id, u16 what_id);
+void move_item(u32 from_id, u32 to_id, u32 what_id) // OP22 (id32);
 
 CUICarBodyWnd::CUICarBodyWnd()
 {
@@ -719,7 +719,7 @@ void SendEvent_Item_Drop(u16 from_id, PIItem pItem)
 
     NET_Packet P;
     pItem->object().u_EventGen(P, GE_OWNERSHIP_REJECT, from_id);
-    P.w_u16(pItem->object().ID());
+    P.w_id(pItem->object().ID()); // OP22 (id32)
     pItem->object().u_EventSend(P);
 }
 
@@ -959,7 +959,7 @@ void CUICarBodyWnd::EatItem()
 
     NET_Packet P;
     CGameObject::u_EventGen(P, GEG_PLAYER_ITEM_EAT, Actor()->ID());
-    P.w_u16(CurrentIItem()->object().ID());
+    P.w_id(CurrentIItem()->object().ID()); // OP22 (id32)
     CGameObject::u_EventSend(P);
 
     PlaySnd(eInvItemUse);
@@ -1049,7 +1049,7 @@ bool CUICarBodyWnd::OnItemRButtonClick(CUICellItem* itm)
     return false;
 }
 
-void move_item(u16 from_id, u16 to_id, u16 what_id)
+void move_item(u32 from_id, u32 to_id, u32 what_id) // OP22 (id32)
 {
     NET_Packet P;
     CGameObject::u_EventGen(P, GE_TRANSFER_REJECT, from_id);

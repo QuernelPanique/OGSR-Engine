@@ -282,7 +282,7 @@ void xrServer::SendUpdatesToAll()
                 tmpPacket.B.count = 0;
                 // write specific data
                 {
-                    tmpPacket.w_u16(Test.ID);
+                    tmpPacket.w_id(Test.ID); // OP22 (id32)
                     tmpPacket.w_chunk_open8(position);
                     Test.UPDATE_Write(tmpPacket);
                     u32 ObjectSize = u32(tmpPacket.w_tell() - position) - sizeof(u8);

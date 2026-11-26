@@ -32,7 +32,7 @@ void xrServer::Perform_destroy(CSE_Abstract* object, u32 mode)
     }
 
     //	Msg						("SLS-CLEAR : DESTROY [%s][%s]",object->name(),object->name_replace());
-    u16 object_id = object->ID;
+    u32 object_id = object->ID; // OP22 (id32)
     entity_Destroy(object);
 
 #ifdef DEBUG
@@ -45,7 +45,7 @@ void xrServer::Perform_destroy(CSE_Abstract* object, u32 mode)
     P.w_begin(M_EVENT);
     P.w_u32(Device.dwTimeGlobal - 2 * NET_Latency);
     P.w_u16(GE_DESTROY);
-    P.w_u16(object_id);
+    P.w_id(object_id); // OP22 (id32)
     SendBroadcast(BroadcastCID, P, mode);
 }
 

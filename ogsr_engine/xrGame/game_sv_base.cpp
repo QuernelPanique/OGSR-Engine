@@ -222,8 +222,8 @@ void game_sv_GameState::OnEvent(NET_Packet& tNetPacket, u16 type, u32 time, Clie
     break;
 
     case GAME_EVENT_ON_HIT: {
-        tNetPacket.r_u16();
-        u16 id_src = tNetPacket.r_u16();
+        tNetPacket.r_id(); // OP22 (id32): адресат, затем whoID - по 4 байта
+        u32 id_src = tNetPacket.r_id();
         CSE_Abstract* e_src = get_entity_from_eid(id_src);
 
         if (!e_src) // added by andy because of Phantom does not have server entity

@@ -143,6 +143,7 @@ void CSE_Abstract::Spawn_Write(NET_Packet& tNetPacket, BOOL bLocal)
 
     s_flags.set(M_SPAWN_VERSION, TRUE);
     s_flags.set(M_SPAWN_ID32, TRUE);
+    s_flags.set(M_SPAWN_CD_ID32, m_cd_id32 || client_data.empty()); // OP22 (id32)
     if (bLocal)
         tNetPacket.w_u16(u16(s_flags.flags | M_SPAWN_OBJECT_LOCAL));
     else
@@ -203,6 +204,7 @@ BOOL CSE_Abstract::Spawn_Read(NET_Packet& tNetPacket)
     ID_Phantom = tNetPacket.r_u16();
 
     tNetPacket.r_u16(s_flags.flags);
+    m_cd_id32 = !!(s_flags.flags & M_SPAWN_CD_ID32); // OP22 (id32)
 
     tNetPacket.r_u16(m_wVersion);
 
@@ -261,6 +263,7 @@ void CSE_Abstract::load(NET_Packet& tNetPacket)
 #endif // DEBUG
         client_data.clear();
     }
+    m_cd_id32 = true; // OP22 (id32): client_data от клиента нового движка
 }
 
 CSE_Abstract* CSE_Abstract::base() { return (this); }

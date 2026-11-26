@@ -9,7 +9,7 @@
 #include "alife_object_registry.h"
 #include "level.h"
 
-xr_string xrServer::ent_name_safe(u16 eid)
+xr_string xrServer::ent_name_safe(u32 eid) // OP22 (id32)
 {
     string1024 buff;
     CSE_Abstract* e_dest = game->get_entity_from_eid(eid);
@@ -21,12 +21,12 @@ xr_string xrServer::ent_name_safe(u16 eid)
     return buff;
 }
 
-void xrServer::Process_event_destroy(NET_Packet& P, ClientID sender, u32 time, u16 ID, NET_Packet* pEPack)
+void xrServer::Process_event_destroy(NET_Packet& P, ClientID sender, u32 time, u32 ID, NET_Packet* pEPack) // OP22 (id32)
 {
     u32 MODE = net_flags(TRUE, TRUE);
 
     // Parse message
-    u16 id_dest = ID;
+    u32 id_dest = ID; // OP22 (id32)
 #ifdef DEBUG
     Msg("sv destroy object %s [%d]", ent_name_safe(id_dest).c_str(), Device.dwFrame);
 #endif
@@ -47,7 +47,7 @@ void xrServer::Process_event_destroy(NET_Packet& P, ClientID sender, u32 time, u
     R_ASSERT(c_from);
     R_ASSERT(c_dest == c_from || GetServerClient() == c_from);
 
-    u16 parent_id = e_dest->ID_Parent;
+    u32 parent_id = e_dest->ID_Parent; // OP22 (id32)
 
     //---------------------------------------------
     NET_Packet P2, *pEventPack = pEPack;
@@ -73,7 +73,7 @@ void xrServer::Process_event_destroy(NET_Packet& P, ClientID sender, u32 time, u
         if (0xffff != parent_id && Process_event_reject(P, sender, time, parent_id, ID, false))
         {
             game->u_EventGen(tmpP, GE_OWNERSHIP_REJECT, parent_id);
-            tmpP.w_u16(id_dest);
+            tmpP.w_id(id_dest); // OP22 (id32)
             tmpP.w_u8(1);
 
             if (!pEventPack)

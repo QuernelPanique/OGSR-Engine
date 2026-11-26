@@ -349,7 +349,7 @@ void CScriptGameObject::DropItem(CScriptGameObject* pItem)
 
     NET_Packet P;
     CGameObject::u_EventGen(P, GE_OWNERSHIP_REJECT, object().ID());
-    P.w_u16(pItem->object().ID());
+    P.w_id(pItem->object().ID()); // OP22 (id32)
     CGameObject::u_EventSend(P);
 }
 
@@ -383,12 +383,12 @@ void CScriptGameObject::TransferItem(CScriptGameObject* pItem, CScriptGameObject
     // выбросить у себя
     NET_Packet P;
     CGameObject::u_EventGen(P, GE_TRANSFER_REJECT, object().ID());
-    P.w_u16(pIItem->object().ID());
+    P.w_id(pIItem->object().ID()); // OP22 (id32)
     CGameObject::u_EventSend(P);
 
     // отдать партнеру
     CGameObject::u_EventGen(P, GE_TRANSFER_TAKE, pForWho->object().ID());
-    P.w_u16(pIItem->object().ID());
+    P.w_id(pIItem->object().ID()); // OP22 (id32)
     CGameObject::u_EventSend(P);
 }
 

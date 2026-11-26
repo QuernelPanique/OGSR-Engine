@@ -148,7 +148,7 @@ void CWeaponRPG7::switch2_Fire()
         {
             NET_Packet P;
             u_EventGen(P, GE_LAUNCH_ROCKET, ID());
-            P.w_u16(u16(getCurrentRocket()->ID()));
+            P.w_id(getCurrentRocket()->ID()); // OP22 (id32)
             u_EventSend(P);
         }
     }
@@ -157,18 +157,18 @@ void CWeaponRPG7::switch2_Fire()
 void CWeaponRPG7::OnEvent(NET_Packet& P, u16 type)
 {
     inherited::OnEvent(P, type);
-    u16 id;
+    u32 id; // OP22 (id32)
     switch (type)
     {
     case GE_OWNERSHIP_TAKE: {
-        P.r_u16(id);
+        P.r_id(id); // OP22 (id32)
         CRocketLauncher::AttachRocket(id, this);
     }
     break;
     case GE_OWNERSHIP_REJECT:
     case GE_LAUNCH_ROCKET: {
         bool bLaunch = (type == GE_LAUNCH_ROCKET);
-        P.r_u16(id);
+        P.r_id(id); // OP22 (id32)
         CRocketLauncher::DetachRocket(id, bLaunch);
     }
     break;

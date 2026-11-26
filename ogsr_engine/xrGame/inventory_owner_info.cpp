@@ -24,11 +24,11 @@ void CInventoryOwner::OnEvent(NET_Packet& P, u16 type)
     switch (type)
     {
     case GE_INFO_TRANSFER: {
-        u16 id;
+        u32 id; // OP22 (id32)
         shared_str info_id;
         u8 add_info;
 
-        P.r_u16(id); //отправитель
+        P.r_id(id); // OP22 (id32) //отправитель
         P.r_stringZ(info_id); //номер полученной информации
         P.r_u8(add_info); //добавление или убирание информации
 

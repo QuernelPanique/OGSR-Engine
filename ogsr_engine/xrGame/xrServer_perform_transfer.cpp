@@ -19,8 +19,8 @@ void xrServer::Perform_transfer(NET_Packet& PR, NET_Packet& PT, CSE_Abstract* wh
     PR.w_begin(M_EVENT);
     PR.w_u32(time);
     PR.w_u16(GE_TRANSFER_REJECT);
-    PR.w_u16(from->ID);
-    PR.w_u16(what->ID);
+    PR.w_id(from->ID); // OP22 (id32)
+    PR.w_id(what->ID); // OP22 (id32)
 
     // 3. Attach "TO"
     what->ID_Parent = to->ID;
@@ -28,8 +28,8 @@ void xrServer::Perform_transfer(NET_Packet& PR, NET_Packet& PT, CSE_Abstract* wh
     PT.w_begin(M_EVENT);
     PT.w_u32(time + 1);
     PT.w_u16(GE_TRANSFER_TAKE);
-    PT.w_u16(to->ID);
-    PT.w_u16(what->ID);
+    PT.w_id(to->ID); // OP22 (id32)
+    PT.w_id(what->ID); // OP22 (id32)
 }
 
 void xrServer::Perform_reject(CSE_Abstract* what, CSE_Abstract* from, int delta)
@@ -43,8 +43,8 @@ void xrServer::Perform_reject(CSE_Abstract* what, CSE_Abstract* from, int delta)
     P.w_begin(M_EVENT);
     P.w_u32(time);
     P.w_u16(GE_OWNERSHIP_REJECT);
-    P.w_u16(from->ID);
-    P.w_u16(what->ID);
+    P.w_id(from->ID); // OP22 (id32)
+    P.w_id(what->ID); // OP22 (id32)
     P.w_u8(1);
 
     Process_event_reject(P, BroadcastCID, time, from->ID, what->ID);

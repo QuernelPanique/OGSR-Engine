@@ -861,7 +861,7 @@ void CScriptGameObject::DropItemAndThrow(CScriptGameObject* pItem, Fvector speed
     item->SetActivationSpeedOverride(speed);
     NET_Packet P;
     CGameObject::u_EventGen(P, GE_OWNERSHIP_REJECT, object().ID());
-    P.w_u16(pItem->object().ID());
+    P.w_id(pItem->object().ID()); // OP22 (id32)
     CGameObject::u_EventSend(P);
 }
 

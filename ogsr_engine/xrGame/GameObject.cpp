@@ -34,6 +34,9 @@
 #include "PHScriptCall.h"
 #include "debug_renderer.h"
 //#include "PHDebug.h"
+#include "op22_id32.h"
+
+bool g_op22_cd_id32 = true; // OP22 (id32)
 
 CGameObject::CGameObject()
 {
@@ -352,7 +355,9 @@ BOOL CGameObject::net_Spawn(CSE_Abstract* DC)
     {
         //		Msg				("client data is present for object [%d][%s], load is processed",ID(),*cName());
         IReader ireader = IReader(&*E->client_data.begin(), E->client_data.size());
+        g_op22_cd_id32 = E->m_cd_id32; // OP22 (id32): формат ID в client_data
         net_Load(ireader); // вызов load(IReader& input_packet)
+        g_op22_cd_id32 = true;
     }
     else
     {

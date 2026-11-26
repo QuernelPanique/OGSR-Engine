@@ -19,8 +19,8 @@ void IInventoryBox::ProcessEvent(CGameObject* O, NET_Packet& P, u16 type)
     {
     case GE_OWNERSHIP_TAKE:
     case GE_TRANSFER_TAKE: {
-        u16 id;
-        P.r_u16(id);
+        u32 id; // OP22 (id32)
+        P.r_id(id); // OP22 (id32)
         CObject* itm = Level().Objects.net_Find(id);
         VERIFY(itm);
         m_items.push_back(id);
@@ -47,8 +47,8 @@ void IInventoryBox::ProcessEvent(CGameObject* O, NET_Packet& P, u16 type)
     break;
     case GE_OWNERSHIP_REJECT:
     case GE_TRANSFER_REJECT: {
-        u16 id;
-        P.r_u16(id);
+        u32 id; // OP22 (id32)
+        P.r_id(id); // OP22 (id32)
         CObject* itm = Level().Objects.net_Find(id);
 
         auto it = std::find(m_items.begin(), m_items.end(), id);

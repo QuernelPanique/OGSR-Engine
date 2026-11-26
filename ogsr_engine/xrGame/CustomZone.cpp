@@ -1189,14 +1189,14 @@ void CCustomZone::OnEvent(NET_Packet& P, u16 type)
     switch (type)
     {
     case GE_OWNERSHIP_TAKE: {
-        u16 id;
-        P.r_u16(id);
+        u32 id; // OP22 (id32)
+        P.r_id(id); // OP22 (id32)
         OnOwnershipTake(id);
         break;
     }
     case GE_OWNERSHIP_REJECT: {
-        u16 id;
-        P.r_u16(id);
+        u32 id; // OP22 (id32)
+        P.r_id(id); // OP22 (id32)
         CArtefact* artefact = smart_cast<CArtefact*>(Level().Objects.net_Find(id));
         if (artefact)
         {

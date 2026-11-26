@@ -115,6 +115,7 @@ enum
     M_SPAWN_UPDATE = (1 << 6), // + update packet
     M_SPAWN_TIME = (1 << 7), // + spawn time
     M_SPAWN_DENIED = (1 << 8), // don't spawn entity with this flag
+    M_SPAWN_CD_ID32 = (1 << 10), // OP22 (id32): client_data записан новым движком (ID в нём 4 байта)
     M_SPAWN_ID32 = (1 << 9), // OP22 (id32): в пакете старшие 16 бит ID/ID_Parent/ID_Phantom и 32-битные ID в STATE
 
     M_SPAWN_OBJECT_FORCEDWORD = u32(-1)

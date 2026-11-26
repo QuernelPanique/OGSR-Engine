@@ -70,12 +70,12 @@ void CAI_Stalker::transfer_item(CInventoryItem* item, CGameObject* old_owner, CG
     NET_Packet P;
     CGameObject* O = old_owner;
     O->u_EventGen(P, GE_TRADE_SELL, O->ID());
-    P.w_u16(u16(item->object().ID()));
+    P.w_id(item->object().ID()); // OP22 (id32)
     O->u_EventSend(P);
 
     O = new_owner;
     O->u_EventGen(P, GE_TRADE_BUY, O->ID());
-    P.w_u16(u16(item->object().ID()));
+    P.w_id(item->object().ID()); // OP22 (id32)
     O->u_EventSend(P);
 }
 

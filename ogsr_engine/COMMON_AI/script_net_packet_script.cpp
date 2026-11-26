@@ -34,6 +34,17 @@ ClientID r_clientID(NET_Packet* self)
 
 extern u16 script_server_object_version();
 
+// OP22 (id32): w_u16 из Lua - значение больше 65535 (например, ID объекта выше старого предела) обрезалось бы молча;
+// пишем как раньше, но сообщаем в лог. Для ID в скриптах - w_id/r_id (4 байта).
+static void op22_w_u16_checked(NET_Packet* self, double v)
+{
+    if (v > 65535.0)
+        Msg("! [OP22 id32] net_packet:w_u16(%.0f) - value above 65535 truncated (object id? use w_id)", v);
+    self->w_u16(u16(s64(v)));
+}
+static void op22_w_id(NET_Packet* self, u32 v) { self->w_id(v); }
+static u32 op22_r_id(NET_Packet* self) { return self->r_id(); }
+
 
 void CScriptNetPacket::script_register(lua_State* L)
 {
@@ -53,7 +64,9 @@ void CScriptNetPacket::script_register(lua_State* L)
                   .def("w_s64", &NET_Packet::w_s64)
                   .def("w_u32", &NET_Packet::w_u32)
                   .def("w_s32", &NET_Packet::w_s32)
-                  .def("w_u16", &NET_Packet::w_u16)
+                  .def("w_u16", &op22_w_u16_checked) // OP22 (id32)
+                  .def("w_id", &op22_w_id)
+                  .def("r_id", &op22_r_id)
                   .def("w_s16", &NET_Packet::w_s16)
                   .def("w_u8", &NET_Packet::w_u8)
                   .def("w_s8", &NET_Packet::w_s8)

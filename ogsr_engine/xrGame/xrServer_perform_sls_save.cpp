@@ -22,7 +22,7 @@ void xrServer::SLS_Save(IWriter& fs)
 
         // Update
         P.w_begin(M_UPDATE);
-        P.w_u16(E->ID);
+        P.w_id(E->ID); // OP22 (id32)
         P.w_chunk_open8(position);
         E->UPDATE_Write(P);
         P.w_chunk_close8(position);

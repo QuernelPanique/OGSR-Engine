@@ -7,6 +7,7 @@
 ////////////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
+#include "op22_id32.h"
 #include "sound_memory_manager.h"
 #include "memory_manager.h"
 #include "hit_memory_manager.h"
@@ -393,7 +394,7 @@ void CSoundMemoryManager::save(NET_Packet& packet) const
     for (; I != E; ++I)
     {
         VERIFY((*I).m_object);
-        packet.w_u16((*I).m_object->ID());
+        packet.w_id((*I).m_object->ID()); // OP22 (id32)
         // object params
         packet.w_u32((*I).m_object_params.m_level_vertex_id);
         packet.w_vec3((*I).m_object_params.m_position);
@@ -435,7 +436,7 @@ void CSoundMemoryManager::load(IReader& packet)
     for (int i = 0; i < count; ++i)
     {
         CDelayedSoundObject delayed_object;
-        delayed_object.m_object_id = packet.r_u16();
+        delayed_object.m_object_id = op22_r_cd_id(packet); // OP22 (id32)
 
         CSoundObject& object = delayed_object.m_sound_object;
         object.m_object = smart_cast<CGameObject*>(Level().Objects.net_Find(delayed_object.m_object_id));
