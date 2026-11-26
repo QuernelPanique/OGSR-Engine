@@ -1019,7 +1019,7 @@ float is_ray_intersect_sphere(Fvector pos, Fvector dir, Fvector C, float R)
 
 DBG_ScriptObject* get_object(u32 id)
 {
-    xr_map<u16, DBG_ScriptObject*>::iterator it = Level().getScriptRenderQueue()->find(id);
+    xr_map<u32, DBG_ScriptObject*>::iterator it = Level().getScriptRenderQueue()->find(id);
     if (it == Level().getScriptRenderQueue()->end())
         return nullptr;
 
