@@ -1,4 +1,5 @@
 #pragma once
+#include "alife_space.h" // OP22 (id32): ALife::_OBJECT_ID
 #include "alife_abstract_registry.h"
 
 class CMapLocation;

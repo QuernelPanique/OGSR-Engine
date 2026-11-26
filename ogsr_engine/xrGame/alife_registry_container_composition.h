@@ -7,6 +7,7 @@
 ////////////////////////////////////////////////////////////////////////////
 
 #pragma once
+#include "alife_space.h" // OP22 (id32): ALife::_OBJECT_ID
 
 #include "InfoPortionDefs.h"
 #include "PdaMsg.h"

@@ -634,7 +634,7 @@ CMapSpot* CMapLocation::GetSpotBorder(CMapSpot* sp)
 
 Fvector2 CMapLocation::SpotSize() { return m_level_spot->GetWndSize(); }
 
-CRelationMapLocation::CRelationMapLocation(const shared_str& type, u32 object_id, u32 pInvOwnerActorID, u32 pInvOwnerEntityID) // OP22 (id32) : CMapLocation(*type, object_id)
+CRelationMapLocation::CRelationMapLocation(const shared_str& type, u32 object_id, u32 pInvOwnerActorID, u32 pInvOwnerEntityID) : CMapLocation(*type, object_id) // OP22 (id32)
 {
     m_curr_spot_name = type;
     m_pInvOwnerEntityID = pInvOwnerEntityID;

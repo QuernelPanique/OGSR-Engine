@@ -35,7 +35,7 @@ typedef struct tagSPdaMessage
 struct TALK_CONTACT_DATA
 {
     TALK_CONTACT_DATA() : id(u16(-1)), time(0){};
-    TALK_CONTACT_DATA(u32 contact_id, ALife::_TIME_ID contact_time) // OP22 (id32) : id(contact_id), time(contact_time){};
+    TALK_CONTACT_DATA(u32 contact_id, ALife::_TIME_ID contact_time) : id(contact_id), time(contact_time){}; // OP22 (id32)
     //время контакта
     ALife::_TIME_ID time;
     // id персонажа с которым говорили

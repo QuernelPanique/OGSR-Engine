@@ -440,7 +440,7 @@ void SGameTaskObjective::SetMapHint_script(LPCSTR _str) { map_hint = _str; }
 
 void SGameTaskObjective::SetMapLocation_script(LPCSTR _str) { map_location = _str; }
 
-void SGameTaskObjective::SetObjectID_script(u32 id) // OP22 (id32) { object_id = id; }
+void SGameTaskObjective::SetObjectID_script(u32 id) { object_id = id; } // OP22 (id32)
 
 void SGameTaskObjective::SetIconName_script(LPCSTR _str)
 {
