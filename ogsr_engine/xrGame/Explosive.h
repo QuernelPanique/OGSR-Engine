@@ -46,7 +46,7 @@ public:
     virtual void OnAfterExplosion();
     virtual void OnBeforeExplosion();
     virtual void SetCurrentParentID(u32 parent_id) { m_iCurrentParentID = parent_id; }
-    IC u16 CurrentParentID() const { return m_iCurrentParentID; }
+    IC u32 CurrentParentID() const { return m_iCurrentParentID; } // OP22 (id32)
 
     virtual void SetInitiator(u32 id) { SetCurrentParentID(id); }
     virtual u32 Initiator(); // OP22 (id32)

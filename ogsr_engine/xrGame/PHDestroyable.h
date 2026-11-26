@@ -61,7 +61,7 @@ public:
     IC bool CanDestroy() { return m_flags.test(fl_destroyable) && !m_flags.test(fl_destroyed); }
     virtual bool CanRemoveObject() { return true; }
     virtual void SheduleUpdate(u32 dt);
-    virtual void GenSpawnReplace(u16 source_id, LPCSTR section, shared_str visual_name);
+    virtual void GenSpawnReplace(u32 source_id, LPCSTR section, shared_str visual_name);
     virtual void InitServerObject(CSE_Abstract* D);
 
 private:

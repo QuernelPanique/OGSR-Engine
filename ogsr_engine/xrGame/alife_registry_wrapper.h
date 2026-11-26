@@ -20,8 +20,8 @@ public:
     typename _registry_type::_data& objects();
     const typename _registry_type::_data* objects_ptr();
 
-    typename _registry_type::_data& objects(u16 id);
-    const typename _registry_type::_data* objects_ptr(u16 id);
+    typename _registry_type::_data& objects(u32 id);
+    const typename _registry_type::_data* objects_ptr(u32 id);
 
     IC const typename _registry_type::OBJECT_REGISTRY& get_registry_objects() const;
     IC typename _registry_type::OBJECT_REGISTRY& get_registry_objects();
@@ -48,7 +48,7 @@ IC typename _registry_type::OBJECT_REGISTRY& CALifeRegistryWrapper<_registry_typ
 };
 
 template <typename _registry_type>
-const typename _registry_type::_data* CALifeRegistryWrapper<_registry_type>::objects_ptr(u16 id)
+const typename _registry_type::_data* CALifeRegistryWrapper<_registry_type>::objects_ptr(u32 id)
 {
     //	if(NULL == ai().get_alife()) return &local_registry;
     if (NULL == ai().get_alife())
@@ -71,7 +71,7 @@ const typename _registry_type::_data* CALifeRegistryWrapper<_registry_type>::obj
 }
 
 template <typename _registry_type>
-typename _registry_type::_data& CALifeRegistryWrapper<_registry_type>::objects(u16 id)
+typename _registry_type::_data& CALifeRegistryWrapper<_registry_type>::objects(u32 id)
 {
     //	if(NULL == ai().get_alife()) return local_registry;
     if (NULL == ai().get_alife())

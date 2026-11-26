@@ -50,7 +50,7 @@ class CUIStalkerRankingInfoItem : public CUIWindow, public CUISelectable
     u32 m_stored_alpha;
 
 public:
-    u16 m_humanID;
+    u32 m_humanID; // OP22 (id32)
     CUIStatic* m_text1;
     CUIStatic* m_text2;
     CUIStatic* m_text3;

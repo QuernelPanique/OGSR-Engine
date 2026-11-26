@@ -758,7 +758,7 @@ void CExplosive::net_Relcase(CObject* O)
 
 u32 CExplosive::Initiator() /* OP22 (id32) */
 {
-    u16 initiator = CurrentParentID();
+    u32 initiator = CurrentParentID(); // OP22 (id32)
     if (initiator == u16(-1))
         initiator = cast_game_object()->ID();
     return initiator;

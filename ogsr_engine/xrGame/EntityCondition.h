@@ -85,7 +85,7 @@ public:
     float BleedingSpeed();
 
     CObject* GetWhoHitLastTime() { return m_pWho; }
-    u16 GetWhoHitLastTimeID() { return m_iWhoID; }
+    u32 GetWhoHitLastTimeID() { return m_iWhoID; } // OP22 (id32)
 
     CWound* AddWound(float hit_power, ALife::EHitType hit_type, u16 element);
 

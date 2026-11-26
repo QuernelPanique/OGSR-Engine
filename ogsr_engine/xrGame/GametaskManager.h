@@ -16,7 +16,7 @@ public:
     CGameTaskManager();
     ~CGameTaskManager();
 
-    void initialize(u16 id);
+    void initialize(u32 id);
     GameTasks& GameTasks();
     CGameTask* HasGameTask(const TASK_ID& id);
     CGameTask* GiveGameTaskToActor(const TASK_ID& id, u32 timeToComplete, bool bCheckExisting = true);

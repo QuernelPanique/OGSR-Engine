@@ -26,7 +26,7 @@ protected:
     bool m_bForceUpdate;
     bool m_op22_rel_over_rep{}; // OP22: у собеседника отношение на месте репутации (карточка диалога по макету)
     xr_vector<CUIStatic*> m_op22_decor; // OP22: op22_auto_static (рамка портрета и т.п.)
-    u16 m_ownerID;
+    u32 m_ownerID; // OP22 (id32)
 
     enum
     {
@@ -76,7 +76,7 @@ public:
 
     virtual void Update();
 
-    u16 OwnerID() const { return m_ownerID; }
+    u32 OwnerID() const { return m_ownerID; } // OP22 (id32)
     CUIStatic& UIIcon()
     {
         VERIFY(m_icons[eUIIcon]);

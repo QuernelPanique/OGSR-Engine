@@ -29,7 +29,7 @@ public:
     virtual void feel_touch_delete(CObject* O) override;
     virtual BOOL feel_touch_contact(CObject* O) override;
 
-    u16 GetOriginalOwnerID() const { return m_idOriginalOwner; }
+    u32 GetOriginalOwnerID() const { return m_idOriginalOwner; } // OP22 (id32)
     CInventoryOwner* GetOriginalOwner() const;
 
     void TurnOn();
@@ -55,7 +55,7 @@ private:
     float m_fRadius;
     bool m_changed;
 
-    u16 m_idOriginalOwner;
+    u32 m_idOriginalOwner; // OP22 (id32)
     shared_str m_SpecificChracterOwner;
     xr_string m_sFullName;
 

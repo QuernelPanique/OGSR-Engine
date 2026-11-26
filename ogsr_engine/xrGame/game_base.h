@@ -94,7 +94,7 @@ public:
     LPCSTR getName() { return name; }
     void setName(LPCSTR s) { strcpy_s(name, s); }
     void SetGameID(u16 NewID);
-    bool HasOldID(u16 ID);
+    bool HasOldID(u32 ID);
     bool IsSkip() const { return false; }
 
     s16 frags() const { return m_iRivalKills - m_iSelfKills - m_iTeamKills; }

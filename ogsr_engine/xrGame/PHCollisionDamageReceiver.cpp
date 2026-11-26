@@ -77,7 +77,7 @@ void CPHCollisionDamageReceiver::CollisionCallback(bool& do_colide, bool bo1, dC
 }
 
 const static float hit_threthhold = 5.f;
-void CPHCollisionDamageReceiver::Hit(u16 source_id, u16 bone_id, float power, const Fvector& dir, Fvector& pos)
+void CPHCollisionDamageReceiver::Hit(u32 source_id, u16 bone_id, float power, const Fvector& dir, Fvector& pos)
 {
     DAMAGE_BONES_I i = FindBone(bone_id);
     if (i == m_controled_bones.end())

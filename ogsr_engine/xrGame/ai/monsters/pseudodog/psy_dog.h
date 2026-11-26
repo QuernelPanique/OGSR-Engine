@@ -84,7 +84,7 @@ add_to_type_list(CPsyDog)
     LPCSTR m_particles_appear;
     LPCSTR m_particles_disappear;
 
-    u16 m_parent_id;
+    u32 m_parent_id; // OP22 (id32)
 
     u32 m_time_spawned;
 

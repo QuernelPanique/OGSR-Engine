@@ -47,7 +47,7 @@ CPHDestroyable::CPHDestroyable()
     m_depended_objects = 0;
 }
 /////////spawn object representing destroyed item//////////////////////////////////////////////////////////////////////////////////
-void CPHDestroyable::GenSpawnReplace(u16 ref_id, LPCSTR section, shared_str visual_name)
+void CPHDestroyable::GenSpawnReplace(u32 ref_id, LPCSTR section, shared_str visual_name)
 {
     CSE_Abstract* D = F_entity_Create(section); //*cNameSect()
     VERIFY(D);

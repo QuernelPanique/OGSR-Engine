@@ -26,7 +26,7 @@ CGameTaskManager::CGameTaskManager()
 
 CGameTaskManager::~CGameTaskManager() { delete_data(m_gametasks); }
 
-void CGameTaskManager::initialize(u16 id)
+void CGameTaskManager::initialize(u32 id)
 {
     m_gametasks->registry().init(id); // actor's id
     if (Core.Features.test(xrCore::Feature::keep_inprogress_tasks_only))

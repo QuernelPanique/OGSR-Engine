@@ -326,7 +326,7 @@ void map_add_object_spot_ser(u32 id, LPCSTR spot_type, LPCSTR text)
 
 #include "graph_engine.h"
 
-u16 map_add_user_spot(u8 level_id, Fvector position, LPCSTR spot_type, LPCSTR text)
+u32 map_add_user_spot(u8 level_id, Fvector position, LPCSTR spot_type, LPCSTR text)
 {
     shared_str level_name = ai().game_graph().header().level((GameGraph::_LEVEL_ID)level_id).name();
 

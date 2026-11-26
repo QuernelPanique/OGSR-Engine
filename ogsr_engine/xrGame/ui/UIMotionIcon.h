@@ -25,9 +25,9 @@ private:
 
     struct _npc_visibility
     {
-        u16 id;
+        u32 id; // OP22 (id32)
         float value;
-        bool operator==(const u16& _id) { return id == _id; }
+        bool operator==(const u32& _id) { return id == _id; } // OP22 (id32)
         bool operator<(const _npc_visibility& m) const { return (value < m.value); }
     };
     xr_vector<_npc_visibility> m_npc_visibility;

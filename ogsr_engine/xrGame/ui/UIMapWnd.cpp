@@ -857,7 +857,7 @@ bool CUIMapWnd::ConvertCursorPosToMap(Fvector* return_position, CUICustomMap* cu
     return true;
 }
 
-void CUIMapWnd::ShowSettingsWindow(u16 id, Fvector pos, shared_str levelName)
+void CUIMapWnd::ShowSettingsWindow(u32 id, Fvector pos, shared_str levelName)
 {
     m_UserSpotWnd->Init(id, levelName.c_str(), pos, false);
     m_UserSpotWnd->Show();

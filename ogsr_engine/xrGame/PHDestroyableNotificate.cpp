@@ -12,7 +12,7 @@ void CPHDestroyableNotificate::spawn_notificate(CSE_Abstract* so)
 {
     CPHDestroyableNotificator* D = NULL;
     CSE_PHSkeleton* po = smart_cast<CSE_PHSkeleton*>(so);
-    u16 id = u16(-1);
+    u32 id = u16(-1); // OP22 (id32)
     if (po)
         id = po->get_source_id();
     if (id != u16(-1))

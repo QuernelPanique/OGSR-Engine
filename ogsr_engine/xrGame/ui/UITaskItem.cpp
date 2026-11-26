@@ -134,7 +134,7 @@ void CUITaskRootItem::SetGameTask(CGameTask* gt, u16 obj_idx)
         // Use its actual character data; never invent a giver for a generic task.
         if (gt->m_Objectives.size() > 1)
         {
-            const u16 id = gt->m_Objectives.back().object_id;
+            const u32 id = gt->m_Objectives.back().object_id; // OP22 (id32)
             if (id != u16(-1) && ai().get_alife())
                 if (auto* trader = smart_cast<CSE_ALifeTraderAbstract*>(ai().alife().objects().object(id, true)))
                 {

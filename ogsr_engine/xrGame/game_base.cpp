@@ -118,7 +118,7 @@ void game_PlayerState::SetGameID(u16 NewID)
     mOldIDs.push_back(GameID);
     GameID = NewID;
 }
-bool game_PlayerState::HasOldID(u16 ID)
+bool game_PlayerState::HasOldID(u32 ID)
 {
     OLD_GAME_ID_it ID_i = std::find(mOldIDs.begin(), mOldIDs.end(), ID);
     if (ID_i != mOldIDs.end() && *(ID_i) == ID)

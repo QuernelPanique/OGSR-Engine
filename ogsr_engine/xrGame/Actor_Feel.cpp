@@ -44,7 +44,7 @@ public:
     }
 };
 
-void op22_suppress_near_miss(u16 shooter_id)
+void op22_suppress_near_miss(u32 shooter_id)
 {
     CActor* a = Actor();
     if (!a || !a->g_Alive() || shooter_id == a->ID() || g_op22_suppress_cfg.add <= 0.f)
