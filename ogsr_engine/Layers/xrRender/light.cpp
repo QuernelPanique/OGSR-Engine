@@ -47,9 +47,16 @@ light::light(void) : ISpatial(g_SpatialSpace)
         svis[id].context_id = id;
 }
 
+light* g_op22_sss_slots[8]{}; // OP22 (SSS 23): лампы с экранными тенями (phase_ssfx_sss_ext)
+
 light::~light()
 {
     set_active(false);
+
+    // OP22 (SSS 23): удалённая лампа не должна остаться в слотах экранных теней
+    for (auto& s : g_op22_sss_slots)
+        if (s == this)
+            s = nullptr;
 
     for (auto& f : omnipart)
         xr_delete(f);
@@ -431,6 +438,7 @@ void light::export_to(light_Package& package)
 
                     f->set_type(IRender_Light::OMNIPART);
                     f->flags.bShadow = true;
+                    f->op22_omni_owner = this; // OP22 (SSS 23)
                 }
 
             for (int f = 0; f < 6; f++)

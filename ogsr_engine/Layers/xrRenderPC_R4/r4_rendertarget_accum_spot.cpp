@@ -136,6 +136,7 @@ void CRenderTarget::accum_spot(CBackend& cmd_list, light* L)
         cmd_list.set_c("Ldynamic_pos", L_pos.x, L_pos.y, L_pos.z, att_factor);
         cmd_list.set_c("Ldynamic_color", L_clr.x, L_clr.y, L_clr.z, L_spec);
         cmd_list.set_c("m_shadow", m_Shadow);
+        cmd_list.set_c("op22_sss_id", float(L->op22_sss_id)); // OP22 (SSS 23): слот экранных теней лампы (-1 - нет)
         cmd_list.set_ca("m_lmap", 0, m_Lmap._11, m_Lmap._21, m_Lmap._31, m_Lmap._41);
         cmd_list.set_ca("m_lmap", 1, m_Lmap._12, m_Lmap._22, m_Lmap._32, m_Lmap._42);
 

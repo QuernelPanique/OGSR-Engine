@@ -96,6 +96,7 @@ void CRender::create()
     o.ssfx_volumetric = ps_op22_ssfx_volumetric ? TRUE : FALSE;
     o.ssfx_glass = ps_op22_ssfx_glass ? TRUE : FALSE;
     o.ssfx_sss = ps_op22_ssfx_sss ? TRUE : FALSE;
+    o.ssfx_sss_ext = ps_op22_ssfx_sss_ext ? TRUE : FALSE;
 
     o.dx11_enable_tessellation = HW.FeatureLevel >= D3D_FEATURE_LEVEL_11_0 && ps_r2_ls_flags_ext.test(R2FLAGEXT_ENABLE_TESSELLATION);
 
@@ -819,6 +820,8 @@ HRESULT CRender::shader_compile(LPCSTR name, DWORD const* pSrcData, UINT SrcData
     appendShaderOption(o.ssfx_volumetric, "SSFX_VOLUMETRIC_PASS", "1");
     // OP22 (SSS 23): экранные тени солнца проходом (каскады солнца читают $user$ssfx_sss)
     appendShaderOption(o.ssfx_sss, "SSFX_SSS_PASS", "1");
+    appendShaderOption(o.ssfx_sss_ext, "SSFX_SSS_EXT_PASS", "1"); // OP22: освещение ламп читает $user$ssfx_sss_tmp
+    appendShaderOption(ps_op22_terrain_height, "SSFX_TERRAIN_HEIGHT", "1"); // OP22: высоты земли из _bump#
     sprintf_s(c_ssfx_sss_dir, "%d", int(std::clamp(ps_ssfx_sss_quality.x, 1.0f, 24.0f)));
     defines.emplace_back("SSFX_SSS_DIR_QUALITY", c_ssfx_sss_dir);
     sprintf_s(c_ssfx_sss_omni, "%d", int(std::clamp(ps_ssfx_sss_quality.y, 1.0f, 12.0f)));

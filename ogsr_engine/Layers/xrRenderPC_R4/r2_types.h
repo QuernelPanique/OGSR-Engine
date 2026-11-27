@@ -100,6 +100,9 @@
 #define r2_RT_ssfx_volumetric_tmp "$user$ssfx_volumetric_tmp"
 #define r2_RT_ssfx "$user$ssfx" // OP22 (SSS 23): кадр экранных теней до размытия
 #define r2_RT_ssfx_sss "$user$ssfx_sss" // OP22 (SSS 23): экранные тени солнца (.b - итог), читают каскады солнца
+#define r2_RT_ssfx_sss_ext "$user$ssfx_sss_ext" // OP22 (SSS 23): экранные тени ламп 0-3 (rgba)
+#define r2_RT_ssfx_sss_ext2 "$user$ssfx_sss_ext2" // лампы 4-7
+#define r2_RT_ssfx_sss_tmp "$user$ssfx_sss_tmp" // сведение: левая половина 0-3, правая 4-7 (читает accum_base.ps)
 
 constexpr const char* c_sbase = "s_base";
 

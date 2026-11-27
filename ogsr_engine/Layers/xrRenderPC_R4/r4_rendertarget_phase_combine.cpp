@@ -20,6 +20,9 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
     // OP22 (SSS 23): лучи прожекторов - размытие в уменьшенном разрешении и перенос в rt_Generic_3 (до сведения)
     if (RImplementation.o.ssfx_volumetric && m_bHasActiveVolumetric_spot)
         phase_ssfx_volumetric_blur(cmd_list);
+    // OP22: в кадре без лучей rt_Generic_3 не очищался - капли дождя (effects_rain.ps слоя) читают его
+    if (RImplementation.o.ssfx_volumetric && !m_bHasActiveVolumetric)
+        cmd_list.ClearRT(rt_Generic_3, {});
 
     // OP22 (SSS 23, Ascii1457; перенос из xray-monolith / SSS UPDATE 23.2): AO и IL отдельными проходами до combine_1.
     // Матрицы текущего/прошлого кадра - для учёта прошлого кадра в шейдерах (как Matrix_current/previous в monolith).
@@ -836,6 +839,105 @@ void CRenderTarget::phase_ssfx_sss(CBackend& cmd_list)
     op22_ssfx_quad(cmd_list, rt_ssfx_temp2, s_ssfx_sss->E[2], w, h, 1.0f, [&]() { cmd_list.set_c("blur_setup", 1.f, 0.f, 2.f, 0.f); });
 
     HW.get_context(cmd_list.context_id)->CopyResource(rt_ssfx_sss->pSurface, rt_ssfx_temp2->pSurface);
+    cmd_list.SetViewport({0.f, 0.f, w, h, 0.f, 1.f});
+}
+
+// OP22 (SSS 23): экранные тени ламп (phase_ssfx_sss_ext SSS UPDATE 23.2, Ascii1457). До 8 ближних прожекторов/ламп с
+// тенью получают слот (у всенаправленной - все 6 частей); 2 прохода по 4 лампы (rgba) с учётом прошлого кадра, сведение в
+// rt_ssfx_sss_tmp (левая половина - лампы 0-3, правая - 4-7). Освещение лампы (accum_base.ps слоя) читает свой канал.
+// Слоты: g_op22_sss_slots (light.cpp, удалённая лампа сама освобождает слот).
+extern light* g_op22_sss_slots[8];
+
+static void op22_sss_set_id(light* L, int id)
+{
+    L->op22_sss_id = id;
+    for (light* f : L->omnipart)
+        if (f)
+            f->op22_sss_id = id;
+}
+
+void CRenderTarget::phase_ssfx_sss_ext(CBackend& cmd_list, const light_Package& LP)
+{
+    PIX_EVENT(phase_ssfx_sss_ext);
+
+    op22_ssfx_frame_prep(cmd_list);
+
+    struct cand_t
+    {
+        light* L;
+        int prio;
+        float dist;
+    };
+    static xr_vector<cand_t> cands;
+    cands.clear();
+
+    const Fvector& cam = Device.vCameraPosition;
+    for (light* L : LP.v_shadowed)
+    {
+        light* O = (L->flags.type == IRender_Light::OMNIPART) ? L->op22_omni_owner : L;
+        if (!O || !O->flags.bActive || O->range <= 1.5f)
+            continue;
+        if (std::any_of(cands.begin(), cands.end(), [O](const cand_t& c) { return c.L == O; }))
+            continue;
+        const float d = cam.distance_to(O->position);
+        if (d > O->range * 2.0f)
+            continue;
+        cands.push_back({O, d <= O->range ? 0 : 1, d}); // внутри радиуса лампы - раньше
+    }
+    std::sort(cands.begin(), cands.end(), [](const cand_t& a, const cand_t& b) { return a.prio != b.prio ? a.prio < b.prio : a.dist < b.dist; });
+
+    // освободить слоты ламп, которых больше нет среди кандидатов
+    for (auto& s : g_op22_sss_slots)
+    {
+        if (s && std::none_of(cands.begin(), cands.end(), [s](const cand_t& c) { return c.L == s; }))
+        {
+            op22_sss_set_id(s, -1);
+            s = nullptr;
+        }
+    }
+    // новые лампы - в свободные слоты (по порядку важности)
+    for (const cand_t& c : cands)
+    {
+        if (std::find(std::begin(g_op22_sss_slots), std::end(g_op22_sss_slots), c.L) != std::end(g_op22_sss_slots))
+            continue;
+        auto free = std::find(std::begin(g_op22_sss_slots), std::end(g_op22_sss_slots), nullptr);
+        if (free == std::end(g_op22_sss_slots))
+            break;
+        *free = c.L;
+        op22_sss_set_id(c.L, int(free - std::begin(g_op22_sss_slots)));
+    }
+
+    // положение ламп в пространстве вида + затухание (w: 1 - не видно ~ 0 - полностью, как в SSS 23)
+    Fvector4 data[8];
+    for (int s = 0; s < 8; s++)
+    {
+        light* L = g_op22_sss_slots[s];
+        if (!L)
+        {
+            data[s].set(0.f, 0.f, 0.f, 1.f);
+            continue;
+        }
+        Fvector Lp;
+        Device.mView.transform_tiny(Lp, L->position);
+        const float d = cam.distance_to(L->position);
+        const float atte = 1.0f - clampr((d - L->range * 1.9f) / -(L->range / 2.0f), 0.f, 1.f);
+        data[s].set(Lp.x, Lp.y, Lp.z, atte);
+    }
+
+    const float w = float(rt_ssfx_sss_tmp->dwWidth);
+    const float h = float(rt_ssfx_sss_tmp->dwHeight);
+    for (int pass = 0; pass < 2; pass++)
+    {
+        op22_ssfx_quad(cmd_list, rt_ssfx_sss_tmp, s_ssfx_sss->E[3 + pass], w, h, 1.0f, [&]() {
+            cmd_list.set_c("m_current", Matrix_current);
+            cmd_list.set_c("m_previous", Matrix_previous);
+            cmd_list.set_c("id_offset", pass);
+            for (u32 i = 0; i < 8; i++)
+                cmd_list.set_ca("lights_data", i, data[i]);
+        });
+        HW.get_context(cmd_list.context_id)->CopyResource((pass == 0 ? rt_ssfx_sss_ext : rt_ssfx_sss_ext2)->pSurface, rt_ssfx_sss_tmp->pSurface);
+    }
+    op22_ssfx_quad(cmd_list, rt_ssfx_sss_tmp, s_ssfx_sss->E[5], w, h, 1.0f, []() {});
     cmd_list.SetViewport({0.f, 0.f, w, h, 0.f, 1.f});
 }
 

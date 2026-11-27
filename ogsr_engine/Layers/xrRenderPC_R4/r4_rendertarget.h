@@ -3,6 +3,7 @@
 #include "../xrRender/ColorMapManager.h"
 
 class light;
+class light_Package; // OP22 (SSS 23): phase_ssfx_sss_ext
 
 static void dummy(){}
 
@@ -93,6 +94,7 @@ public:
     ref_rt rt_ssfx_water, rt_ssfx_water_waves; // OP22 (SSS 23): вода
     ref_rt rt_ssfx_volumetric, rt_ssfx_volumetric_tmp; // OP22 (SSS 23): объёмный свет прожекторов в уменьшенном разрешении
     ref_rt rt_ssfx, rt_ssfx_sss; // OP22 (SSS 23): экранные тени солнца
+    ref_rt rt_ssfx_sss_ext, rt_ssfx_sss_ext2, rt_ssfx_sss_tmp; // OP22 (SSS 23): экранные тени ламп
     bool m_op22_ssfx_prep_done{}; // OP22: векторы движения SSS и матрицы кадра уже посчитаны в этом кадре
     Fmatrix Matrix_current{}, Matrix_previous{};
 
@@ -296,6 +298,7 @@ public:
     void phase_ssfx_water(CBackend& cmd_list); // OP22 (SSS 23): отражения, размытие, волны и сама вода
     void phase_ssfx_volumetric_blur(CBackend& cmd_list); // OP22 (SSS 23): размытие лучей прожекторов и перенос в rt_Generic_3
     void phase_ssfx_sss(CBackend& cmd_list); // OP22 (SSS 23): экранные тени солнца (до накопления солнца)
+    void phase_ssfx_sss_ext(CBackend& cmd_list, const light_Package& LP); // OP22 (SSS 23): экранные тени ламп (до ламп)
     void op22_ssfx_frame_prep(CBackend& cmd_list); // OP22: раз за кадр - матрицы текущего/прошлого кадра и векторы движения SSS
     void op22_ssfx_quad(CBackend& cmd_list, const ref_rt& rt, ref_selement& sh, float vw, float vh, float uv, const std::function<void()>& lambda);
     void phase_luminance(CBackend& cmd_list);

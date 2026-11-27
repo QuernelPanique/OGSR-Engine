@@ -117,6 +117,22 @@ void CBlender_BmmD::Compile(CBlender_Compile& C)
         C.r_dx10Texture("s_puddles_normal", "fx\\water_normal");
         C.r_dx10Texture("s_rainsplash", "fx\\water_sbumpvolume");
 
+        // OP22 (как s_height_* Terrain Upgrade SSS 23): высоты деталей для параллакса - альфа _bump# (так хранит высоту
+        // X-Ray); у цветных текстур деталей ОП альфа = 255 (плоско). Нет _bump# - цветная, как раньше.
+        if (ps_op22_terrain_height)
+        {
+            const auto height_tex = [&](LPCSTR name, LPCSTR slot) {
+                string256 hname;
+                strconcat(sizeof(hname), hname, name, "_bump#");
+                string_path fn;
+                C.r_dx10Texture(slot, FS.exist(fn, "$game_textures$", hname, ".dds") ? hname : name);
+            };
+            height_tex(oR_Name, "s_height_r");
+            height_tex(oG_Name, "s_height_g");
+            height_tex(oB_Name, "s_height_b");
+            height_tex(oA_Name, "s_height_a");
+        }
+
         C.r_dx10Sampler("smp_base");
         C.r_dx10Sampler("smp_linear");
 
