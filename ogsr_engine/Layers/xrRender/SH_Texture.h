@@ -12,7 +12,7 @@ public:
     enum MaxTextures
     {
         //	Actually these values are 128
-        mtMaxPixelShaderTextures = 16,
+        mtMaxPixelShaderTextures = 32, // OP22 (SSS 23): было 16 - земле с высотами деталей нужно 18+ (слоты ps до rstVertex = 257)
         mtMaxVertexShaderTextures = 4,
         mtMaxGeometryShaderTextures = 16,
         mtMaxHullShaderTextures = 16,
