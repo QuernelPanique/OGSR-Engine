@@ -531,6 +531,11 @@ bool CUIInventoryWnd::OnItemDropOP22(CUICellItem* itm)
     luabind::functor<void> f;
     if (op22_ui_func("on_cell_item_drop", f))
         f(this, from, to, itm, focused, processed);
+    // OP22 (27.11, вылет при ремонте набором): скрипт мог удалить перетаскиваемый предмет (repair_check.repair_repkit ->
+    // release). В OGSR окно инвентаря при этом перестраивается сразу - перетаскивание и ячейка уже уничтожены
+    // (в движке ОП удаление шло следующим кадром). Тогда сброс обработан: дальше itm и m_drag_item не трогать.
+    if (!CUIDragDropListEx::m_drag_item)
+        return true;
     return res;
 }
 

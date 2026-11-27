@@ -166,6 +166,10 @@ void CUIDragDropListEx::OnItemDrop(CUIWindow* w, void* pData)
         return;
     }
 
+    // OP22 (27.11): обработчик сброса мог перестроить окно (скрипт удалил предмет) - перетаскивания уже нет
+    if (!m_drag_item)
+        return;
+
     CUIDragDropListEx* old_owner = itm->OwnerList();
     CUIDragDropListEx* new_owner = m_drag_item->BackList();
 
