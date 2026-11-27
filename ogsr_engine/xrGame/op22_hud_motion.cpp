@@ -6,6 +6,7 @@
 #include "../xr_3da/bone.h"
 #include "CameraEffector.h"
 #include "Actor.h"
+#include "ActorEffector.h"
 
 float g_op22_hud_smooth = 1.f;
 float g_op22_cam_follow = 1.f;

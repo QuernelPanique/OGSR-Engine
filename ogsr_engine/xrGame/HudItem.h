@@ -142,6 +142,7 @@ public:
     virtual void PlayAnimIdle();
     bool TryPlayAnimIdle();
     virtual bool IsZoomed() const { return false; }
+    float op22_ZoomFactor() const { return m_fZoomRotationFactor; } // OP22: 0..1 - насколько худ в прицеливании
     // virtual void	PlayAnimBore		();
     virtual void PlayAnimIdleMoving();
     virtual void PlayAnimIdleMovingSlow();
@@ -344,6 +345,7 @@ private:
         float m_tendto_speed_aim;
     } inertion_data{}; //--#SM+#--
     Fvector inert_st_last_dir{};
+    Fvector op22_inert_vel{}; // OP22: скорость инерции 2-го порядка (op22_hud_inertion_spring)
     void UpdateInertion(Fmatrix& trans);
     float GetInertionFactor() const { return 1.f; } //--#SM+#--
     float GetInertionPowerFactor() const { return 0.5f; } //--#SM+#--

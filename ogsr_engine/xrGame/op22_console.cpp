@@ -266,6 +266,8 @@ void op22_register_console()
         extern float g_op22_hud_smooth, g_op22_cam_follow;
         add(xr_new<CCC_Float>("op22_hud_smooth", &g_op22_hud_smooth, 0.f, 3.f));
         add(xr_new<CCC_Float>("op22_cam_follow", &g_op22_cam_follow, 0.f, 3.f));
+        extern float g_op22_hud_inertion_spring;
+        add(xr_new<CCC_Float>("op22_hud_inertion_spring", &g_op22_hud_inertion_spring, 0.f, 3.f));
     }
     str("bolt_visual", "bolt");
     str("hc_unarmed", "");

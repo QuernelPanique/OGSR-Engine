@@ -332,7 +332,7 @@ void attachable_hud_item::update(bool bForce)
         CWeapon* W = smart_cast<CWeapon*>(m_parent_hud_item);
         const bool firing = W && (W->GetState() == CWeapon::eFire || W->GetState() == CWeapon::eFire2);
         const bool moving = Actor() && (Actor()->MovingState() & ACTOR_DEFS::mcAnyMove);
-        op22_cam_follow_feed(K, bone, xf, m_parent_hud_item->m_fZoomRotationFactor, firing, moving);
+        op22_cam_follow_feed(K, bone, xf, m_parent_hud_item->op22_ZoomFactor(), firing, moving);
     }
 }
 

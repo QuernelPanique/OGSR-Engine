@@ -803,6 +803,7 @@ void CHudItem::UpdateCollision(Fmatrix& trans)
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 float g_op22_hud_inertion = 100.f; // OP22: op22_console.cpp
+float g_op22_hud_inertion_spring = 1.f; // OP22 (27.11): инерция 2-го порядка, 0 - прежняя (op22_console.cpp)
 
 // OP22: процедурная отдача и «дыхание» модели оружия в руках (22.11, решение пользователя; отключаемо).
 // Только вид модели худа: камера, разброс и пули - как в ОП (отдача камеры on_weapon_shot_start не меняется).
@@ -916,6 +917,7 @@ void CHudItem::UpdateInertion(Fmatrix& trans)
             v0.crossproduct(inert_st_last_dir, xform.k);
             inert_st_last_dir.crossproduct(xform.k, v0);
             diff_dir.sub(xform.k, inert_st_last_dir);
+            op22_inert_vel.set(0.f, 0.f, 0.f); // OP22
         }
 
         // tend to forward
@@ -938,7 +940,29 @@ void CHudItem::UpdateInertion(Fmatrix& trans)
         // OP22: настройка «Инерция рук», проценты; скорость возврата не трогаем, иначе при 0 направление копилось бы
         _origin_offset *= power_factor * g_op22_hud_inertion * 0.01f;
 
-        inert_st_last_dir.mad(diff_dir, _tendto_speed * Device.fTimeDelta);
+        if (g_op22_hud_inertion_spring > 0.f)
+        {
+            // OP22 (27.11): инерция 2-го порядка - ствол догоняет взгляд пружиной (затухание 0,72) и при резкой остановке
+            // поворота чуть перелетает и возвращается, как оружие в руке; время догона - как у прежней (m_tendto_speed)
+            const float w = _tendto_speed * 1.6f / g_op22_hud_inertion_spring, k = w * w, c = 2.f * 0.72f * w;
+            float dt = Device.fTimeDelta;
+            clamp(dt, 0.f, 0.05f);
+            const int n = _max(1, iCeil(dt / 0.004f));
+            const float h = dt / n;
+            for (int s = 0; s < n; ++s)
+            {
+                Fvector a;
+                a.sub(xform.k, inert_st_last_dir).mul(k);
+                a.mad(op22_inert_vel, -c);
+                op22_inert_vel.mad(a, h);
+                inert_st_last_dir.mad(op22_inert_vel, h);
+            }
+        }
+        else
+        {
+            op22_inert_vel.set(0.f, 0.f, 0.f);
+            inert_st_last_dir.mad(diff_dir, _tendto_speed * Device.fTimeDelta);
+        }
         origin.mad(diff_dir, -_origin_offset); // Инвертировал
 
         // pitch compensation
