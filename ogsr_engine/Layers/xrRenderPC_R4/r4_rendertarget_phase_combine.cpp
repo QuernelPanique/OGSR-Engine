@@ -17,6 +17,31 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
             t_LUM_dest->surface_set(rt_LUM_pool[1]->pSurface);
     }
 
+    // OP22 (SSS 23, Ascii1457; перенос из xray-monolith / SSS UPDATE 23.2): AO и IL отдельными проходами до combine_1.
+    // Матрицы текущего/прошлого кадра - для учёта прошлого кадра в шейдерах (как Matrix_current/previous в monolith).
+    if (ps_op22_ssfx_ao_pass || ps_op22_ssfx_il_pass)
+    {
+        PIX_EVENT(op22_ssfx_ao_il);
+        static Fmatrix m_saved_viewproj;
+        Matrix_previous.mul(m_saved_viewproj, Device.mInvView);
+        Matrix_current.set(Device.mProject);
+        m_saved_viewproj.set(Device.mFullTransform);
+
+        Fcolor clear_color;
+        clear_color.set(0.f, 0.f, 0.f, 1.f);
+        cmd_list.ClearRT(rt_ssfx_temp->pRT, clear_color);
+        cmd_list.ClearRT(rt_ssfx_temp2->pRT, clear_color);
+
+        phase_op22_ssfx_mv(cmd_list);
+        if (ps_op22_ssfx_ao_pass && ps_ssfx_ao.y > 0)
+            phase_ssfx_ao(cmd_list);
+        if (ps_op22_ssfx_il_pass && ps_ssfx_il.y > 0)
+            phase_ssfx_il(cmd_list);
+
+        // позиции этого кадра - «прошлые» для следующего
+        HW.get_context(cmd_list.context_id)->CopyResource(rt_ssfx_prevPos->pSurface, rt_Position->pSurface);
+    }
+
     u_setrt(cmd_list, rt_Generic_0, nullptr, nullptr, nullptr, rt_Base_Depth->pZRT[cmd_list.context_id]);
     cmd_list.set_CullMode(CULL_NONE);
     cmd_list.set_Stencil(FALSE);
@@ -95,7 +120,8 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
     // Copy rt_Generic_0 to new RT
     HW.get_context(cmd_list.context_id)->CopyResource(rt_Generic_0_temp->pSurface, rt_Generic_0->pSurface);
 
-    if (ps_r2_ls_flags_ext.test(R2FLAGEXT_SSLR) && !fis_zero(g_pGamePersistent->Environment().wetness_factor))
+    // OP22: op22_ssr_always 1 - отражения SSR всегда, а не только при влажности (дождь)
+    if (ps_r2_ls_flags_ext.test(R2FLAGEXT_SSLR) && (ps_op22_ssr_always || !fis_zero(g_pGamePersistent->Environment().wetness_factor)))
     {
         PIX_EVENT(PHASE_SSR_BLUR);
 
@@ -563,4 +589,112 @@ void CRenderTarget::render_flare(CBackend& cmd_list, light* L)
 
 
     cmd_list.Render(D3DPT_TRIANGLELIST, VS_Offset, 0, 4, 0, 2);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// OP22 (SSS 23): AO/IL отдельными проходами. Перенос phase_ssfx_ao/phase_ssfx_il (xray-monolith,
+// r4_rendertarget_phase_ssao.cpp; SSS UPDATE 23.2, Ascii1457) под CBackend OGSR.
+
+// Экранный прямоугольник: вьюпорт vw x vh пикселей, текстурные координаты 0..uv (как p1 = 1/ScaleFactor в monolith -
+// шейдеры SSS сами умножают tc на ao_setup.x, а hpos - пиксель уменьшенного вьюпорта).
+void CRenderTarget::op22_ssfx_quad(CBackend& cmd_list, const ref_rt& rt, ref_selement& sh, float vw, float vh, float uv, const std::function<void()>& lambda)
+{
+    u32 Offset = 0;
+    constexpr float d_Z = EPS_S;
+    constexpr float d_W = 1.0f;
+    constexpr u32 C = color_rgba(0, 0, 0, 255);
+
+    u_setrt(cmd_list, rt->dwWidth, rt->dwHeight, rt->pRT, nullptr, nullptr, nullptr);
+    cmd_list.SetViewport({0.f, 0.f, vw, vh, 0.f, 1.f});
+
+    cmd_list.set_CullMode(CULL_NONE);
+    cmd_list.set_Stencil(FALSE);
+
+    FVF::TL* pv = (FVF::TL*)RImplementation.Vertex.Lock(4, g_combine->vb_stride, Offset);
+    pv->set(0, vh, d_Z, d_W, C, 0.f, uv);
+    pv++;
+    pv->set(0, 0, d_Z, d_W, C, 0.f, 0.f);
+    pv++;
+    pv->set(vw, vh, d_Z, d_W, C, uv, uv);
+    pv++;
+    pv->set(vw, 0, d_Z, d_W, C, uv, 0.f);
+    pv++;
+    RImplementation.Vertex.Unlock(4, g_combine->vb_stride);
+
+    cmd_list.set_Element(sh);
+    lambda();
+    cmd_list.set_Geometry(g_combine);
+    cmd_list.Render(D3DPT_TRIANGLELIST, Offset, 0, 4, 0, 2);
+}
+
+// Векторы движения в формате SSS: xy = (dx, -dy) * 0.5 в UV, z - маска худа, w - флора (op22_ssfx_mv.ps из rt_Velocity)
+void CRenderTarget::phase_op22_ssfx_mv(CBackend& cmd_list)
+{
+    PIX_EVENT(op22_ssfx_mv);
+    RenderScreenTriangle(cmd_list, rt_ssfx_motion_vectors, s_op22_ssfx_mv->E[0]);
+}
+
+void CRenderTarget::phase_ssfx_ao(CBackend& cmd_list)
+{
+    PIX_EVENT(phase_ssfx_ao);
+
+    const float w = float(rt_ssfx_temp->dwWidth);
+    const float h = float(rt_ssfx_temp->dwHeight);
+    const float k = std::clamp(ps_ssfx_ao.x, 1.0f, 8.0f);
+    const float sx = w / k, sy = h / k;
+
+    // AO в уменьшенном разрешении
+    op22_ssfx_quad(cmd_list, rt_ssfx_temp, s_ssfx_ao->E[0], sx, sy, 1.0f / k, [&]() {
+        cmd_list.set_c("ao_setup", ps_ssfx_ao);
+        cmd_list.set_c("m_current", Matrix_current);
+        cmd_list.set_c("m_previous", Matrix_previous);
+    });
+
+    // кадр - для учёта прошлого
+    HW.get_context(cmd_list.context_id)->CopyResource(rt_ssfx_ao->pSurface, rt_ssfx_temp->pSurface);
+
+    // 4 прохода размытия в полном разрешении (temp -> temp3 -> temp -> temp3 -> temp)
+    const float blur[4][2] = {{k, 0.25f}, {1.f, 0.5f}, {1.f, 0.75f}, {1.f, 1.0f}};
+    for (int i = 0; i < 4; i++)
+    {
+        const ref_rt& dst = (i % 2 == 0) ? rt_ssfx_temp3 : rt_ssfx_temp;
+        op22_ssfx_quad(cmd_list, dst, s_ssfx_ao->E[1 + (i % 2)], w, h, 1.0f, [&]() {
+            cmd_list.set_c("blur_setup", blur[i][0], blur[i][1], sx, sy);
+            cmd_list.set_c("ao_setup", ps_ssfx_ao);
+        });
+    }
+
+    cmd_list.SetViewport({0.f, 0.f, w, h, 0.f, 1.f});
+}
+
+void CRenderTarget::phase_ssfx_il(CBackend& cmd_list)
+{
+    PIX_EVENT(phase_ssfx_il);
+
+    const float w = float(rt_ssfx_temp2->dwWidth);
+    const float h = float(rt_ssfx_temp2->dwHeight);
+    const float k = std::clamp(ps_ssfx_il.x, 1.0f, 8.0f);
+    const float sx = w / k, sy = h / k;
+
+    // IL в уменьшенном разрешении
+    op22_ssfx_quad(cmd_list, rt_ssfx_temp2, s_ssfx_ao->E[3], sx, sy, 1.0f / k, [&]() {
+        cmd_list.set_c("ao_setup", ps_ssfx_il);
+        cmd_list.set_c("m_current", Matrix_current);
+        cmd_list.set_c("m_previous", Matrix_previous);
+    });
+
+    HW.get_context(cmd_list.context_id)->CopyResource(rt_ssfx_il->pSurface, rt_ssfx_temp2->pSurface);
+
+    // 4 прохода размытия там же, в уменьшенном разрешении (temp2 -> temp3 -> temp2 -> temp3 -> temp2), как в monolith
+    const float blur[4] = {0.25f, 0.5f, 0.75f, 1.0f};
+    for (int i = 0; i < 4; i++)
+    {
+        const ref_rt& dst = (i % 2 == 0) ? rt_ssfx_temp3 : rt_ssfx_temp2;
+        op22_ssfx_quad(cmd_list, dst, s_ssfx_ao->E[4 + (i % 2)], sx, sy, 1.0f / k, [&]() {
+            cmd_list.set_c("blur_setup", 1.f, blur[i], sx, sy);
+            cmd_list.set_c("ao_setup", ps_ssfx_il);
+        });
+    }
+
+    cmd_list.SetViewport({0.f, 0.f, w, h, 0.f, 1.f});
 }

@@ -662,6 +662,24 @@ static class ssfx_bloom_1 : public R_constant_setup
     }
 } ssfx_bloom_1;
 
+// OP22 (SSS 23): AO/IL отдельными проходами
+static class op22_ssfx_ao_setup final : public R_constant_setup
+{
+    void setup(CBackend& cmd_list, R_constant* C) override { cmd_list.set_c(C, ps_ssfx_ao); }
+} op22_ssfx_ao_setup;
+static class op22_ssfx_ao_setup2 final : public R_constant_setup
+{
+    void setup(CBackend& cmd_list, R_constant* C) override { cmd_list.set_c(C, ps_ssfx_ao_setup1); }
+} op22_ssfx_ao_setup2;
+static class op22_ssfx_il_setup final : public R_constant_setup
+{
+    void setup(CBackend& cmd_list, R_constant* C) override { cmd_list.set_c(C, ps_ssfx_il); }
+} op22_ssfx_il_setup;
+static class op22_ssfx_il_setup2 final : public R_constant_setup
+{
+    void setup(CBackend& cmd_list, R_constant* C) override { cmd_list.set_c(C, ps_ssfx_il_setup1); }
+} op22_ssfx_il_setup2;
+
 static class ssfx_bloom_2 : public R_constant_setup
 {
     void setup(CBackend& cmd_list, R_constant* C) override { cmd_list.set_c(C, ps_ssfx_bloom_2); }
@@ -923,6 +941,11 @@ void CBlender_Compile::SetMapping() const
 
     r_Constant("ssfx_bloom_1", &ssfx_bloom_1);
     r_Constant("ssfx_bloom_2", &ssfx_bloom_2);
+    // OP22 (SSS 23): AO/IL проходами - для combine_1
+    r_Constant("ssfx_ao_setup", &op22_ssfx_ao_setup);
+    r_Constant("ssfx_ao_setup2", &op22_ssfx_ao_setup2);
+    r_Constant("ssfx_il_setup", &op22_ssfx_il_setup);
+    r_Constant("ssfx_il_setup2", &op22_ssfx_il_setup2);
 
     r_Constant("ssfx_pom", &ssfx_pom);
     r_Constant("ssfx_terrain_pom", &ssfx_terrain_pom);

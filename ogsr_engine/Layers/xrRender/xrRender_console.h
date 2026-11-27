@@ -167,6 +167,9 @@ extern ECORE_API Fvector4 ps_ssfx_bloom_2;
 extern BOOL ps_ssfx_pom_refine, ps_ssfx_terrain_pom_refine;
 extern ECORE_API Fvector4 ps_ssfx_pom, ps_ssfx_terrain_pom, ps_ssfx_terrain_offset;
 extern Fvector4 ps_ssfx_ssr_1, ps_ssfx_ssr_2;
+// OP22 (SSS 23): AO/IL отдельными проходами
+extern Fvector4 ps_ssfx_ao, ps_ssfx_ao_setup1, ps_ssfx_il, ps_ssfx_il_setup1;
+extern int ps_ssfx_ao_quality, ps_ssfx_il_quality, ps_op22_ssfx_ao_pass, ps_op22_ssfx_il_pass, ps_op22_ssr_always;
 
 extern ECORE_API float ps_r__opt_dist;
 

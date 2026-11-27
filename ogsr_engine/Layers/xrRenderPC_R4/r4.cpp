@@ -690,6 +690,8 @@ HRESULT CRender::shader_compile(LPCSTR name, DWORD const* pSrcData, UINT SrcData
     char c_rain_quality[10]{};
     char c_ssfx_pom_refine[10]{};
     char c_ssfx_terrain_pom_refine[10]{};
+    char c_ssfx_ao_quality[10]{}; // OP22 (SSS 23)
+    char c_ssfx_il_quality[10]{};
 
     {
         sprintf_s(c_smapsize, "%d", m_SMAPSize);
@@ -791,6 +793,14 @@ HRESULT CRender::shader_compile(LPCSTR name, DWORD const* pSrcData, UINT SrcData
     appendShaderOption(ps_r2_ls_flags.test(R2FLAGEXT_SSFX_SHADOWS), "SSFX_SHADOWS", "1");
 
     appendShaderOption(ps_r2_ls_flags.test(R2FLAGEXT_SSFX_SSS), "SSFX_SSS", "1");
+
+    // OP22 (SSS 23): AO/IL отдельными проходами - качество и включение (меняются только при запуске)
+    sprintf_s(c_ssfx_ao_quality, "%d", std::clamp(ps_ssfx_ao_quality, 2, 8));
+    defines.emplace_back("SSFX_AO_QUALITY", c_ssfx_ao_quality);
+    sprintf_s(c_ssfx_il_quality, "%d", std::clamp(ps_ssfx_il_quality, 16, 32));
+    defines.emplace_back("SSFX_IL_QUALITY", c_ssfx_il_quality);
+    appendShaderOption(ps_op22_ssfx_ao_pass, "SSFX_AO_PASS", "1");
+    appendShaderOption(ps_op22_ssfx_il_pass, "SSFX_IL_PASS", "1");
 
     appendShaderOption(ps_r2_ls_flags.test(R2FLAGEXT_SSFX_INTER_GRASS), "SSFX_INTER_GRASS", "1");
 

@@ -88,6 +88,9 @@ public:
     ref_rt rt_LUM_8; // 64bit, 8x8,		log-average in all components
 
     ref_rt rt_ssr1, rt_ssr2;
+    // OP22 (SSS 23): AO/IL отдельными проходами
+    ref_rt rt_ssfx_temp, rt_ssfx_temp2, rt_ssfx_temp3, rt_ssfx_ao, rt_ssfx_il, rt_ssfx_prevPos, rt_ssfx_motion_vectors;
+    Fmatrix Matrix_current{}, Matrix_previous{};
 
     ref_rt rt_LUM_pool[2]; // 1xfp32,1x1, exp-result -> scaler
 
@@ -171,6 +174,8 @@ private:
 
     ref_shader s_blur;
     ref_shader s_ssr;
+    ref_shader s_ssfx_ao; // OP22 (SSS 23): shaders/r3/ssfx_ao.s - AO (0-2) и IL (3-5)
+    ref_shader s_op22_ssfx_mv; // OP22: векторы движения OGSR -> формат SSS (shaders/r3/op22_ssfx_mv.s)
     ref_shader s_dof;
     ref_shader s_lut;
     ref_shader s_taa;
@@ -276,6 +281,11 @@ public:
     void accum_volumetric(CBackend& cmd_list, light* L);
     void phase_bloom(CBackend& cmd_list);
     void phase_ssfx_bloom(CBackend& cmd_list);
+    // OP22 (SSS 23): AO/IL отдельными проходами в уменьшенном разрешении с учётом прошлого кадра
+    void phase_op22_ssfx_mv(CBackend& cmd_list);
+    void phase_ssfx_ao(CBackend& cmd_list);
+    void phase_ssfx_il(CBackend& cmd_list);
+    void op22_ssfx_quad(CBackend& cmd_list, const ref_rt& rt, ref_selement& sh, float vw, float vh, float uv, const std::function<void()>& lambda);
     void phase_luminance(CBackend& cmd_list);
     void phase_combine(CBackend& cmd_list);
     void phase_pp(CBackend& cmd_list);

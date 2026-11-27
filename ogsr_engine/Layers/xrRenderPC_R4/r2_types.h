@@ -86,6 +86,14 @@
 
 #define r2_RT_ssr1 "$user$ssr1" // [Ascii1457] SSS new Phase
 #define r2_RT_ssr2 "$user$ssr2" // [ SSS ] Full res - D3DFMT_A8B8G8R8F
+// OP22 (SSS 23, Ascii1457): AO/IL отдельными проходами (перенос из xray-monolith / SSS UPDATE 23.2)
+#define r2_RT_ssfx_temp "$user$ssfx_temp"
+#define r2_RT_ssfx_temp2 "$user$ssfx_temp2"
+#define r2_RT_ssfx_temp3 "$user$ssfx_temp3"
+#define r2_RT_ssfx_ao "$user$ssfx_ao" // AO - кадр для учёта прошлого
+#define r2_RT_ssfx_il "$user$ssfx_il" // IL - кадр для учёта прошлого
+#define r2_RT_ssfx_prevPos "$user$ssfx_prev_p" // позиции прошлого кадра
+#define r2_RT_ssfx_motion_vectors "$user$ssfx_motion_vectors" // OP22: векторы движения в формате SSS (из rt_Velocity)
 
 constexpr const char* c_sbase = "s_base";
 

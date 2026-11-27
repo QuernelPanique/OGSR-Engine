@@ -276,6 +276,18 @@ CRenderTarget::CRenderTarget()
         rt_ssr1.create(r2_RT_ssr1, w, h, DXGI_FORMAT_R8G8B8A8_UNORM); // Generic RT
         rt_ssr2.create(r2_RT_ssr2, w, h, DXGI_FORMAT_R8G8B8A8_UNORM); // Temp RT 8B
 
+        // OP22 (SSS 23): AO/IL отдельными проходами - только если включены (op22_ssfx_ao_pass / op22_ssfx_il_pass)
+        if (ps_op22_ssfx_ao_pass || ps_op22_ssfx_il_pass)
+        {
+            rt_ssfx_temp.create(r2_RT_ssfx_temp, w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
+            rt_ssfx_temp2.create(r2_RT_ssfx_temp2, w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
+            rt_ssfx_temp3.create(r2_RT_ssfx_temp3, w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
+            rt_ssfx_ao.create(r2_RT_ssfx_ao, w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
+            rt_ssfx_il.create(r2_RT_ssfx_il, w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
+            rt_ssfx_prevPos.create(r2_RT_ssfx_prevPos, w, h, DXGI_FORMAT_R16G16B16A16_FLOAT); // формат rt_Position (CopyResource)
+            rt_ssfx_motion_vectors.create(r2_RT_ssfx_motion_vectors, w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
+        }
+
         rt_flares.create(r2_RT_flares, displayW, displayH, DXGI_FORMAT_R8G8B8A8_UNORM);
 
         rt_Velocity.create(r2_RT_velocity, w, h, DXGI_FORMAT_R16G16_FLOAT);
@@ -328,6 +340,12 @@ CRenderTarget::CRenderTarget()
     s_flare.create("effects\\lensflare", "shaders\\lensflare");
     s_lut.create("ogsr_lut");
     s_ssr.create("ogsr_ssr");
+    // OP22 (SSS 23): шейдеры проходов создаются только при включённых проходах - ошибка в них не роняет игру с выключенными
+    if (ps_op22_ssfx_ao_pass || ps_op22_ssfx_il_pass)
+    {
+        s_ssfx_ao.create("ssfx_ao");
+        s_op22_ssfx_mv.create("op22_ssfx_mv");
+    }
 
     s_ssfx_bloom.create("ogsr_bloom");
     s_ssfx_bloom_lens.create("ogsr_bloom_flares");

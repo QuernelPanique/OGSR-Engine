@@ -255,6 +255,16 @@ Fvector4 ps_ssfx_pom = {16, 12, 0.035f, 0.4f}; // Samples , Range, Height, AO
 Fvector4 ps_ssfx_terrain_pom{12, 20, 0.04f, 1.0f}; // Samples, Range, Height, Water Limit
 Fvector4 ps_ssfx_terrain_offset{};
 Fvector4 ps_ssfx_ssr_1{1.f, 0.f, 0.f, 0.f}, ps_ssfx_ssr_2{1.f, 1.f, 0.2f, 0.015f};
+// OP22 (SSS 23, значения по умолчанию - как в SSS 23 / xray-monolith)
+Fvector4 ps_ssfx_ao{1.0f, 5.0f, 1.0f, 2.5f}; // Res, AO int, Blur, Radius
+Fvector4 ps_ssfx_ao_setup1{150.0f, 1.0f, 1.0f, 0.0f}; // Distance, HUD, Flora, Max OCC
+Fvector4 ps_ssfx_il{6.66f, 1.0f, 1.0f, 5.0f}; // Res, Int, Vibrance, Blur
+Fvector4 ps_ssfx_il_setup1{150.0f, 1.0f, 0.5f, 0.0f}; // Distance, HUD, Flora, -
+int ps_ssfx_ao_quality = 4; // AO Samples (define SSFX_AO_QUALITY, нужен перезапуск)
+int ps_ssfx_il_quality = 32; // IL Samples (SSFX_IL_QUALITY; таблица направлений screenspace_common.h - 32)
+int ps_op22_ssfx_ao_pass = 0; // 1 - AO проходом SSS 23 (вместо SSDO/GTAO в combine_1), нужен перезапуск
+int ps_op22_ssfx_il_pass = 0; // 1 - IL проходом SSS 23 (вместо ssfx_indirect_light в combine_2), нужен перезапуск
+int ps_op22_ssr_always = 0; // 1 - отражения SSR не только в дождь
 
 // Screen Space Shaders Stuff
 Fvector4 ps_ssfx_wind_grass{9.5f, 1.4f, 1.5f, 0.4f}; // Anim Speed, Turbulence, Push, Wave
@@ -1025,6 +1035,16 @@ void xrRender_initconsole()
     CMD4(CCC_Vector4, "ssfx_pom", &ps_ssfx_pom, Fvector4().set(0, 0, 0, 0), Fvector4().set(36, 60, 1, 1));
     CMD4(CCC_Vector4, "ssfx_terrain_pom", &ps_ssfx_terrain_pom, (Fvector4{}), (Fvector4{36, 60, 1, 2}));
     CMD4(CCC_Vector4, "ssfx_terrain_offset", &ps_ssfx_terrain_offset, (Fvector4{-1.f, -1.f, -1.f, -1.f}), (Fvector4{1.f, 1.f, 1.f, 1.f}));
+    // OP22 (SSS 23): AO/IL отдельными проходами
+    CMD4(CCC_Vector4, "ssfx_ao", &ps_ssfx_ao, (Fvector4{0, 0, 0, 0}), (Fvector4{8, 10, 1, 10}));
+    CMD4(CCC_Vector4, "ssfx_ao_setup1", &ps_ssfx_ao_setup1, (Fvector4{0, 0, 0, 0}), (Fvector4{300, 1, 1, 1}));
+    CMD4(CCC_Vector4, "ssfx_il", &ps_ssfx_il, (Fvector4{0, 0, 0, 0}), (Fvector4{8, 10, 3, 6}));
+    CMD4(CCC_Vector4, "ssfx_il_setup1", &ps_ssfx_il_setup1, (Fvector4{0, 0, 0, 0}), (Fvector4{300, 1, 1, 1}));
+    CMD4(CCC_Integer, "ssfx_ao_quality", &ps_ssfx_ao_quality, 2, 8);
+    CMD4(CCC_Integer, "ssfx_il_quality", &ps_ssfx_il_quality, 16, 32);
+    CMD4(CCC_Integer, "op22_ssfx_ao_pass", &ps_op22_ssfx_ao_pass, 0, 1);
+    CMD4(CCC_Integer, "op22_ssfx_il_pass", &ps_op22_ssfx_il_pass, 0, 1);
+    CMD4(CCC_Integer, "op22_ssr_always", &ps_op22_ssr_always, 0, 1);
     CMD4(CCC_Vector4, "ssfx_ssr_1", &ps_ssfx_ssr_1, (Fvector4{1.f, 0.f, 0.f, 0.f}), (Fvector4{2.f, 1.f, 1.f, 1.f}));
     CMD4(CCC_Vector4, "ssfx_ssr_2", &ps_ssfx_ssr_2, (Fvector4{}), (Fvector4{2.f, 2.f, 2.f, 2.f}));
 
