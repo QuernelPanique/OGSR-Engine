@@ -265,6 +265,7 @@ public:
     virtual float GetHudFov(); // Получить HUD FOV от текущего оружия игрока
     void UpdateHudAdditional(Fmatrix&, const bool need_update_collision = false);
     void op22_HudRecoilKick(float strength); // OP22: процедурная отдача модели оружия (op22_wpn_recoil)
+    void op22_OnHudAnim(const char* anm); // OP22 (27.11): начало анимации худа - манера действия (op22_hud_variety)
     bool HudBobbingAllowed() const { return m_huditem_flags.test(fl_bobbing_allow); }
     bool AnmIdleMovingAllowed() const;
     void AllowHudBobbing(BOOL B) { m_huditem_flags.set(fl_bobbing_allow, B); }
@@ -323,6 +324,9 @@ private:
     // OP22: процедурная отдача и «дыхание» модели оружия (op22_wpn_recoil, op22_wpn_breath; HudItem.cpp)
     Fvector m_op22_rec_pos{}, m_op22_rec_pos_v{}, m_op22_rec_rot{}, m_op22_rec_rot_v{};
     float m_op22_breath_t{};
+    // OP22 (27.11): дыхание циклом, дрейф и тремор шумом, состояние тела, манера действия (op22_UpdateProcedural)
+    float m_op22_breath_phase{}, m_op22_breath_period{4.f}, m_op22_excite{};
+    Fvector m_op22_var_pos{}, m_op22_var_pos_v{}, m_op22_var_rot{}, m_op22_var_rot_v{}, m_op22_var_tpos{}, m_op22_var_trot{};
     void op22_UpdateProcedural(Fvector& offs, Fvector& rot, bool aiming, u32 moving_state);
 
     float m_base_fov{};

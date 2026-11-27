@@ -268,6 +268,10 @@ void op22_register_console()
         add(xr_new<CCC_Float>("op22_cam_follow", &g_op22_cam_follow, 0.f, 3.f));
         extern float g_op22_hud_inertion_spring;
         add(xr_new<CCC_Float>("op22_hud_inertion_spring", &g_op22_hud_inertion_spring, 0.f, 3.f));
+        // OP22 (27.11): манера действия и влияние состояния тела на дыхание/тремор (HudItem.cpp), 0 - выкл
+        extern float g_op22_hud_variety, g_op22_body_state;
+        add(xr_new<CCC_Float>("op22_hud_variety", &g_op22_hud_variety, 0.f, 3.f));
+        add(xr_new<CCC_Float>("op22_body_state", &g_op22_body_state, 0.f, 3.f));
     }
     str("bolt_visual", "bolt");
     str("hc_unarmed", "");

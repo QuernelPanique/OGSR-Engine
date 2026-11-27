@@ -744,6 +744,18 @@ u32 attachable_hud_item::anim_play(const shared_str& anm_name_b, BOOL bMixIn, co
     IKinematicsAnimated* ka = m_model->dcast_PKinematicsAnimated();
     u32 ret = g_player_hud->anim_play(m_attach_place_idx, anm->params, M, bMixIn, md, speed, m_has_separated_hands, ka);
 
+    // OP22 (27.11): действие (не покой/прицел/ходьба/выстрел) - своя манера и жёсткость рук; время анимации не меняется
+    {
+        const char* n = anm_name_b.c_str();
+        const bool action = !strstr(n, "idle") && !strstr(n, "aim") && !strstr(n, "shoot") && !strstr(n, "shot") && !strstr(n, "moving") &&
+            !strstr(n, "sprint") && !strstr(n, "walk") && !strstr(n, "run") && !strstr(n, "zoom");
+        const float v = (action && g_op22_hud_variety > 0.f) ? 1.f + ::Random.randFs(0.12f * _min(g_op22_hud_variety, 2.f)) : 1.f;
+        m_op22_filter.var = v;
+        m_parent->op22_vary(m_attach_place_idx, v);
+        if (m_parent_hud_item)
+            m_parent_hud_item->op22_OnHudAnim(action ? n : nullptr);
+    }
+
     if (ka)
     {
         MotionID M2;

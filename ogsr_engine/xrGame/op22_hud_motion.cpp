@@ -10,6 +10,8 @@
 
 float g_op22_hud_smooth = 1.f;
 float g_op22_cam_follow = 1.f;
+float g_op22_hud_variety = 1.f;
+float g_op22_body_state = 1.f;
 
 #define eCEOp22Follow ((ECamEffectorType)(cefNext + 40))
 
@@ -96,6 +98,7 @@ void op22_hud_filter_bones(IKinematics* K, op22_bone_filter& f, float weight)
     // собственная частота: лёгкий пистолет ~10 Гц (запаздывание ~0,02 с), винтовка ~7 Гц, пулемёт ~5 Гц
     float hz = 9.f * std::pow(1.5f / _max(weight, 0.5f), 0.3f);
     clamp(hz, 5.f, 11.f);
+    hz *= f.var; // у каждого действия своя «рука»
     hz /= g_op22_hud_smooth;
     const float w = PI_MUL_2 * hz, k = w * w, c = 2.f * OP22_POSE_ZETA * w;
     const int steps = _max(1, iCeil(dt / OP22_STEP));

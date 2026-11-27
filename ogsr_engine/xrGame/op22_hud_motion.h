@@ -18,10 +18,13 @@ struct op22_bone_filter
     const void* owner{};
     u16 count{};
     u32 frame{u32(-1)};
+    float var{1.f}; // жёсткость пружины этого действия (вариативность, op22_hud_variety)
 };
 
 extern float g_op22_hud_smooth;
 extern float g_op22_cam_follow;
+extern float g_op22_hud_variety; // OP22 (27.11): манера действия, 0 - выкл
+extern float g_op22_body_state; // OP22 (27.11): влияние состояния тела на дыхание и тремор, 0 - выкл
 
 // после CalculateBones модели худа: фильтр поз; weight - масса предмета в руках, кг
 void op22_hud_filter_bones(IKinematics* K, op22_bone_filter& f, float weight);

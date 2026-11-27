@@ -4,6 +4,9 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
+#include "op22_hud_motion.h" // OP22 (27.11)
+#include "Inventory.h"
+#include <cmath>
 #include "HudItem.h"
 #include "op22_suppression.h" // OP22
 #include "player_hud.h"
@@ -832,6 +835,46 @@ void op22_spring(Fvector& x, Fvector& v, float dt)
 }
 } // namespace
 
+namespace
+{
+IC float op22_smooth01(float x)
+{
+    clamp(x, 0.f, 1.f);
+    return x * x * (3.f - 2.f * x);
+}
+
+// плавный одномерный градиентный шум (-1..1): у каждой оси свой seed - движения не повторяются
+IC float op22_grad(int i, int seed)
+{
+    u32 hsh = u32(i) * 374761393u + u32(seed) * 668265263u;
+    hsh = (hsh ^ (hsh >> 13)) * 1274126177u;
+    return float(hsh & 0xffff) / 32767.5f - 1.f;
+}
+
+IC float op22_noise(float x, int seed)
+{
+    const int i = iFloor(x);
+    const float f = x - float(i);
+    const float u = f * f * f * (f * (f * 6.f - 15.f) + 10.f);
+    const float n0 = op22_grad(i, seed) * f, n1 = op22_grad(i + 1, seed) * (f - 1.f);
+    return 2.f * (n0 + (n1 - n0) * u); // ~ -1..1
+}
+} // namespace
+
+void CHudItem::op22_OnHudAnim(const char* anm)
+{
+    // anm = nullptr - покой/прицел/ходьба: поза возвращается
+    if (!anm || g_op22_hud_variety <= 0.f)
+    {
+        m_op22_var_tpos.set(0.f, 0.f, 0.f);
+        m_op22_var_trot.set(0.f, 0.f, 0.f);
+        return;
+    }
+    const float v = _min(g_op22_hud_variety, 2.f);
+    m_op22_var_tpos.set(::Random.randFs(0.004f), ::Random.randFs(0.003f), ::Random.randFs(0.005f)).mul(v);
+    m_op22_var_trot.set(deg2rad(::Random.randFs(1.2f)), deg2rad(::Random.randFs(1.0f)), deg2rad(::Random.randFs(2.0f))).mul(v);
+}
+
 void CHudItem::op22_HudRecoilKick(float strength)
 {
     if (g_op22_wpn_recoil <= 0.f || strength <= 0.f)
@@ -866,21 +909,78 @@ void CHudItem::op22_UpdateProcedural(Fvector& offs, Fvector& rot, bool aiming, u
     offs.add(m_op22_rec_pos);
     rot.add(m_op22_rec_rot);
 
-    // «дыхание»: медленная фигура Лиссажу ~0,2-0,27 Гц; в прицеливании и на ходу слабее, при усталости сильнее
+    // OP22 (27.11): живое «дыхание» вместо фигуры Лиссажу - дыхательный цикл с паузой, медленный дрейф и тремор плавным
+    // шумом (без регулярности, которую ловит глаз); сила - от состояния тела (op22_body_state): сбитое дыхание после
+    // бега, усталость, здоровье, перегруз. Только вид модели: меткость и разброс - как в ОП.
     if (g_op22_wpn_breath > 0.f && smart_cast<CWeapon*>(this))
     {
         m_op22_breath_t += dt;
         const float t = m_op22_breath_t;
+        float fatigue = 0.f, wound = 0.f;
+        if (CActor* pA = Actor())
+        {
+            const float bs = g_op22_body_state;
+            if (moving_state & mcSprint)
+                m_op22_excite += dt / 4.f; // ~4 с бега - дыхание сбито полностью
+            else
+                m_op22_excite -= m_op22_excite * (1.f - std::exp(-dt / 10.f)); // успокаивается за ~10 с
+            clamp(m_op22_excite, 0.f, 1.f);
+            fatigue = (1.f - pA->conditions().GetPower()) * bs;
+            const float load = pA->inventory().TotalWeight() / _max(1.f, pA->MaxCarryWeight());
+            if (load > 1.f)
+                fatigue += _min(1.f, load - 1.f) * 0.5f * bs;
+            wound = _sqr(1.f - pA->conditions().GetHealth()) * bs;
+        }
+        const float excite = m_op22_excite * g_op22_body_state;
         float k = g_op22_wpn_breath * (aiming ? 0.5f : 1.f);
         if (moving_state & mcAnyMove)
             k *= 0.5f;
-        if (CActor* pA = Actor())
-            k *= 1.f + 1.5f * (1.f - pA->conditions().GetPower());
-        const float a = _sin(t * PI_MUL_2 * 0.19f), b = _sin(t * PI_MUL_2 * 0.27f + 1.1f);
-        offs.x += 0.0012f * k * a;
-        offs.y += 0.0010f * k * b;
-        rot.x += deg2rad(0.30f) * k * b;
-        rot.y += deg2rad(0.25f) * k * a;
+
+        // дыхание: вдох ~40 % (ствол чуть поднимается), выдох ~45 %, пауза ~15 %; период плавает от вдоха к вдоху
+        m_op22_breath_phase += dt / m_op22_breath_period;
+        if (m_op22_breath_phase >= 1.f)
+        {
+            m_op22_breath_phase -= 1.f;
+            m_op22_breath_period = (4.3f - 2.6f * excite) * (1.f + ::Random.randFs(0.12f));
+        }
+        const float ph = m_op22_breath_phase;
+        const float br = ph < 0.4f ? op22_smooth01(ph / 0.4f) : (ph < 0.85f ? 1.f - op22_smooth01((ph - 0.4f) / 0.45f) : 0.f);
+        const float ab = k * (1.f + 1.8f * excite + 0.8f * fatigue);
+        offs.y += 0.0016f * ab * br;
+        rot.x -= deg2rad(0.22f) * ab * br; // минус - ствол вверх
+
+        // дрейф: медленное блуждание рук (шум, не синус)
+        const float ad = k * (1.f + 1.5f * fatigue + 0.6f * excite);
+        offs.x += 0.0010f * ad * op22_noise(t * 0.33f, 11);
+        offs.y += 0.0007f * ad * op22_noise(t * 0.29f, 23);
+        rot.y += deg2rad(0.20f) * ad * op22_noise(t * 0.31f, 37);
+        rot.x += deg2rad(0.14f) * ad * op22_noise(t * 0.27f, 41);
+
+        // тремор ~8-10 Гц: у отдохнувшего почти незаметен, растёт с усталостью, ранами и после бега
+        const float at = g_op22_wpn_breath * (0.15f + 1.1f * fatigue + 1.6f * wound + 0.7f * excite);
+        rot.x += deg2rad(0.035f) * at * op22_noise(t * 8.7f, 53);
+        rot.y += deg2rad(0.035f) * at * op22_noise(t * 9.6f, 67);
+    }
+
+    // OP22 (27.11): манера действия - у каждой перезарядки/доставания своя небольшая поза рук (op22_OnHudAnim), мягко
+    // входит и выходит; время анимаций не меняется
+    {
+        const float w = PI_MUL_2 * 2.2f, kk = w * w, c = 2.f * 0.9f * w;
+        const int n = _max(1, iCeil(dt / 0.004f));
+        const float h = dt / n;
+        for (int s = 0; s < n; ++s)
+        {
+            Fvector a;
+            a.sub(m_op22_var_tpos, m_op22_var_pos).mul(kk).mad(m_op22_var_pos_v, -c);
+            m_op22_var_pos_v.mad(a, h);
+            m_op22_var_pos.mad(m_op22_var_pos_v, h);
+            a.sub(m_op22_var_trot, m_op22_var_rot).mul(kk).mad(m_op22_var_rot_v, -c);
+            m_op22_var_rot_v.mad(a, h);
+            m_op22_var_rot.mad(m_op22_var_rot_v, h);
+        }
+        const float vk = aiming ? 0.3f : 1.f;
+        offs.mad(m_op22_var_pos, vk);
+        rot.mad(m_op22_var_rot, vk);
     }
 
     // OP22 23.11: подавление огнём - частая дрожь модели оружия (видимая, меткость не меняется; op22_suppression.h)
