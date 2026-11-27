@@ -23,20 +23,19 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
 
     // OP22 (SSS 23, Ascii1457; перенос из xray-monolith / SSS UPDATE 23.2): AO и IL отдельными проходами до combine_1.
     // Матрицы текущего/прошлого кадра - для учёта прошлого кадра в шейдерах (как Matrix_current/previous в monolith).
-    if (ps_op22_ssfx_ao_pass || ps_op22_ssfx_il_pass)
+    if (ps_op22_ssfx_ao_pass || ps_op22_ssfx_il_pass || RImplementation.o.ssfx_sss)
     {
         PIX_EVENT(op22_ssfx_ao_il);
-        static Fmatrix m_saved_viewproj;
-        Matrix_previous.mul(m_saved_viewproj, Device.mInvView);
-        Matrix_current.set(Device.mProject);
-        m_saved_viewproj.set(Device.mFullTransform);
+        op22_ssfx_frame_prep(cmd_list); // матрицы и векторы движения (если экранные тени уже не посчитали их до солнца)
 
-        Fcolor clear_color;
-        clear_color.set(0.f, 0.f, 0.f, 1.f);
-        cmd_list.ClearRT(rt_ssfx_temp->pRT, clear_color);
-        cmd_list.ClearRT(rt_ssfx_temp2->pRT, clear_color);
+        if (ps_op22_ssfx_ao_pass || ps_op22_ssfx_il_pass)
+        {
+            Fcolor clear_color;
+            clear_color.set(0.f, 0.f, 0.f, 1.f);
+            cmd_list.ClearRT(rt_ssfx_temp->pRT, clear_color);
+            cmd_list.ClearRT(rt_ssfx_temp2->pRT, clear_color);
+        }
 
-        phase_op22_ssfx_mv(cmd_list);
         if (ps_op22_ssfx_ao_pass && ps_ssfx_ao.y > 0)
             phase_ssfx_ao(cmd_list);
         if (ps_op22_ssfx_il_pass && ps_ssfx_il.y > 0)
@@ -793,6 +792,50 @@ void CRenderTarget::phase_ssfx_volumetric_blur(CBackend& cmd_list)
     const float w = float(rt_Generic_3->dwWidth);
     const float h = float(rt_Generic_3->dwHeight);
     op22_ssfx_quad(cmd_list, rt_Generic_3, s_ssfx_volumetric_blur->E[2], w, h, 1.0f, []() {});
+    cmd_list.SetViewport({0.f, 0.f, w, h, 0.f, 1.f});
+}
+
+// OP22: раз за кадр - матрицы текущего/прошлого кадра (Matrix_current/previous monolith) и векторы движения SSS.
+// Вызывают экранные тени (до солнца) и блок AO/IL (в phase_combine); сброс флага - phase_scene_prepare.
+void CRenderTarget::op22_ssfx_frame_prep(CBackend& cmd_list)
+{
+    if (m_op22_ssfx_prep_done)
+        return;
+    m_op22_ssfx_prep_done = true;
+
+    static Fmatrix m_saved_viewproj;
+    Matrix_previous.mul(m_saved_viewproj, Device.mInvView);
+    Matrix_current.set(Device.mProject);
+    m_saved_viewproj.set(Device.mFullTransform);
+
+    phase_op22_ssfx_mv(cmd_list);
+}
+
+// OP22 (SSS 23): экранные тени солнца (phase_ssfx_sss SSS UPDATE 23.2, Ascii1457): расчёт с учётом прошлого кадра в
+// rt_ssfx, два размытия маски (temp, temp2), итог - rt_ssfx_sss (его .b читают каскады солнца слоя).
+void CRenderTarget::phase_ssfx_sss(CBackend& cmd_list)
+{
+    PIX_EVENT(phase_ssfx_sss);
+
+    op22_ssfx_frame_prep(cmd_list);
+
+    const float w = float(rt_ssfx->dwWidth);
+    const float h = float(rt_ssfx->dwHeight);
+
+    if (ps_ssfx_sss_quality.z <= 0.f)
+    {
+        cmd_list.ClearRT(rt_ssfx_sss, Fcolor{1.f, 1.f, 1.f, 1.f}); // выключено консолью - без теней
+        return;
+    }
+
+    op22_ssfx_quad(cmd_list, rt_ssfx, s_ssfx_sss->E[0], w, h, 1.0f, [&]() {
+        cmd_list.set_c("m_current", Matrix_current);
+        cmd_list.set_c("m_previous", Matrix_previous);
+    });
+    op22_ssfx_quad(cmd_list, rt_ssfx_temp, s_ssfx_sss->E[1], w, h, 1.0f, [&]() { cmd_list.set_c("blur_setup", 0.f, 1.f, 0.f, 0.f); });
+    op22_ssfx_quad(cmd_list, rt_ssfx_temp2, s_ssfx_sss->E[2], w, h, 1.0f, [&]() { cmd_list.set_c("blur_setup", 1.f, 0.f, 2.f, 0.f); });
+
+    HW.get_context(cmd_list.context_id)->CopyResource(rt_ssfx_sss->pSurface, rt_ssfx_temp2->pSurface);
     cmd_list.SetViewport({0.f, 0.f, w, h, 0.f, 1.f});
 }
 

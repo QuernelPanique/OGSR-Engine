@@ -274,6 +274,9 @@ Fvector4 ps_ssfx_water_setup2{0.8f, 6.0f, 0.3f, 0.5f}; // Reflection, Specular, 
 // OP22 (SSS 23): объёмный свет прожекторов/фонарей с тенью (r2_volumetric_lights on). Метод лучей OGSR (combine_peak)
 // в уменьшенном разрешении + размытие SSS 23 (ssfx_volumetric_blur), лучи у всех прожекторов с тенью, затухание с расстоянием.
 int ps_op22_ssfx_volumetric = 0; // 1 - включено, нужен перезапуск (буферы и шейдеры)
+int ps_op22_ssfx_sss = 0; // OP22 (SSS 23): 1 - экранные тени солнца отдельным проходом SSS 22 (учёт прошлого кадра, размытие), нужен перезапуск
+Fvector4 ps_ssfx_sss{1.0f, 1.0f, 1.0f, 0.0f}; // Dir Len, Omni Len, Grass shadows, -
+Fvector4 ps_ssfx_sss_quality{12.0f, 4.0f, 1.0f, 0.0f}; // Dir Samples (перезапуск), Omni Samples, Dir Enable, -
 int ps_op22_ssfx_glass = 0; // OP22 (SSS 23): 1 - стекло SSS 23 (преломление, френель), нужен перезапуск
 Fvector4 ps_ssfx_volumetric{1.0f, 1.0f, 8.0f, 2.0f}; // x - лучи у всех прожекторов с тенью, y - сила, z - шаги луча (4-16), w - делитель разрешения (1-8)
 
@@ -1065,6 +1068,9 @@ void xrRender_initconsole()
     // OP22 (SSS 23): объёмный свет
     CMD4(CCC_Integer, "op22_ssfx_volumetric", &ps_op22_ssfx_volumetric, 0, 1);
     CMD4(CCC_Integer, "op22_ssfx_glass", &ps_op22_ssfx_glass, 0, 1);
+    CMD4(CCC_Integer, "op22_ssfx_sss", &ps_op22_ssfx_sss, 0, 1);
+    CMD4(CCC_Vector4, "ssfx_sss", &ps_ssfx_sss, (Fvector4{0, 0, 0, 0}), (Fvector4{3, 3, 1, 1}));
+    CMD4(CCC_Vector4, "ssfx_sss_quality", &ps_ssfx_sss_quality, (Fvector4{1, 1, 0, 0}), (Fvector4{24, 12, 1, 1}));
     CMD4(CCC_Vector4, "ssfx_volumetric", &ps_ssfx_volumetric, (Fvector4{0, 0, 4, 1}), (Fvector4{1, 5, 16, 8}));
     CMD4(CCC_Vector4, "ssfx_ssr_1", &ps_ssfx_ssr_1, (Fvector4{1.f, 0.f, 0.f, 0.f}), (Fvector4{2.f, 1.f, 1.f, 1.f}));
     CMD4(CCC_Vector4, "ssfx_ssr_2", &ps_ssfx_ssr_2, (Fvector4{}), (Fvector4{2.f, 2.f, 2.f, 2.f}));

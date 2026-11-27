@@ -22,6 +22,7 @@ void CRenderTarget::phase_scene_prepare()
     //	Igor: for volumetric lights
     m_bHasActiveVolumetric = false;
     m_bHasActiveVolumetric_spot = false; // OP22 (SSS 23)
+    m_op22_ssfx_prep_done = false;
     //	Clear later if try to draw volumetric
 }
 

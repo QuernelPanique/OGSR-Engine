@@ -95,6 +95,7 @@ void CRender::create()
     o.ssfx_water = ps_op22_ssfx_water ? TRUE : FALSE; // OP22 (SSS 23)
     o.ssfx_volumetric = ps_op22_ssfx_volumetric ? TRUE : FALSE;
     o.ssfx_glass = ps_op22_ssfx_glass ? TRUE : FALSE;
+    o.ssfx_sss = ps_op22_ssfx_sss ? TRUE : FALSE;
 
     o.dx11_enable_tessellation = HW.FeatureLevel >= D3D_FEATURE_LEVEL_11_0 && ps_r2_ls_flags_ext.test(R2FLAGEXT_ENABLE_TESSELLATION);
 
@@ -697,6 +698,8 @@ HRESULT CRender::shader_compile(LPCSTR name, DWORD const* pSrcData, UINT SrcData
     char c_ssfx_il_quality[10]{};
     char c_ssfx_water_quality[10]{};
     char c_ssfx_water_parallax[10]{};
+    char c_ssfx_sss_dir[10]{};
+    char c_ssfx_sss_omni[10]{};
 
     {
         sprintf_s(c_smapsize, "%d", m_SMAPSize);
@@ -814,6 +817,12 @@ HRESULT CRender::shader_compile(LPCSTR name, DWORD const* pSrcData, UINT SrcData
     defines.emplace_back("SSFX_WATER_PARALLAX", c_ssfx_water_parallax);
     // OP22 (SSS 23): объёмный свет - число шагов луча из ssfx_volumetric.z (combine_peak.ps слоя)
     appendShaderOption(o.ssfx_volumetric, "SSFX_VOLUMETRIC_PASS", "1");
+    // OP22 (SSS 23): экранные тени солнца проходом (каскады солнца читают $user$ssfx_sss)
+    appendShaderOption(o.ssfx_sss, "SSFX_SSS_PASS", "1");
+    sprintf_s(c_ssfx_sss_dir, "%d", int(std::clamp(ps_ssfx_sss_quality.x, 1.0f, 24.0f)));
+    defines.emplace_back("SSFX_SSS_DIR_QUALITY", c_ssfx_sss_dir);
+    sprintf_s(c_ssfx_sss_omni, "%d", int(std::clamp(ps_ssfx_sss_quality.y, 1.0f, 12.0f)));
+    defines.emplace_back("SSFX_SSS_OMNI_QUALITY", c_ssfx_sss_omni);
 
     appendShaderOption(ps_r2_ls_flags.test(R2FLAGEXT_SSFX_INTER_GRASS), "SSFX_INTER_GRASS", "1");
 

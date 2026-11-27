@@ -298,6 +298,11 @@ CRenderTarget::CRenderTarget()
             rt_ssfx_volumetric_tmp.create(r2_RT_ssfx_volumetric_tmp, vw, vh, DXGI_FORMAT_R16G16B16A16_FLOAT);
         }
 
+        // OP22 (SSS 23): экранные тени солнца - $user$ssfx_sss есть всегда (на него ссылаются accum_sun_cascade*.s слоя)
+        rt_ssfx_sss.create(r2_RT_ssfx_sss, w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
+        if (RImplementation.o.ssfx_sss)
+            rt_ssfx.create(r2_RT_ssfx, w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
+
         if (RImplementation.o.ssfx_water)
         {
             rt_ssfx_water.create(r2_RT_ssfx_water, w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
@@ -358,10 +363,11 @@ CRenderTarget::CRenderTarget()
     s_ssr.create("ogsr_ssr");
     // OP22 (SSS 23): шейдеры проходов создаются только при включённых проходах - ошибка в них не роняет игру с выключенными
     if (ps_op22_ssfx_ao_pass || ps_op22_ssfx_il_pass)
-    {
         s_ssfx_ao.create("ssfx_ao");
+    if (ps_op22_ssfx_ao_pass || ps_op22_ssfx_il_pass || RImplementation.o.ssfx_sss)
         s_op22_ssfx_mv.create("op22_ssfx_mv");
-    }
+    if (RImplementation.o.ssfx_sss)
+        s_ssfx_sss.create("ssfx_sss");
     if (RImplementation.o.ssfx_water)
     {
         s_ssfx_water.create("ssfx_water");

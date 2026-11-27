@@ -98,6 +98,8 @@
 #define r2_RT_ssfx_water_waves "$user$ssfx_water_waves" // OP22 (SSS 23): карта высот волн 512x512
 #define r2_RT_ssfx_volumetric "$user$ssfx_volumetric" // OP22 (SSS 23): объёмный свет прожекторов в 1/ssfx_volumetric.w
 #define r2_RT_ssfx_volumetric_tmp "$user$ssfx_volumetric_tmp"
+#define r2_RT_ssfx "$user$ssfx" // OP22 (SSS 23): кадр экранных теней до размытия
+#define r2_RT_ssfx_sss "$user$ssfx_sss" // OP22 (SSS 23): экранные тени солнца (.b - итог), читают каскады солнца
 
 constexpr const char* c_sbase = "s_base";
 

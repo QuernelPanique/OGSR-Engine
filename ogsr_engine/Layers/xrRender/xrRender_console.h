@@ -178,6 +178,9 @@ extern int ps_op22_ssfx_water;
 extern Fvector4 ps_ssfx_volumetric;
 extern int ps_op22_ssfx_volumetric;
 extern int ps_op22_ssfx_glass; // OP22 (SSS 23): стекло
+// OP22 (SSS 23): экранные тени солнца проходом SSS 22
+extern Fvector4 ps_ssfx_sss, ps_ssfx_sss_quality;
+extern int ps_op22_ssfx_sss;
 
 extern ECORE_API float ps_r__opt_dist;
 

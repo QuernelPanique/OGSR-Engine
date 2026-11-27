@@ -78,6 +78,7 @@ public:
         u32 ssfx_water : 1; // OP22 (SSS 23): op22_ssfx_water при запуске
         u32 ssfx_volumetric : 1; // OP22 (SSS 23): op22_ssfx_volumetric при запуске
         u32 ssfx_glass : 1; // OP22 (SSS 23): op22_ssfx_glass при запуске
+        u32 ssfx_sss : 1; // OP22 (SSS 23): op22_ssfx_sss при запуске
     } o;
     struct _stats
     {

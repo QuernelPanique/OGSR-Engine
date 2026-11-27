@@ -700,6 +700,11 @@ static class op22_ssfx_volumetric final : public R_constant_setup
     void setup(CBackend& cmd_list, R_constant* C) override { cmd_list.set_c(C, ps_ssfx_volumetric); }
 } op22_ssfx_volumetric;
 
+static class op22_ssfx_sss final : public R_constant_setup
+{
+    void setup(CBackend& cmd_list, R_constant* C) override { cmd_list.set_c(C, ps_ssfx_sss); }
+} op22_ssfx_sss;
+
 static class ssfx_bloom_2 : public R_constant_setup
 {
     void setup(CBackend& cmd_list, R_constant* C) override { cmd_list.set_c(C, ps_ssfx_bloom_2); }
@@ -971,6 +976,7 @@ void CBlender_Compile::SetMapping() const
     r_Constant("ssfx_water_setup1", &op22_ssfx_water_setup1);
     r_Constant("ssfx_water_setup2", &op22_ssfx_water_setup2);
     r_Constant("ssfx_volumetric", &op22_ssfx_volumetric);
+    r_Constant("ssfx_sss", &op22_ssfx_sss);
 
     r_Constant("ssfx_pom", &ssfx_pom);
     r_Constant("ssfx_terrain_pom", &ssfx_terrain_pom);

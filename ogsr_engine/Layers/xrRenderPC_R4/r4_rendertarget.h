@@ -92,6 +92,8 @@ public:
     ref_rt rt_ssfx_temp, rt_ssfx_temp2, rt_ssfx_temp3, rt_ssfx_ao, rt_ssfx_il, rt_ssfx_prevPos, rt_ssfx_motion_vectors;
     ref_rt rt_ssfx_water, rt_ssfx_water_waves; // OP22 (SSS 23): вода
     ref_rt rt_ssfx_volumetric, rt_ssfx_volumetric_tmp; // OP22 (SSS 23): объёмный свет прожекторов в уменьшенном разрешении
+    ref_rt rt_ssfx, rt_ssfx_sss; // OP22 (SSS 23): экранные тени солнца
+    bool m_op22_ssfx_prep_done{}; // OP22: векторы движения SSS и матрицы кадра уже посчитаны в этом кадре
     Fmatrix Matrix_current{}, Matrix_previous{};
 
     ref_rt rt_LUM_pool[2]; // 1xfp32,1x1, exp-result -> scaler
@@ -180,6 +182,7 @@ private:
     ref_shader s_op22_ssfx_mv; // OP22: векторы движения OGSR -> формат SSS (shaders/r3/op22_ssfx_mv.s)
     ref_shader s_ssfx_water, s_ssfx_water_ssr, s_ssfx_water_blur; // OP22 (SSS 23): вода (ssfx_water*.s)
     ref_shader s_ssfx_volumetric_blur; // OP22 (SSS 23): размытие и перенос объёмного света (ssfx_volumetric_blur.s)
+    ref_shader s_ssfx_sss; // OP22 (SSS 23): экранные тени солнца (ssfx_sss.s)
     ref_shader s_dof;
     ref_shader s_lut;
     ref_shader s_taa;
@@ -292,6 +295,8 @@ public:
     void phase_ssfx_il(CBackend& cmd_list);
     void phase_ssfx_water(CBackend& cmd_list); // OP22 (SSS 23): отражения, размытие, волны и сама вода
     void phase_ssfx_volumetric_blur(CBackend& cmd_list); // OP22 (SSS 23): размытие лучей прожекторов и перенос в rt_Generic_3
+    void phase_ssfx_sss(CBackend& cmd_list); // OP22 (SSS 23): экранные тени солнца (до накопления солнца)
+    void op22_ssfx_frame_prep(CBackend& cmd_list); // OP22: раз за кадр - матрицы текущего/прошлого кадра и векторы движения SSS
     void op22_ssfx_quad(CBackend& cmd_list, const ref_rt& rt, ref_selement& sh, float vw, float vh, float uv, const std::function<void()>& lambda);
     void phase_luminance(CBackend& cmd_list);
     void phase_combine(CBackend& cmd_list);

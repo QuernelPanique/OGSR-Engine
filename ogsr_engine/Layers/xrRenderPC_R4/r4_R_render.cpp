@@ -444,6 +444,10 @@ void CRender::Render()
         r_rain.sync();
     }
 
+    // OP22 (SSS 23): экранные тени солнца проходом - до накопления солнца (r_sun.sync -> accum_direct_cascade)
+    if (o.ssfx_sss && bSUN)
+        Target->phase_ssfx_sss(cmd_list);
+
     // Directional light - fucking sun
     if (bSUN)
     {
