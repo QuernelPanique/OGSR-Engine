@@ -9,6 +9,8 @@
 
 #include "IKLimbsController.h"
 #include "actor.h"
+#include "HudItem.h" // OP22
+#include "inventory.h" // OP22
 #include "game_object_space.h"
 #include "script_game_object.h"
 
@@ -157,7 +159,13 @@ void CStepManager::update()
                 GET_RANDOM(mtl_pair->StepSounds).play_no_feedback(m_object, 0, 0, &sound_pos, &m_step_info.params.step[i].power);
 
                 if (actor)
+                {
                     actor->callback(GameObject::eOnActorFootStep)(actor->lua_game_object(), m_step_info.params.step[i].power);
+                    // OP22 (27.11): шаг - толчок рук и оружия в руках на опорную ногу
+                    if (actor == Level().CurrentViewEntity())
+                        if (CHudItem* hi = smart_cast<CHudItem*>(actor->inventory().ActiveItem()))
+                            hi->op22_HudStep(int(i), m_step_info.params.step[i].power);
+                }
             }
 
             // Играть партиклы

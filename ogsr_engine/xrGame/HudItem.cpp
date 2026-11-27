@@ -807,6 +807,9 @@ void CHudItem::UpdateCollision(Fmatrix& trans)
 
 float g_op22_hud_inertion = 100.f; // OP22: op22_console.cpp
 float g_op22_hud_inertion_spring = 1.f; // OP22 (27.11): инерция 2-го порядка, 0 - прежняя (op22_console.cpp)
+float g_op22_hud_steps = 1.f; // OP22 (27.11): толчок рук на шаге, 0 - выкл
+float g_op22_hud_hit = 1.f; // OP22 (27.11): толчок рук от попадания, 0 - выкл
+float g_op22_ads_arc = 1.f; // OP22 (27.11): прицеливание по дуге и досыл, 0 - выкл
 
 // OP22: процедурная отдача и «дыхание» модели оружия в руках (22.11, решение пользователя; отключаемо).
 // Только вид модели худа: камера, разброс и пули - как в ОП (отдача камеры on_weapon_shot_start не меняется).
@@ -875,10 +878,51 @@ void CHudItem::op22_OnHudAnim(const char* anm)
     m_op22_var_trot.set(deg2rad(::Random.randFs(1.2f)), deg2rad(::Random.randFs(1.0f)), deg2rad(::Random.randFs(2.0f))).mul(v);
 }
 
+void CHudItem::op22_HudStep(int leg, float power)
+{
+    if (g_op22_hud_steps <= 0.f)
+        return;
+    u32 ms = 0;
+    if (const CActor* pA = Actor())
+        ms = pA->MovingState();
+    float s = _min(power, 1.f) * g_op22_hud_steps;
+    if (ms & mcSprint)
+        s *= 1.35f;
+    else if (ms & mcCrouch)
+        s *= 0.5f;
+    if (IsZoomed())
+        s *= 0.3f;
+    const float side = (leg & 1) ? 1.f : -1.f; // опорная нога: правая/левая
+    m_op22_rec_pos_v.y -= 0.045f * s; // руки чуть «проседают» на опору
+    m_op22_rec_pos_v.x += 0.010f * s * side;
+    m_op22_rec_rot_v.z += deg2rad(0.9f) * s * side;
+    m_op22_rec_rot_v.x += deg2rad(0.35f) * s; // ствол на миг вниз
+}
+
+void CHudItem::op22_HudHitKick(const Fvector& dir, float power)
+{
+    if (g_op22_hud_hit <= 0.f || power <= 0.f)
+        return;
+    // направление удара в осях камеры: руки и ствол уводит по удару
+    const float x = dir.dotproduct(Device.vCameraRight), y = dir.dotproduct(Device.vCameraTop), z = dir.dotproduct(Device.vCameraDirection);
+    float s = _min(0.25f + power * 1.5f, 1.2f) * g_op22_hud_hit * (IsZoomed() ? 0.5f : 1.f);
+    m_op22_rec_pos_v.x += 0.06f * x * s;
+    m_op22_rec_pos_v.y += 0.04f * y * s - 0.02f * s;
+    m_op22_rec_pos_v.z += 0.06f * z * s;
+    m_op22_rec_rot_v.y += deg2rad(6.f) * x * s;
+    m_op22_rec_rot_v.x += deg2rad(4.f) * s; // ствол сбивает вниз
+    m_op22_rec_rot_v.z += deg2rad(::Random.randFs(6.f)) * s;
+}
+
 void CHudItem::op22_HudRecoilKick(float strength)
 {
     if (g_op22_wpn_recoil <= 0.f || strength <= 0.f)
         return;
+    // OP22 (27.11): очередь - первый выстрел резче (стойка «ломается»), дальше плечо устаёт и оседает (m_op22_sag)
+    const float burst = m_op22_burst;
+    m_op22_burst += 1.f;
+    m_op22_sag += 1.f;
+    strength *= burst < 0.5f ? 1.12f : 1.f + 0.05f * _min(burst - 1.f, 8.f);
     // в прицеливании слабее, чтобы прицел не уходил из глаз
     const float s = strength * g_op22_wpn_recoil * (IsZoomed() ? 0.35f : 1.f) * OP22_REC_W * 1.6f; // пик ~ величине толчка
     // смещение, м (оси худа: x вправо, y вверх, z вперёд): назад в плечо, чуть вверх и вбок
@@ -908,6 +952,34 @@ void CHudItem::op22_UpdateProcedural(Fvector& offs, Fvector& rot, bool aiming, u
     clamp(m_op22_rec_rot.z, -rmax, rmax);
     offs.add(m_op22_rec_pos);
     rot.add(m_op22_rec_rot);
+
+    // OP22 (27.11): очередь - плечо оседает с каждым выстрелом и отпускает после паузы
+    m_op22_burst *= std::exp(-dt / 0.35f);
+    m_op22_sag *= std::exp(-dt / 0.7f);
+    if (g_op22_wpn_recoil > 0.f)
+    {
+        const float sag = _min(m_op22_sag, 8.f) * g_op22_wpn_recoil * (aiming ? 0.4f : 1.f);
+        offs.y -= 0.0011f * sag;
+        offs.z -= 0.0014f * sag;
+        rot.x += deg2rad(0.10f) * sag; // ствол опускается
+    }
+
+    // OP22 (27.11): прицеливание по дуге - на середине перехода ствол уходит чуть вниз и в сторону с завалом, в конце
+    // досылается в плечо; начало и конец перехода - как прежде (дуга на краях равна нулю)
+    if (g_op22_ads_arc > 0.f)
+    {
+        const float zf = m_fZoomRotationFactor;
+        const float arc = _sin(PI * zf) * g_op22_ads_arc;
+        offs.y -= 0.010f * arc;
+        offs.x -= 0.004f * arc;
+        rot.z += deg2rad(3.f) * arc;
+        if (m_op22_prev_zoom < 0.999f && zf >= 0.999f)
+        {
+            m_op22_rec_pos_v.z -= 0.05f * g_op22_ads_arc; // досыл в плечо
+            m_op22_rec_rot_v.x -= deg2rad(0.6f) * g_op22_ads_arc;
+        }
+        m_op22_prev_zoom = zf;
+    }
 
     // OP22 (27.11): живое «дыхание» вместо фигуры Лиссажу - дыхательный цикл с паузой, медленный дрейф и тремор плавным
     // шумом (без регулярности, которую ловит глаз); сила - от состояния тела (op22_body_state): сбитое дыхание после

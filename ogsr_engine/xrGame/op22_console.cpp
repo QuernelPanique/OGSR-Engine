@@ -272,6 +272,11 @@ void op22_register_console()
         extern float g_op22_hud_variety, g_op22_body_state;
         add(xr_new<CCC_Float>("op22_hud_variety", &g_op22_hud_variety, 0.f, 3.f));
         add(xr_new<CCC_Float>("op22_body_state", &g_op22_body_state, 0.f, 3.f));
+        // OP22 (27.11): толчок рук на шаге, от попадания, прицеливание по дуге (HudItem.cpp), 0 - выкл
+        extern float g_op22_hud_steps, g_op22_hud_hit, g_op22_ads_arc;
+        add(xr_new<CCC_Float>("op22_hud_steps", &g_op22_hud_steps, 0.f, 3.f));
+        add(xr_new<CCC_Float>("op22_hud_hit", &g_op22_hud_hit, 0.f, 3.f));
+        add(xr_new<CCC_Float>("op22_ads_arc", &g_op22_ads_arc, 0.f, 3.f));
     }
     str("bolt_visual", "bolt");
     str("hc_unarmed", "");

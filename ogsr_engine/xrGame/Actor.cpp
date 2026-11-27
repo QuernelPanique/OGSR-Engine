@@ -486,7 +486,12 @@ void CActor::Hit(SHit* pHDS)
     if (HDS.power > 0.f && this == Level().CurrentViewEntity() &&
         (HDS.hit_type == ALife::eHitTypeFireWound || HDS.hit_type == ALife::eHitTypeWound || HDS.hit_type == ALife::eHitTypeWound_2 ||
          HDS.hit_type == ALife::eHitTypeStrike || HDS.hit_type == ALife::eHitTypeExplosion))
+    {
         g_op22_actor_hit_time = Device.fTimeGlobal;
+        // OP22 (27.11): толчок рук и оружия по направлению удара
+        if (CHudItem* hi = smart_cast<CHudItem*>(inventory().ActiveItem()))
+            hi->op22_HudHitKick(HDS.dir, HDS.power);
+    }
 
     bool bPlaySound = true;
     if (!g_Alive())
