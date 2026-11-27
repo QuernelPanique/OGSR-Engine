@@ -16,9 +16,20 @@ private:
     vis_data hom{};    
 
     light* omnipart[6]{};
+
+public:
     // OP22 (SSS 23): экранные тени от ламп (phase_ssfx_sss_ext) - слот 0..7 или -1; у части всенаправленного - владелец
     int op22_sss_id{-1};
     light* op22_omni_owner{};
+    void op22_set_sss_id(int id)
+    {
+        op22_sss_id = id;
+        for (light* f : omnipart)
+            if (f)
+                f->op22_sss_id = id;
+    }
+
+private:
 
     u32 m_xform_frame{};
 

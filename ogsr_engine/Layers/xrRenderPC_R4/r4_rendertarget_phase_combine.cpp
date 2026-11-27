@@ -848,13 +848,7 @@ void CRenderTarget::phase_ssfx_sss(CBackend& cmd_list)
 // Слоты: g_op22_sss_slots (light.cpp, удалённая лампа сама освобождает слот).
 extern light* g_op22_sss_slots[8];
 
-static void op22_sss_set_id(light* L, int id)
-{
-    L->op22_sss_id = id;
-    for (light* f : L->omnipart)
-        if (f)
-            f->op22_sss_id = id;
-}
+static void op22_sss_set_id(light* L, int id) { L->op22_set_sss_id(id); }
 
 void CRenderTarget::phase_ssfx_sss_ext(CBackend& cmd_list, const light_Package& LP)
 {
