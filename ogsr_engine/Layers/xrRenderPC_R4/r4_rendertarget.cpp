@@ -288,6 +288,22 @@ CRenderTarget::CRenderTarget()
             rt_ssfx_motion_vectors.create(r2_RT_ssfx_motion_vectors, w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
         }
 
+        // OP22 (SSS 23): вода - только при op22_ssfx_water (на эти буферы ссылаются лишь шейдеры ssfx_water*.s)
+        // OP22 (SSS 23): объёмный свет прожекторов в уменьшенном разрешении (делитель ssfx_volumetric.w при запуске)
+        if (RImplementation.o.ssfx_volumetric)
+        {
+            const float k = std::clamp(ps_ssfx_volumetric.w, 1.0f, 8.0f);
+            const u32 vw = std::max(1u, u32(float(w) / k)), vh = std::max(1u, u32(float(h) / k));
+            rt_ssfx_volumetric.create(r2_RT_ssfx_volumetric, vw, vh, DXGI_FORMAT_R16G16B16A16_FLOAT);
+            rt_ssfx_volumetric_tmp.create(r2_RT_ssfx_volumetric_tmp, vw, vh, DXGI_FORMAT_R16G16B16A16_FLOAT);
+        }
+
+        if (RImplementation.o.ssfx_water)
+        {
+            rt_ssfx_water.create(r2_RT_ssfx_water, w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
+            rt_ssfx_water_waves.create(r2_RT_ssfx_water_waves, 512, 512, DXGI_FORMAT_R8G8B8A8_UNORM);
+        }
+
         rt_flares.create(r2_RT_flares, displayW, displayH, DXGI_FORMAT_R8G8B8A8_UNORM);
 
         rt_Velocity.create(r2_RT_velocity, w, h, DXGI_FORMAT_R16G16_FLOAT);
@@ -346,6 +362,14 @@ CRenderTarget::CRenderTarget()
         s_ssfx_ao.create("ssfx_ao");
         s_op22_ssfx_mv.create("op22_ssfx_mv");
     }
+    if (RImplementation.o.ssfx_water)
+    {
+        s_ssfx_water.create("ssfx_water");
+        s_ssfx_water_ssr.create("ssfx_water_ssr");
+        s_ssfx_water_blur.create("ssfx_water_blur");
+    }
+    if (RImplementation.o.ssfx_volumetric)
+        s_ssfx_volumetric_blur.create("ssfx_volumetric_blur");
 
     s_ssfx_bloom.create("ogsr_bloom");
     s_ssfx_bloom_lens.create("ogsr_bloom_flares");

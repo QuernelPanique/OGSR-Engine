@@ -170,6 +170,14 @@ extern Fvector4 ps_ssfx_ssr_1, ps_ssfx_ssr_2;
 // OP22 (SSS 23): AO/IL отдельными проходами
 extern Fvector4 ps_ssfx_ao, ps_ssfx_ao_setup1, ps_ssfx_il, ps_ssfx_il_setup1;
 extern int ps_ssfx_ao_quality, ps_ssfx_il_quality, ps_op22_ssfx_ao_pass, ps_op22_ssfx_il_pass, ps_op22_ssr_always;
+// OP22 (SSS 23): вода
+extern Fvector4 ps_ssfx_water, ps_ssfx_water_setup1, ps_ssfx_water_setup2;
+extern Fvector3 ps_ssfx_water_quality;
+extern int ps_op22_ssfx_water;
+// OP22 (SSS 23): объёмный свет прожекторов и фонарей
+extern Fvector4 ps_ssfx_volumetric;
+extern int ps_op22_ssfx_volumetric;
+extern int ps_op22_ssfx_glass; // OP22 (SSS 23): стекло
 
 extern ECORE_API float ps_r__opt_dist;
 

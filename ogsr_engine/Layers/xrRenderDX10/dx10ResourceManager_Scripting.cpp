@@ -753,6 +753,12 @@ ShaderElement* CBlender_Compile::_lua_Compile(LPCSTR namesp, LPCSTR name)
     element(ac, t_0, t_1, t_d);
     r_End();
 
+    // OP22 (SSS 23, как "SSS fix water" xray-monolith): обычная вода уровня рисуется отдельной очередью (отражения
+    // в уменьшенном разрешении, размытие, волны - CRenderTarget::phase_ssfx_water). Только effects_water: ряска,
+    // студень и подземная вода остаются прежними (ssfx_water рисует одной текстурой water_water).
+    if (E.flags.bDistort && 0 == xr_strcmp(namesp, "effects_water") && (0 == xr_strcmp(name, "normal") || 0 == xr_strcmp(name, "normal_hq")))
+        E.flags.isWater = TRUE;
+
     ShaderElement* _r = dxRenderDeviceRender::Instance().Resources->_CreateElement(std::move(E));
     return _r;
 }

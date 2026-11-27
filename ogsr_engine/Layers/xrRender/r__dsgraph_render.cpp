@@ -390,6 +390,37 @@ void R_dsgraph_structure::r_dsgraph_render_scope_sorted(const bool upscaled)
 
 //////////////////////////////////////////////////////////////////////////
 // strict-sorted render
+// OP22 (SSS 23): вода (перенос water_node / water_node_ssr xray-monolith). Список не очищается - его рисуют два раза
+// (отражения и сама вода), очистка - CRenderTarget::phase_ssfx_water (mapWater.clear()).
+void R_dsgraph_structure::r_dsgraph_render_water(ShaderElement* se, const std::function<void(CBackend&)>& setup)
+{
+    ZoneScoped;
+
+    if (mapWater.empty())
+        return;
+
+    PIX_EVENT_CTX(cmd_list, dsgraph_render_water);
+
+    waterItems.clear();
+    mapWater.get_left_right(waterItems);
+
+    for (const auto& item : waterItems)
+    {
+        dxRender_Visual* V = item.pVisual;
+        VERIFY(V && V->shader._get());
+
+        cmd_list.set_Element(se ? se : item.se);
+        cmd_list.set_xform_world(item.Matrix);
+        RImplementation.apply_object(cmd_list, item.pObject, true);
+        cmd_list.apply_lmaterial();
+        setup(cmd_list);
+
+        const float lod = calcLOD(item.ssa);
+        cmd_list.lod.set_lod(lod);
+        V->Render(cmd_list, lod, false);
+    }
+}
+
 void R_dsgraph_structure::r_dsgraph_render_emissive(bool clear)
 {
     ZoneScoped;

@@ -493,6 +493,7 @@ void CEnvironment::OnFrame()
     wind_anim.x += WindVel * WDir.x * Device.fTimeDelta;
     wind_anim.y += WindVel * WDir.y * Device.fTimeDelta;
     wind_anim.z += clampr(WindVel * 1.33f, 0.0f, 1.0f) * Device.fTimeDelta;
+    op22_wind_anim_w += Device.fTimeDelta; // OP22 (SSS 23): wind_anim.w += 1 * dt
 
     float current_weight;
     lerp(current_weight);

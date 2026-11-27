@@ -355,6 +355,13 @@ void R_dsgraph_structure::r_dsgraph_insert_static(dxRender_Visual* pVisual)
     if (!pmask[sh->flags.iPriority / 2])
         return;
 
+    // OP22 (SSS 23, как xray-monolith): обычная вода - своя очередь, рисуется в CRenderTarget::phase_combine
+    if (sh->flags.isWater && RImplementation.o.ssfx_water && phase == CRender::PHASE_NORMAL)
+    {
+        mapWater.insert_anyway(dist_sqr, _MatrixItemS({SSA, nullptr, pVisual, Fidentity, sh}));
+        return;
+    }
+
     // strict-sorting selection
     if (sh->flags.bStrictB2F)
     {
@@ -800,6 +807,7 @@ void R_dsgraph_structure::reset()
 
     mapSorted.clear();
     mapDistort.clear();
+    mapWater.clear(); // OP22 (SSS 23)
 
     mapHUD.destroy();
     mapHUDSorted.destroy();

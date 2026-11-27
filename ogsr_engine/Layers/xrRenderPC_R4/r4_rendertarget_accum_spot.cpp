@@ -151,6 +151,37 @@ void CRenderTarget::accum_spot(CBackend& cmd_list, light* L)
 
 void CRenderTarget::accum_volumetric(CBackend& cmd_list, light* L)
 {
+    // OP22 (SSS 23, как accum_volumetric SSS UPDATE 23.2): лучи у всех прожекторов с тенью (ssfx_volumetric.x),
+    // сила ssfx_volumetric.y, затухание с расстоянием (полная до 20 м, ноль со 120 м); расчёт - в rt_ssfx_volumetric
+    // в 1/ssfx_volumetric.w разрешения без буфера глубины (луч ограничивает глубина сцены в шейдере), затем размытие.
+    float op22_vol_mul = 1.f;
+    if (RImplementation.o.ssfx_volumetric)
+    {
+        if (!L->flags.bVolumetric && ps_ssfx_volumetric.x <= 0.f)
+            return;
+        op22_vol_mul = ps_ssfx_volumetric.y * (1.f - std::clamp((L->vis.distance - 20.f) * 0.01f, 0.f, 1.f));
+        if (op22_vol_mul <= 0.f)
+            return;
+
+        if (!m_bHasActiveVolumetric)
+        {
+            m_bHasActiveVolumetric = true;
+            cmd_list.ClearRT(rt_Generic_2, {}); // black
+            cmd_list.ClearRT(rt_Generic_3, {}); // black
+        }
+        if (!m_bHasActiveVolumetric_spot)
+        {
+            m_bHasActiveVolumetric_spot = true;
+            cmd_list.ClearRT(rt_ssfx_volumetric, {});
+        }
+        u_setrt(cmd_list, rt_ssfx_volumetric->dwWidth, rt_ssfx_volumetric->dwHeight, rt_ssfx_volumetric->pRT, nullptr, nullptr, nullptr);
+        cmd_list.SetViewport({0.f, 0.f, float(rt_ssfx_volumetric->dwWidth), float(rt_ssfx_volumetric->dwHeight), 0.f, 1.f});
+        cmd_list.set_Stencil(FALSE);
+        cmd_list.set_CullMode(CULL_NONE);
+        cmd_list.set_ColorWriteEnable();
+    }
+    else
+    {
     if (!L->flags.bVolumetric)
         return;
 
@@ -161,6 +192,7 @@ void CRenderTarget::accum_volumetric(CBackend& cmd_list, light* L)
     //    return;
 
     phase_vol_accumulator(cmd_list, false);
+    }
 
     // setup xform
     L->xform_calc();
@@ -197,6 +229,7 @@ void CRenderTarget::accum_volumetric(CBackend& cmd_list, light* L)
     Fvector L_dir, L_clr, L_pos;
     L_clr.set(L->color.r, L->color.g, L->color.b);
     L_clr.mul(L->m_volumetric_intensity);
+    L_clr.mul(op22_vol_mul); // OP22 (SSS 23): сила и затухание с расстоянием (1 без op22_ssfx_volumetric)
     // L_clr.mul(falloff);
     // L_clr.mul(L->m_volumetric_distance); // SIMP: ????
     // L_clr.mul(L->get_LOD()); // SIMP: ????
@@ -225,4 +258,8 @@ void CRenderTarget::accum_volumetric(CBackend& cmd_list, light* L)
 
     geom_volume(cmd_list, L);
     render_volume(cmd_list, L);
+
+    // OP22 (SSS 23): вьюпорт - обратно на полный кадр
+    if (RImplementation.o.ssfx_volumetric)
+        cmd_list.SetViewport({0.f, 0.f, float(rt_Generic_0->dwWidth), float(rt_Generic_0->dwHeight), 0.f, 1.f});
 }

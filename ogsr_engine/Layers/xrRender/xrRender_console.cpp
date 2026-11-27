@@ -265,6 +265,17 @@ int ps_ssfx_il_quality = 32; // IL Samples (SSFX_IL_QUALITY; таблица на
 int ps_op22_ssfx_ao_pass = 0; // 1 - AO проходом SSS 23 (вместо SSDO/GTAO в combine_1), нужен перезапуск
 int ps_op22_ssfx_il_pass = 0; // 1 - IL проходом SSS 23 (вместо ssfx_indirect_light в combine_2), нужен перезапуск
 int ps_op22_ssr_always = 0; // 1 - отражения SSR не только в дождь
+// OP22 (SSS 23): вода (значения по умолчанию - как в SSS 23 / xray-monolith)
+int ps_op22_ssfx_water = 0; // 1 - обычная вода SSS 23 (отдельная очередь, отражения в уменьшенном разрешении), нужен перезапуск
+Fvector4 ps_ssfx_water{1.0f, 0.8f, 1.0f, 0.0f}; // Res, Blur, Blur Perlin, -
+Fvector3 ps_ssfx_water_quality{1.0f, 2.0f, 0.0f}; // SSR Quality, Parallax Quality, - (нужен перезапуск)
+Fvector4 ps_ssfx_water_setup1{0.6f, 3.0f, 0.3f, 0.05f}; // Distortion, Turbidity, Softborder, Parallax Height
+Fvector4 ps_ssfx_water_setup2{0.8f, 6.0f, 0.3f, 0.5f}; // Reflection, Specular, Caustics, Ripples
+// OP22 (SSS 23): объёмный свет прожекторов/фонарей с тенью (r2_volumetric_lights on). Метод лучей OGSR (combine_peak)
+// в уменьшенном разрешении + размытие SSS 23 (ssfx_volumetric_blur), лучи у всех прожекторов с тенью, затухание с расстоянием.
+int ps_op22_ssfx_volumetric = 0; // 1 - включено, нужен перезапуск (буферы и шейдеры)
+int ps_op22_ssfx_glass = 0; // OP22 (SSS 23): 1 - стекло SSS 23 (преломление, френель), нужен перезапуск
+Fvector4 ps_ssfx_volumetric{1.0f, 1.0f, 8.0f, 2.0f}; // x - лучи у всех прожекторов с тенью, y - сила, z - шаги луча (4-16), w - делитель разрешения (1-8)
 
 // Screen Space Shaders Stuff
 Fvector4 ps_ssfx_wind_grass{9.5f, 1.4f, 1.5f, 0.4f}; // Anim Speed, Turbulence, Push, Wave
@@ -1045,6 +1056,16 @@ void xrRender_initconsole()
     CMD4(CCC_Integer, "op22_ssfx_ao_pass", &ps_op22_ssfx_ao_pass, 0, 1);
     CMD4(CCC_Integer, "op22_ssfx_il_pass", &ps_op22_ssfx_il_pass, 0, 1);
     CMD4(CCC_Integer, "op22_ssr_always", &ps_op22_ssr_always, 0, 1);
+    // OP22 (SSS 23): вода
+    CMD4(CCC_Integer, "op22_ssfx_water", &ps_op22_ssfx_water, 0, 1);
+    CMD4(CCC_Vector4, "ssfx_water", &ps_ssfx_water, (Fvector4{1, 0, 0, 0}), (Fvector4{8, 1, 1, 0}));
+    CMD4(CCC_Vector3, "ssfx_water_quality", &ps_ssfx_water_quality, (Fvector3{0, 0, 0}), (Fvector3{4, 3, 0}));
+    CMD4(CCC_Vector4, "ssfx_water_setup1", &ps_ssfx_water_setup1, (Fvector4{0, 0, 0, 0}), (Fvector4{2, 10, 1, 0.1f}));
+    CMD4(CCC_Vector4, "ssfx_water_setup2", &ps_ssfx_water_setup2, (Fvector4{0, 0, 0, 0}), (Fvector4{1, 10, 1, 1}));
+    // OP22 (SSS 23): объёмный свет
+    CMD4(CCC_Integer, "op22_ssfx_volumetric", &ps_op22_ssfx_volumetric, 0, 1);
+    CMD4(CCC_Integer, "op22_ssfx_glass", &ps_op22_ssfx_glass, 0, 1);
+    CMD4(CCC_Vector4, "ssfx_volumetric", &ps_ssfx_volumetric, (Fvector4{0, 0, 4, 1}), (Fvector4{1, 5, 16, 8}));
     CMD4(CCC_Vector4, "ssfx_ssr_1", &ps_ssfx_ssr_1, (Fvector4{1.f, 0.f, 0.f, 0.f}), (Fvector4{2.f, 1.f, 1.f, 1.f}));
     CMD4(CCC_Vector4, "ssfx_ssr_2", &ps_ssfx_ssr_2, (Fvector4{}), (Fvector4{2.f, 2.f, 2.f, 2.f}));
 

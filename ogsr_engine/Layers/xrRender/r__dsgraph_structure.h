@@ -57,6 +57,8 @@ public:
 
     R_dsgraph::mapSorted_T mapWmark; // sorted
     R_dsgraph::mapSorted_T mapEmissive;
+    R_dsgraph::mapSorted_T mapWater; // OP22 (SSS 23): обычная вода (effects_water), рисуется в phase_combine
+    xr_vector<R_dsgraph::_MatrixItemS> waterItems; // OP22: рабочий список для обхода mapWater
 
     // Runtime structures
     xr_vector<R_dsgraph::_LodItem> lstLODs;
@@ -131,6 +133,8 @@ public:
     void r_dsgraph_render_emissive(bool clear);
     void r_dsgraph_render_wmarks();
     void r_dsgraph_render_distort();
+    // OP22 (SSS 23): вода своим элементом шейдера (se = nullptr - элемент самой воды), setup - константы на каждый объект
+    void r_dsgraph_render_water(ShaderElement* se, const std::function<void(CBackend&)>& setup);
 
     void build_subspace(const IRender_Sector::sector_id_t& start_sector_id, CFrustum& frustum, const Fmatrix& xform, const Fvector& camera_position, BOOL add_dynamic);
 };

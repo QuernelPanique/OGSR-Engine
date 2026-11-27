@@ -618,7 +618,8 @@ static class ssfx_wind_anim : public R_constant_setup
     virtual void setup(CBackend& cmd_list, R_constant* C)
     {
         Fvector3 WindAni = g_pGamePersistent->Environment().wind_anim;
-        cmd_list.set_c(C, WindAni.x, WindAni.y, WindAni.z, 0);
+        // OP22 (SSS 23): w - время анимации воды (wind_anim.w SSS 23), шейдеры OGSR w не читают
+        cmd_list.set_c(C, WindAni.x, WindAni.y, WindAni.z, g_pGamePersistent->Environment().op22_wind_anim_w);
     }
 } ssfx_wind_anim;
 
@@ -679,6 +680,25 @@ static class op22_ssfx_il_setup2 final : public R_constant_setup
 {
     void setup(CBackend& cmd_list, R_constant* C) override { cmd_list.set_c(C, ps_ssfx_il_setup1); }
 } op22_ssfx_il_setup2;
+
+// OP22 (SSS 23): вода
+static class op22_ssfx_water final : public R_constant_setup
+{
+    void setup(CBackend& cmd_list, R_constant* C) override { cmd_list.set_c(C, ps_ssfx_water); }
+} op22_ssfx_water;
+static class op22_ssfx_water_setup1 final : public R_constant_setup
+{
+    void setup(CBackend& cmd_list, R_constant* C) override { cmd_list.set_c(C, ps_ssfx_water_setup1); }
+} op22_ssfx_water_setup1;
+static class op22_ssfx_water_setup2 final : public R_constant_setup
+{
+    void setup(CBackend& cmd_list, R_constant* C) override { cmd_list.set_c(C, ps_ssfx_water_setup2); }
+} op22_ssfx_water_setup2;
+
+static class op22_ssfx_volumetric final : public R_constant_setup
+{
+    void setup(CBackend& cmd_list, R_constant* C) override { cmd_list.set_c(C, ps_ssfx_volumetric); }
+} op22_ssfx_volumetric;
 
 static class ssfx_bloom_2 : public R_constant_setup
 {
@@ -946,6 +966,11 @@ void CBlender_Compile::SetMapping() const
     r_Constant("ssfx_ao_setup2", &op22_ssfx_ao_setup2);
     r_Constant("ssfx_il_setup", &op22_ssfx_il_setup);
     r_Constant("ssfx_il_setup2", &op22_ssfx_il_setup2);
+    // OP22 (SSS 23): вода
+    r_Constant("ssfx_water", &op22_ssfx_water);
+    r_Constant("ssfx_water_setup1", &op22_ssfx_water_setup1);
+    r_Constant("ssfx_water_setup2", &op22_ssfx_water_setup2);
+    r_Constant("ssfx_volumetric", &op22_ssfx_volumetric);
 
     r_Constant("ssfx_pom", &ssfx_pom);
     r_Constant("ssfx_terrain_pom", &ssfx_terrain_pom);

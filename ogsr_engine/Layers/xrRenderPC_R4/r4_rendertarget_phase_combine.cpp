@@ -17,6 +17,10 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
             t_LUM_dest->surface_set(rt_LUM_pool[1]->pSurface);
     }
 
+    // OP22 (SSS 23): лучи прожекторов - размытие в уменьшенном разрешении и перенос в rt_Generic_3 (до сведения)
+    if (RImplementation.o.ssfx_volumetric && m_bHasActiveVolumetric_spot)
+        phase_ssfx_volumetric_blur(cmd_list);
+
     // OP22 (SSS 23, Ascii1457; перенос из xray-monolith / SSS UPDATE 23.2): AO и IL отдельными проходами до combine_1.
     // Матрицы текущего/прошлого кадра - для учёта прошлого кадра в шейдерах (как Matrix_current/previous в monolith).
     if (ps_op22_ssfx_ao_pass || ps_op22_ssfx_il_pass)
@@ -158,6 +162,14 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
 
         HW.get_context(CHW::IMM_CTX_ID)->CopyResource(rt_Generic_0->pSurface, rt_Generic_scene_scratch->pSurface);
     }
+
+    // OP22 (SSS 23): обычная вода - отражения в уменьшенном разрешении, размытие, волны и сама вода (до прямого прохода)
+    if (RImplementation.o.ssfx_water)
+        phase_ssfx_water(cmd_list);
+
+    // OP22 (SSS 23): кадр для преломления стекла - уже с водой (как copy_glass xray-monolith)
+    if (RImplementation.o.ssfx_glass)
+        HW.get_context(cmd_list.context_id)->CopyResource(rt_Generic_0_temp->pSurface, rt_Generic_0->pSurface);
 
     // Forward rendering
     {
@@ -597,6 +609,9 @@ void CRenderTarget::render_flare(CBackend& cmd_list, light* L)
 
 // Экранный прямоугольник: вьюпорт vw x vh пикселей, текстурные координаты 0..uv (как p1 = 1/ScaleFactor в monolith -
 // шейдеры SSS сами умножают tc на ao_setup.x, а hpos - пиксель уменьшенного вьюпорта).
+// OP22 (3.258): вершины - сразу в пространстве отсечения (-1..1), как TriangleGeom: stub_screen_space.vs OGSR
+// передаёт HPos без перевода (у monolith он переводит пиксели через screen_res). В 3.256-3.257 здесь были пиксели
+// (0..vw) - прямоугольник закрывал только угол вьюпорта, проходы AO/IL SSS 23 почти не работали.
 void CRenderTarget::op22_ssfx_quad(CBackend& cmd_list, const ref_rt& rt, ref_selement& sh, float vw, float vh, float uv, const std::function<void()>& lambda)
 {
     u32 Offset = 0;
@@ -611,13 +626,13 @@ void CRenderTarget::op22_ssfx_quad(CBackend& cmd_list, const ref_rt& rt, ref_sel
     cmd_list.set_Stencil(FALSE);
 
     FVF::TL* pv = (FVF::TL*)RImplementation.Vertex.Lock(4, g_combine->vb_stride, Offset);
-    pv->set(0, vh, d_Z, d_W, C, 0.f, uv);
+    pv->set(-1.f, -1.f, d_Z, d_W, C, 0.f, uv); // низ слева
     pv++;
-    pv->set(0, 0, d_Z, d_W, C, 0.f, 0.f);
+    pv->set(-1.f, 1.f, d_Z, d_W, C, 0.f, 0.f); // верх слева
     pv++;
-    pv->set(vw, vh, d_Z, d_W, C, uv, uv);
+    pv->set(1.f, -1.f, d_Z, d_W, C, uv, uv); // низ справа
     pv++;
-    pv->set(vw, 0, d_Z, d_W, C, uv, 0.f);
+    pv->set(1.f, 1.f, d_Z, d_W, C, uv, 0.f); // верх справа
     pv++;
     RImplementation.Vertex.Unlock(4, g_combine->vb_stride);
 
@@ -664,6 +679,120 @@ void CRenderTarget::phase_ssfx_ao(CBackend& cmd_list)
         });
     }
 
+    cmd_list.SetViewport({0.f, 0.f, w, h, 0.f, 1.f});
+}
+
+// OP22 (SSS 23): вода. Перенос phase_combine (блок [SSFX] Water), phase_ssfx_water_blur, phase_ssfx_water_waves
+// (xray-monolith rendertarget_phase_blur.cpp; SSS UPDATE 23.2, Ascii1457) под CBackend OGSR.
+// rt_ssfx_temp - отражения (1/ssfx_water.x), затем итог размытия в левой верхней четверти (шейдер воды читает tc / 2);
+// rt_ssfx_water - кадр отражений для учёта прошлого; rt_ssfx_water_waves - высоты волн для параллакса.
+void CRenderTarget::phase_ssfx_water(CBackend& cmd_list)
+{
+    auto& dsgraph = RImplementation.get_imm_context();
+    if (dsgraph.mapWater.empty())
+        return;
+
+    PIX_EVENT(phase_ssfx_water);
+
+    const float w = float(rt_ssfx_temp->dwWidth);
+    const float h = float(rt_ssfx_temp->dwHeight);
+    const float k = std::clamp(ps_ssfx_water.x, 1.0f, 8.0f);
+    auto& Env = g_pGamePersistent->Environment();
+
+    // матрицы текущего/прошлого кадра для учёта прошлого кадра отражений (как Matrix_current/previous monolith)
+    static Fmatrix m_saved_viewproj;
+    Fmatrix m_previous, m_current;
+    m_previous.mul(m_saved_viewproj, Device.mInvView);
+    m_current.set(Device.mProject);
+    m_saved_viewproj.set(Device.mFullTransform);
+
+    Fcolor clear_color;
+    clear_color.set(0.f, 0.f, 0.f, 1.f);
+    cmd_list.ClearRT(rt_ssfx_temp->pRT, clear_color);
+    cmd_list.ClearRT(rt_ssfx_temp2->pRT, clear_color);
+
+    // 1. отражения воды в 1/k разрешения (без буфера глубины, как в monolith)
+    {
+        PIX_EVENT(phase_ssfx_water_ssr);
+        u_setrt(cmd_list, rt_ssfx_temp->dwWidth, rt_ssfx_temp->dwHeight, rt_ssfx_temp->pRT, nullptr, nullptr, nullptr);
+        cmd_list.SetViewport({0.f, 0.f, w / k, h / k, 0.f, 1.f});
+        cmd_list.set_CullMode(CULL_CCW);
+        cmd_list.set_Stencil(FALSE);
+        cmd_list.set_ColorWriteEnable();
+        cmd_list.set_xform_world(Fidentity);
+        dsgraph.r_dsgraph_render_water(s_ssfx_water_ssr->E[0]._get(), [&](CBackend& cl) {
+            cl.set_c("m_current", m_current);
+            cl.set_c("m_previous", m_previous);
+        });
+        cmd_list.SetViewport({0.f, 0.f, w, h, 0.f, 1.f});
+    }
+
+    // кадр отражений - для учёта прошлого в следующем кадре
+    HW.get_context(cmd_list.context_id)->CopyResource(rt_ssfx_water->pSurface, rt_ssfx_temp->pSurface);
+
+    // 2. размытие в половине разрешения: temp -> temp2 -> temp (или без размытия - копия)
+    {
+        PIX_EVENT(phase_ssfx_water_blur);
+        const float hw = w * 0.5f, hh = h * 0.5f;
+        if (ps_ssfx_water.y > 0)
+        {
+            op22_ssfx_quad(cmd_list, rt_ssfx_temp2, s_ssfx_water_blur->E[0], hw, hh, 0.5f, [&]() { cmd_list.set_c("blur_setup", 1.f, 0.f, 0.f, 2.0f / k); });
+            op22_ssfx_quad(cmd_list, rt_ssfx_temp, s_ssfx_water_blur->E[1], hw, hh, 0.5f, [&]() { cmd_list.set_c("blur_setup", 0.f, 1.f, 0.f, 1.0f); });
+        }
+        else
+        {
+            HW.get_context(cmd_list.context_id)->CopyResource(rt_ssfx_temp2->pSurface, rt_ssfx_temp->pSurface);
+            op22_ssfx_quad(cmd_list, rt_ssfx_temp, s_ssfx_water_blur->E[2], hw, hh, 0.5f, [&]() { cmd_list.set_c("blur_setup", 0.f, 0.f, 0.f, 2.0f / k); });
+        }
+    }
+
+    // 3. высоты волн 512x512 (параллакс воды)
+    {
+        PIX_EVENT(phase_ssfx_water_waves);
+        op22_ssfx_quad(cmd_list, rt_ssfx_water_waves, s_ssfx_water_blur->E[3], 512.f, 512.f, 1.0f,
+                       [&]() { cmd_list.set_c("wind_setup", Env.op22_wind_anim_w, Env.CurrentEnv->wind_velocity, 0.f, 0.f); });
+    }
+
+    // 4. сама вода поверх сцены (с буфером глубины)
+    {
+        PIX_EVENT(render_water);
+        u_setrt(cmd_list, rt_Generic_0, nullptr, nullptr, nullptr, rt_Base_Depth->pZRT[cmd_list.context_id]);
+        cmd_list.SetViewport({0.f, 0.f, w, h, 0.f, 1.f});
+        cmd_list.set_CullMode(CULL_CCW);
+        cmd_list.set_Stencil(FALSE);
+        cmd_list.set_ColorWriteEnable();
+        cmd_list.set_xform_world(Fidentity);
+        dsgraph.r_dsgraph_render_water(s_ssfx_water->E[0]._get(), [&](CBackend& cl) {
+            cl.set_c("wind_setup", Env.CurrentEnv->wind_direction, Env.CurrentEnv->wind_velocity, 0.f, 0.f);
+        });
+    }
+
+    dsgraph.mapWater.clear();
+}
+
+// OP22 (SSS 23): размытие лучей прожекторов (phase_ssfx_volumetric_blur SSS UPDATE 23.2, Ascii1457): 4 прохода
+// vol -> tmp -> vol -> tmp -> vol в уменьшенном разрешении, затем перенос с растяжением в rt_Generic_3
+// (его сводит combine_volumetric OGSR вместе с солнечными лучами rt_Generic_2).
+void CRenderTarget::phase_ssfx_volumetric_blur(CBackend& cmd_list)
+{
+    PIX_EVENT(phase_ssfx_volumetric_blur);
+
+    const float vw = float(rt_ssfx_volumetric->dwWidth);
+    const float vh = float(rt_ssfx_volumetric->dwHeight);
+    const int pixelsize[4] = {0, 1, 1, 2}; // как в SSS 23: полпикселя + размер
+    const float pixelscale[4] = {2.0f, 0.5f, 2.0f, 0.5f};
+
+    for (int b = 0; b < 4; b++)
+    {
+        const ref_rt& dst = (b % 2 == 0) ? rt_ssfx_volumetric_tmp : rt_ssfx_volumetric;
+        op22_ssfx_quad(cmd_list, dst, s_ssfx_volumetric_blur->E[b % 2], vw, vh, 1.0f,
+                       [&]() { cmd_list.set_c("blur_setup", vw, vh, float(pixelsize[b]), pixelscale[b]); });
+    }
+
+    // перенос в полный кадр (rt_Generic_3 содержит только лучи прожекторов - их теперь пишут сюда)
+    const float w = float(rt_Generic_3->dwWidth);
+    const float h = float(rt_Generic_3->dwHeight);
+    op22_ssfx_quad(cmd_list, rt_Generic_3, s_ssfx_volumetric_blur->E[2], w, h, 1.0f, []() {});
     cmd_list.SetViewport({0.f, 0.f, w, h, 0.f, 1.f});
 }
 

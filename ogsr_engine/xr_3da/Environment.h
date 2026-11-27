@@ -287,6 +287,7 @@ public:
 	float wetness_factor;
 
     Fvector3 wind_anim{}, wind_anim_old{};
+    float op22_wind_anim_w{}; // OP22 (SSS 23): время анимации воды (wind_anim.w SSS 23)
 
     // wind blast params
     float wind_blast_strength;

@@ -92,6 +92,9 @@ void CRender::create()
     o.distortion_enabled = TRUE; // !strstr(Core.Params, "-nodistort");
     o.distortion = o.distortion_enabled;
     o.disasm = (strstr(Core.Params, "-disasm")) ? TRUE : FALSE;
+    o.ssfx_water = ps_op22_ssfx_water ? TRUE : FALSE; // OP22 (SSS 23)
+    o.ssfx_volumetric = ps_op22_ssfx_volumetric ? TRUE : FALSE;
+    o.ssfx_glass = ps_op22_ssfx_glass ? TRUE : FALSE;
 
     o.dx11_enable_tessellation = HW.FeatureLevel >= D3D_FEATURE_LEVEL_11_0 && ps_r2_ls_flags_ext.test(R2FLAGEXT_ENABLE_TESSELLATION);
 
@@ -692,6 +695,8 @@ HRESULT CRender::shader_compile(LPCSTR name, DWORD const* pSrcData, UINT SrcData
     char c_ssfx_terrain_pom_refine[10]{};
     char c_ssfx_ao_quality[10]{}; // OP22 (SSS 23)
     char c_ssfx_il_quality[10]{};
+    char c_ssfx_water_quality[10]{};
+    char c_ssfx_water_parallax[10]{};
 
     {
         sprintf_s(c_smapsize, "%d", m_SMAPSize);
@@ -801,6 +806,14 @@ HRESULT CRender::shader_compile(LPCSTR name, DWORD const* pSrcData, UINT SrcData
     defines.emplace_back("SSFX_IL_QUALITY", c_ssfx_il_quality);
     appendShaderOption(ps_op22_ssfx_ao_pass, "SSFX_AO_PASS", "1");
     appendShaderOption(ps_op22_ssfx_il_pass, "SSFX_IL_PASS", "1");
+
+    // OP22 (SSS 23): вода - качество отражений и параллакса волн
+    sprintf_s(c_ssfx_water_quality, "%d", u8(std::clamp(ps_ssfx_water_quality.x, 0.0f, 4.0f)));
+    defines.emplace_back("SSFX_WATER_QUALITY", c_ssfx_water_quality);
+    sprintf_s(c_ssfx_water_parallax, "%d", u8(std::clamp(ps_ssfx_water_quality.y, 0.0f, 3.0f)));
+    defines.emplace_back("SSFX_WATER_PARALLAX", c_ssfx_water_parallax);
+    // OP22 (SSS 23): объёмный свет - число шагов луча из ssfx_volumetric.z (combine_peak.ps слоя)
+    appendShaderOption(o.ssfx_volumetric, "SSFX_VOLUMETRIC_PASS", "1");
 
     appendShaderOption(ps_r2_ls_flags.test(R2FLAGEXT_SSFX_INTER_GRASS), "SSFX_INTER_GRASS", "1");
 

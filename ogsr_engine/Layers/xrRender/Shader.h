@@ -121,6 +121,7 @@ public:
         u32 bWmark : 1;
         u32 iScopeLense : 1;
         u32 bTreeBranch : 1 {};
+        u32 isWater : 1 {}; // OP22 (SSS 23): обычная вода (effects_water) - отдельная очередь mapWater
     };
 
 public:

@@ -94,6 +94,10 @@
 #define r2_RT_ssfx_il "$user$ssfx_il" // IL - кадр для учёта прошлого
 #define r2_RT_ssfx_prevPos "$user$ssfx_prev_p" // позиции прошлого кадра
 #define r2_RT_ssfx_motion_vectors "$user$ssfx_motion_vectors" // OP22: векторы движения в формате SSS (из rt_Velocity)
+#define r2_RT_ssfx_water "$user$ssfx_water" // OP22 (SSS 23): отражения воды - кадр для учёта прошлого
+#define r2_RT_ssfx_water_waves "$user$ssfx_water_waves" // OP22 (SSS 23): карта высот волн 512x512
+#define r2_RT_ssfx_volumetric "$user$ssfx_volumetric" // OP22 (SSS 23): объёмный свет прожекторов в 1/ssfx_volumetric.w
+#define r2_RT_ssfx_volumetric_tmp "$user$ssfx_volumetric_tmp"
 
 constexpr const char* c_sbase = "s_base";
 

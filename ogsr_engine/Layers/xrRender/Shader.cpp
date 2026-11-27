@@ -95,6 +95,7 @@ ShaderElement::ShaderElement()
     flags.bDistort = FALSE;
     flags.bWmark = FALSE;
     flags.iScopeLense = FALSE;
+    flags.isWater = FALSE;
 }
 
 BOOL ShaderElement::equal(ShaderElement& S)
@@ -110,6 +111,8 @@ BOOL ShaderElement::equal(ShaderElement& S)
     if (flags.iScopeLense != S.flags.iScopeLense)
         return FALSE;
     if (flags.bDistort != S.flags.bDistort)
+        return FALSE;
+    if (flags.isWater != S.flags.isWater)
         return FALSE;
     if (passes.size() != S.passes.size())
         return FALSE;
