@@ -444,6 +444,7 @@ public:
     // OP22: модель рук, кость крепления предмета и её переход модель -> мир (камера за действием)
     void op22_hands_ref(u16 slot, IKinematics*& K, u16& bone, Fmatrix& xf);
     void op22_vary(u16 slot, float v) { if (slot < 2) m_op22_hands_filter[slot].var = v; } // OP22: жёсткость рук на действие
+    const op22_bone_filter* op22_hands_filter(u16 slot) const { return slot < 2 ? &m_op22_hands_filter[slot] : nullptr; } // OP22: трасса
 
 private:
     static void Thumb0Callback(CBoneInstance* B);

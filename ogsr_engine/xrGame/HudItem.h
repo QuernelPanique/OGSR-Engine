@@ -332,6 +332,30 @@ private:
     float m_op22_burst{}, m_op22_sag{}, m_op22_prev_zoom{}; // очередь (усталость плеча), прицеливание по дуге
     void op22_UpdateProcedural(Fvector& offs, Fvector& rot, bool aiming, u32 moving_state);
 
+    // OP22 (27.11, 3.251): походка от шагов вместо синусоиды (op22_hud_gait)
+    float m_op22_gait_phase{}, m_op22_gait_period{0.55f}, m_op22_gait_side{1.f}, m_op22_gait_amp{1.f}, m_op22_gait_last{-1.f};
+    float m_op22_gait_on{}, m_op22_gait_on_v{};
+    u32 m_op22_gait_n{};
+    Fvector m_op22_gait_out[2]{}, m_op22_gait_out_v[2]{}; // смещение и поворот походки после сглаживания
+    void op22_GaitBob(Fmatrix& m, Fmatrix& m2, u32 mstate, float amp);
+    // мягкие переходы поз (op22_hud_soft): стрейф, наклон, прыжок, присед, ходьба, стена
+    Fvector m_op22_soft_v[6][2]{};
+    void op22_Ease(Fvector& cur, Fvector& vel, const Fvector& tgt, float T, float zeta);
+    // крен при повороте мышью и усилие руки (op22_hud_bank)
+    Fvector m_op22_prev_dir{};
+    float m_op22_turn{}, m_op22_bank{}, m_op22_bank_v{}, m_op22_effort{};
+    // моторика: прерывистые поправки руки вместо плавного блуждания (op22_hud_motor)
+    float m_op22_mc_c[4]{}, m_op22_mc_c0[4]{}, m_op22_mc_c1[4]{}, m_op22_mc_t{}, m_op22_mc_dur{}, m_op22_mc_next{0.3f};
+    // тело: усталость руки в прицеле, задержка дыхания при вскидке (op22_body_state)
+    float m_op22_ads_hold{}, m_op22_breath_hold_t{}, m_op22_breath_mul{1.f};
+    bool m_op22_full_prev{};
+    // точка опоры поворотов (op22_hud_pivot): плечо/кисть от бедра и в прицеле, оси худа
+    Fvector m_op22_pivot[2]{};
+    // трасса (op22_hud_trace): события кадра и имя начатой анимации
+    u32 m_op22_ev{};
+    string64 m_op22_ev_anm{};
+    void op22_TraceWrite(const Fmatrix& trans, const Fvector& offs, const Fvector& rot, u32 mstate);
+
     float m_base_fov{};
 
     bool allow_bobbing{true};

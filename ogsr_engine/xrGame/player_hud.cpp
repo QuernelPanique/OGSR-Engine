@@ -322,13 +322,18 @@ void attachable_hud_item::update(bool bForce)
         u16 bone = BI_NONE;
         Fmatrix xf;
         if (m_has_separated_hands)
+        {
             m_parent->op22_hands_ref(0, K, bone, xf);
+            g_op22_trace_ref.f = m_parent->op22_hands_filter(0);
+        }
         else
         {
             K = m_model;
             bone = m_measures.m_fire_bone;
             xf.set(m_item_transform);
+            g_op22_trace_ref.f = &m_op22_filter;
         }
+        g_op22_trace_ref.bone = bone;
         CWeapon* W = smart_cast<CWeapon*>(m_parent_hud_item);
         const bool firing = W && (W->GetState() == CWeapon::eFire || W->GetState() == CWeapon::eFire2);
         const bool moving = Actor() && (Actor()->MovingState() & ACTOR_DEFS::mcAnyMove);

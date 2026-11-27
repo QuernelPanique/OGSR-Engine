@@ -277,6 +277,14 @@ void op22_register_console()
         add(xr_new<CCC_Float>("op22_hud_steps", &g_op22_hud_steps, 0.f, 3.f));
         add(xr_new<CCC_Float>("op22_hud_hit", &g_op22_hud_hit, 0.f, 3.f));
         add(xr_new<CCC_Float>("op22_ads_arc", &g_op22_ads_arc, 0.f, 3.f));
+        // OP22 (27.11, 3.251): походка от шагов, мягкие переходы поз, крен при повороте, опора поворотов, моторика руки, трасса
+        extern float g_op22_hud_gait, g_op22_hud_soft, g_op22_hud_bank, g_op22_hud_pivot, g_op22_hud_motor, g_op22_hud_trace;
+        add(xr_new<CCC_Float>("op22_hud_gait", &g_op22_hud_gait, 0.f, 3.f));
+        add(xr_new<CCC_Float>("op22_hud_soft", &g_op22_hud_soft, 0.f, 3.f));
+        add(xr_new<CCC_Float>("op22_hud_bank", &g_op22_hud_bank, 0.f, 3.f));
+        add(xr_new<CCC_Float>("op22_hud_pivot", &g_op22_hud_pivot, 0.f, 2.f));
+        add(xr_new<CCC_Float>("op22_hud_motor", &g_op22_hud_motor, 0.f, 2.f));
+        add(xr_new<CCC_Float>("op22_hud_trace", &g_op22_hud_trace, 0.f, 1.f));
     }
     str("bolt_visual", "bolt");
     str("hc_unarmed", "");

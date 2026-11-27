@@ -15,6 +15,8 @@ struct op22_bone_filter
     xr_vector<Fvector> pos, vel; // положение кости и скорость, пространство модели
     xr_vector<Fvector4> rot, avel; // кватернион кости как 4-вектор и его скорость
     xr_vector<Fmatrix> out; // результат кадра (для повторного расчёта костей в том же кадре)
+    xr_vector<Fvector> tp, raw; // OP22 (27.11): цель после предфильтра (плавный старт) и сырая поза анимации (трасса)
+    xr_vector<Fvector4> tq;
     const void* owner{};
     u16 count{};
     u32 frame{u32(-1)};
@@ -25,6 +27,16 @@ extern float g_op22_hud_smooth;
 extern float g_op22_cam_follow;
 extern float g_op22_hud_variety; // OP22 (27.11): манера действия, 0 - выкл
 extern float g_op22_body_state; // OP22 (27.11): влияние состояния тела на дыхание и тремор, 0 - выкл
+extern float g_op22_hud_motor; // OP22 (27.11): моторика руки - плавный старт поз, поправки вместо «звона», 0 - как 3.250
+extern float g_op22_hud_trace; // OP22 (27.11): запись траектории худа в userdata/logs, 0 - выкл
+
+// OP22 (27.11): какая кость пишется в трассу (основной предмет; ставит player_hud раз в кадр)
+struct op22_trace_ref
+{
+    const op22_bone_filter* f{};
+    u16 bone{u16(-1)};
+};
+extern op22_trace_ref g_op22_trace_ref;
 
 // после CalculateBones модели худа: фильтр поз; weight - масса предмета в руках, кг
 void op22_hud_filter_bones(IKinematics* K, op22_bone_filter& f, float weight);

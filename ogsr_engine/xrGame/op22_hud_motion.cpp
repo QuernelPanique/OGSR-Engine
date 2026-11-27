@@ -12,6 +12,9 @@ float g_op22_hud_smooth = 1.f;
 float g_op22_cam_follow = 1.f;
 float g_op22_hud_variety = 1.f;
 float g_op22_body_state = 1.f;
+float g_op22_hud_motor = 1.f;
+float g_op22_hud_trace = 0.f;
+op22_trace_ref g_op22_trace_ref;
 
 #define eCEOp22Follow ((ECamEffectorType)(cefNext + 40))
 
@@ -58,6 +61,9 @@ void snap(IKinematics* K, op22_bone_filter& f, u16 i)
     quat_of(T, f.rot[i]);
     f.avel[i].set(0.f, 0.f, 0.f, 0.f);
     f.out[i].set(T);
+    f.tp[i].set(T.c);
+    f.raw[i].set(T.c);
+    f.tq[i].set(f.rot[i]);
 }
 } // namespace
 
@@ -88,6 +94,9 @@ void op22_hud_filter_bones(IKinematics* K, op22_bone_filter& f, float weight)
         f.rot.resize(n);
         f.avel.resize(n);
         f.out.resize(n);
+        f.tp.resize(n);
+        f.raw.resize(n);
+        f.tq.resize(n);
         for (u16 i = 0; i < n; ++i)
             snap(K, f, i);
         f.frame = Device.dwFrame;
@@ -100,9 +109,14 @@ void op22_hud_filter_bones(IKinematics* K, op22_bone_filter& f, float weight)
     clamp(hz, 5.f, 11.f);
     hz *= f.var; // у каждого действия своя «рука»
     hz /= g_op22_hud_smooth;
-    const float w = PI_MUL_2 * hz, k = w * w, c = 2.f * OP22_POSE_ZETA * w;
+    // OP22 (27.11): моторика - 3-й порядок: цель сперва проходит короткий сглаживатель (~1/10 периода), поэтому ускорение
+    // нарастает плавно (скорость - «колоколом», как у руки), а не скачком; затухание выше - без звона на одной частоте
+    const float motor = _min(_max(g_op22_hud_motor, 0.f), 2.f);
+    const float zeta = OP22_POSE_ZETA + 0.07f * _min(motor, 1.f);
+    const float w = PI_MUL_2 * hz, k = w * w, c = 2.f * zeta * w;
     const int steps = _max(1, iCeil(dt / OP22_STEP));
     const float h = dt / steps;
+    const float pre = motor > 0.f ? 1.f - std::exp(-h * w * 1.6f / motor) : 1.f; // доля шага предфильтра
 
     for (u16 i = 0; i < n; ++i)
     {
@@ -120,19 +134,26 @@ void op22_hud_filter_bones(IKinematics* K, op22_bone_filter& f, float weight)
             snap(K, f, i);
             continue;
         }
+        f.raw[i].set(tp);
         Fvector& p = f.pos[i];
         Fvector& v = f.vel[i];
+        Fvector& sp = f.tp[i];
+        Fvector4& sq = f.tq[i];
+        if (dot4(sq, tq) < 0.f)
+            sq.set(-sq.x, -sq.y, -sq.z, -sq.w);
         for (int s = 0; s < steps; ++s)
         {
+            sp.lerp(sp, tp, pre);
+            sq.set(sq.x + (tq.x - sq.x) * pre, sq.y + (tq.y - sq.y) * pre, sq.z + (tq.z - sq.z) * pre, sq.w + (tq.w - sq.w) * pre);
             // положение: x'' = k (цель - x) - c x'
             Fvector a;
-            a.sub(tp, p).mul(k);
+            a.sub(sp, p).mul(k);
             a.mad(v, -c);
             v.mad(a, h);
             p.mad(v, h);
             // поворот: та же пружина на единичной сфере кватернионов (малые углы - точная угловая пружина)
             Fvector4 aq;
-            aq.set(k * (tq.x - q.x) - c * av.x, k * (tq.y - q.y) - c * av.y, k * (tq.z - q.z) - c * av.z, k * (tq.w - q.w) - c * av.w);
+            aq.set(k * (sq.x - q.x) - c * av.x, k * (sq.y - q.y) - c * av.y, k * (sq.z - q.z) - c * av.z, k * (sq.w - q.w) - c * av.w);
             av.set(av.x + aq.x * h, av.y + aq.y * h, av.z + aq.z * h, av.w + aq.w * h);
             q.set(q.x + av.x * h, q.y + av.y * h, q.z + av.z * h, q.w + av.w * h);
             const float len = _sqrt(dot4(q, q));

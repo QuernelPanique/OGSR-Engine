@@ -19,8 +19,10 @@
 #include "../xr_3da/x_ray.h"
 #include "../../xr_3da/igame_persistent.h"
 #include "Pda.h"
+#include <ctime>
 
 ENGINE_API extern float psHUD_FOV_def;
+extern float g_op22_hud_soft, g_op22_hud_gait, g_op22_hud_bank, g_op22_hud_pivot; // OP22 (27.11, 3.251): ниже в файле
 
 CHudItem::CHudItem()
 {
@@ -106,6 +108,31 @@ void CHudItem::Load(LPCSTR section)
         m_base_fov = READ_IF_EXISTS(pSettings, r_float, section, "hud_fov", 0.0f);
 
     m_nearwall_last_hud_fov = m_base_fov > 0.0f ? m_base_fov : psHUD_FOV_def;
+
+    // OP22 (27.11, 3.251): точка опоры поворотов рук (op22_hud_pivot), оси худа (x вправо, y вверх, z вперёд, 0 - глаз):
+    // винтовка - приклад в плече, пистолет - кисть, остальное - кисть руки; в прицеле опора ближе к линии глаза
+    switch (GetWeaponTypeForCollision())
+    {
+    case Pistol:
+        m_op22_pivot[0].set(0.06f, -0.13f, 0.22f);
+        m_op22_pivot[1].set(0.f, -0.06f, 0.24f);
+        break;
+    case RPG:
+        m_op22_pivot[0].set(0.05f, -0.05f, 0.f);
+        m_op22_pivot[1].set(0.f, -0.03f, -0.02f);
+        break;
+    case Bolt:
+    case Detector:
+    case Knife_and_other:
+    case Binocular:
+        m_op22_pivot[0].set(0.07f, -0.15f, 0.20f);
+        m_op22_pivot[1].set(0.035f, -0.08f, 0.15f);
+        break;
+    default:
+        m_op22_pivot[0].set(0.08f, -0.16f, 0.f);
+        m_op22_pivot[1].set(0.f, -0.10f, -0.04f);
+        break;
+    }
 
     ////////////////////////////////////////////
     m_strafe_offset[0][0] = READ_IF_EXISTS(pSettings, r_fvector3, section, "strafe_hud_offset_pos", (Fvector{0.025f, 0.f, 0.f}));
@@ -781,11 +808,20 @@ void CHudItem::UpdateCollision(Fmatrix& trans)
     //curr_offs.mul(wpn && !wpn->LoweredActive);
     //curr_rot.mul(wpn && !wpn->LoweredActive);
 
-    if (!curr_offs.similar(m_nearwall_last_pos, EPS))
-        m_nearwall_last_pos.lerp(m_nearwall_last_pos, curr_offs, fStepPerUpd);
-
-    if (!curr_rot.similar(m_nearwall_last_rot, EPS))
-        m_nearwall_last_rot.lerp(m_nearwall_last_rot, curr_rot, fStepPerUpd);
+    if (g_op22_hud_soft > 0.f) // OP22 (27.11, 3.251): ствол у стены поднимается/опускается с разгоном и торможением
+    {
+        op22_Ease(m_nearwall_last_pos, m_op22_soft_v[5][0], curr_offs, m_nearwall_hud_offset_speed * 1.5f, 0.9f);
+        op22_Ease(m_nearwall_last_rot, m_op22_soft_v[5][1], curr_rot, m_nearwall_hud_offset_speed * 1.5f, 0.9f);
+    }
+    else
+    {
+        m_op22_soft_v[5][0].set(0.f, 0.f, 0.f);
+        m_op22_soft_v[5][1].set(0.f, 0.f, 0.f);
+        if (!curr_offs.similar(m_nearwall_last_pos, EPS))
+            m_nearwall_last_pos.lerp(m_nearwall_last_pos, curr_offs, fStepPerUpd);
+        if (!curr_rot.similar(m_nearwall_last_rot, EPS))
+            m_nearwall_last_rot.lerp(m_nearwall_last_rot, curr_rot, fStepPerUpd);
+    }
 
     Fmatrix hud_rotation;
     hud_rotation.identity();
@@ -810,6 +846,11 @@ float g_op22_hud_inertion_spring = 1.f; // OP22 (27.11): инерция 2-го �
 float g_op22_hud_steps = 1.f; // OP22 (27.11): толчок рук на шаге, 0 - выкл
 float g_op22_hud_hit = 1.f; // OP22 (27.11): толчок рук от попадания, 0 - выкл
 float g_op22_ads_arc = 1.f; // OP22 (27.11): прицеливание по дуге и досыл, 0 - выкл
+// OP22 (27.11, 3.251): живость без смены анимаций - походка от шагов, мягкие переходы поз, крен при повороте, точка опоры
+float g_op22_hud_gait = 1.f; // походка от шагов вместо синусоиды покачивания оружия, 0 - прежнее покачивание
+float g_op22_hud_soft = 1.f; // мягкие (пружинные) переходы стрейфа/наклона/прыжка/приседа/ходьбы/стены, 0 - прежние
+float g_op22_hud_bank = 1.f; // крен оружия в сторону поворота мышью, 0 - выкл
+float g_op22_hud_pivot = 1.f; // повороты рук вокруг плеча/кисти, а не глаза, 0 - вокруг глаза
 
 // OP22: процедурная отдача и «дыхание» модели оружия в руках (22.11, решение пользователя; отключаемо).
 // Только вид модели худа: камера, разброс и пули - как в ОП (отдача камеры on_weapon_shot_start не меняется).
@@ -866,6 +907,11 @@ IC float op22_noise(float x, int seed)
 
 void CHudItem::op22_OnHudAnim(const char* anm)
 {
+    if (anm)
+    {
+        xr_strcpy(m_op22_ev_anm, anm); // трасса
+        m_op22_ev |= 2;
+    }
     // anm = nullptr - покой/прицел/ходьба: поза возвращается
     if (!anm || g_op22_hud_variety <= 0.f)
     {
@@ -880,12 +926,36 @@ void CHudItem::op22_OnHudAnim(const char* anm)
 
 void CHudItem::op22_HudStep(int leg, float power)
 {
-    if (g_op22_hud_steps <= 0.f)
-        return;
+    m_op22_ev |= 1;
     u32 ms = 0;
     if (const CActor* pA = Actor())
         ms = pA->MovingState();
-    float s = _min(power, 1.f) * g_op22_hud_steps;
+
+    // OP22 (27.11, 3.251): походка идёт от настоящих шагов - фаза сбрасывается на ударе пятки, период - по интервалу
+    // между шагами, сила каждого шага своя (люди не шагают одинаково)
+    {
+        const float t = Device.fTimeGlobal, d = t - m_op22_gait_last;
+        if (d > 0.18f && d < 1.2f)
+            m_op22_gait_period = m_op22_gait_period * 0.5f + d * 0.5f;
+        m_op22_gait_last = t;
+        m_op22_gait_phase = 0.f;
+        m_op22_gait_side = (leg & 1) ? 1.f : -1.f;
+        m_op22_gait_amp = 1.f + ::Random.randFs(0.15f);
+        ++m_op22_gait_n;
+        // дыхание на бегу ложится на шаг (вдох - на каждый второй шаг), если дыхание сбито
+        if (g_op22_body_state > 0.f && (m_op22_gait_n & 1) == 0)
+        {
+            const float c = _min(1.f, m_op22_excite * g_op22_body_state + ((ms & mcSprint) ? 0.6f : 0.f));
+            const float ph = m_op22_breath_phase > 0.5f ? m_op22_breath_phase - 1.f : m_op22_breath_phase;
+            m_op22_breath_phase -= ph * 0.3f * c;
+            if (m_op22_breath_phase < 0.f)
+                m_op22_breath_phase += 1.f;
+        }
+    }
+
+    if (g_op22_hud_steps <= 0.f)
+        return;
+    float s = _min(power, 1.f) * g_op22_hud_steps * (g_op22_hud_gait > 0.f ? 0.5f : 1.f); // с походкой - только «вес» удара
     if (ms & mcSprint)
         s *= 1.35f;
     else if (ms & mcCrouch)
@@ -901,6 +971,7 @@ void CHudItem::op22_HudStep(int leg, float power)
 
 void CHudItem::op22_HudHitKick(const Fvector& dir, float power)
 {
+    m_op22_ev |= 4;
     if (g_op22_hud_hit <= 0.f || power <= 0.f)
         return;
     // направление удара в осях камеры: руки и ствол уводит по удару
@@ -916,6 +987,7 @@ void CHudItem::op22_HudHitKick(const Fvector& dir, float power)
 
 void CHudItem::op22_HudRecoilKick(float strength)
 {
+    m_op22_ev |= 8;
     if (g_op22_wpn_recoil <= 0.f || strength <= 0.f)
         return;
     // OP22 (27.11): очередь - первый выстрел резче (стойка «ломается»), дальше плечо устаёт и оседает (m_op22_sag)
@@ -981,17 +1053,58 @@ void CHudItem::op22_UpdateProcedural(Fvector& offs, Fvector& rot, bool aiming, u
         m_op22_prev_zoom = zf;
     }
 
+    // OP22 (27.11, 3.251): крен в сторону поворота мышью (как оружие в руке при резком довороте корпуса) и «усилие» руки:
+    // после резкого поворота/остановки тремор на миг сильнее
+    {
+        const Fvector& d = Device.vCameraDirection;
+        float wy = 0.f;
+        if (dt > EPS_L && m_op22_prev_dir.square_magnitude() > 0.5f)
+        {
+            Fvector cr;
+            cr.crossproduct(m_op22_prev_dir, d);
+            wy = cr.dotproduct(Device.vCameraTop) / dt; // рад/с, + вправо
+            clamp(wy, -12.f, 12.f);
+        }
+        m_op22_prev_dir.set(d);
+        if (dt > EPS_L)
+        {
+            m_op22_turn += (wy - m_op22_turn) * (1.f - std::exp(-dt / 0.05f));
+            float tgt = 0.f;
+            if (g_op22_hud_bank > 0.f)
+            {
+                tgt = -m_op22_turn * 0.016f * g_op22_hud_bank * (aiming ? 0.3f : 1.f);
+                clamp(tgt, -deg2rad(4.f), deg2rad(4.f));
+            }
+            const float w = PI_MUL_2 * 2.6f, kk = w * w, c = 2.f * 0.7f * w;
+            const int n = _max(1, iCeil(dt / 0.004f));
+            const float h = dt / n;
+            for (int i = 0; i < n; ++i)
+            {
+                m_op22_bank_v += (kk * (tgt - m_op22_bank) - c * m_op22_bank_v) * h;
+                m_op22_bank += m_op22_bank_v * h;
+            }
+            const float e = _min(1.f, _abs(m_op22_turn) / 5.f);
+            if (e > m_op22_effort)
+                m_op22_effort += (e - m_op22_effort) * (1.f - std::exp(-dt / 0.15f));
+            else
+                m_op22_effort *= std::exp(-dt / 1.2f);
+        }
+        rot.z += m_op22_bank;
+    }
+
     // OP22 (27.11): живое «дыхание» вместо фигуры Лиссажу - дыхательный цикл с паузой, медленный дрейф и тремор плавным
     // шумом (без регулярности, которую ловит глаз); сила - от состояния тела (op22_body_state): сбитое дыхание после
     // бега, усталость, здоровье, перегруз. Только вид модели: меткость и разброс - как в ОП.
+    // 3.251: всё из одной модели тела - присед устойчивее, рука в прицеле устаёт, при вскидке дыхание задерживается,
+    // блуждание руки гасится прерывистыми поправками (как рука ловит цель), а не плавно.
     if (g_op22_wpn_breath > 0.f && smart_cast<CWeapon*>(this))
     {
         m_op22_breath_t += dt;
         const float t = m_op22_breath_t;
+        const float bs = g_op22_body_state;
         float fatigue = 0.f, wound = 0.f;
         if (CActor* pA = Actor())
         {
-            const float bs = g_op22_body_state;
             if (moving_state & mcSprint)
                 m_op22_excite += dt / 4.f; // ~4 с бега - дыхание сбито полностью
             else
@@ -1003,13 +1116,41 @@ void CHudItem::op22_UpdateProcedural(Fvector& offs, Fvector& rot, bool aiming, u
                 fatigue += _min(1.f, load - 1.f) * 0.5f * bs;
             wound = _sqr(1.f - pA->conditions().GetHealth()) * bs;
         }
-        const float excite = m_op22_excite * g_op22_body_state;
+        const float excite = m_op22_excite * bs;
         float k = g_op22_wpn_breath * (aiming ? 0.5f : 1.f);
         if (moving_state & mcAnyMove)
             k *= 0.5f;
 
+        // тело: присед устойчивее; рука, долго держащая прицел, устаёт (~12 с), отдыхает за ~4 с
+        float kc = 1.f;
+        if (bs > 0.f)
+        {
+            if (moving_state & mcCrouch)
+                kc = (moving_state & mcAccel) ? 0.6f : 0.75f;
+            if (aiming)
+                m_op22_ads_hold = _min(1.f, m_op22_ads_hold + dt / 12.f);
+            else
+                m_op22_ads_hold = _max(0.f, m_op22_ads_hold - dt / 4.f);
+            // вскидка: на 1-2,5 с дыхание задерживается (после бега - короче), затем мягко возвращается
+            const bool full = m_fZoomRotationFactor >= 0.999f;
+            if (full && !m_op22_full_prev)
+                m_op22_breath_hold_t = (2.5f - 1.5f * _min(excite, 1.f)) * (1.f + ::Random.randFs(0.2f));
+            if (!aiming)
+                m_op22_breath_hold_t = 0.f;
+            m_op22_full_prev = full;
+            m_op22_breath_hold_t = _max(0.f, m_op22_breath_hold_t - dt);
+        }
+        else
+        {
+            m_op22_ads_hold = 0.f;
+            m_op22_breath_hold_t = 0.f;
+        }
+        const float bm_t = m_op22_breath_hold_t > 0.f ? 0.3f : 1.f;
+        m_op22_breath_mul += (bm_t - m_op22_breath_mul) * (1.f - std::exp(-dt / (bm_t < m_op22_breath_mul ? 0.35f : 0.9f)));
+        const float hold = 1.f + 0.7f * m_op22_ads_hold * bs;
+
         // дыхание: вдох ~40 % (ствол чуть поднимается), выдох ~45 %, пауза ~15 %; период плавает от вдоха к вдоху
-        m_op22_breath_phase += dt / m_op22_breath_period;
+        m_op22_breath_phase += dt / m_op22_breath_period * (0.25f + 0.75f * m_op22_breath_mul);
         if (m_op22_breath_phase >= 1.f)
         {
             m_op22_breath_phase -= 1.f;
@@ -1017,19 +1158,59 @@ void CHudItem::op22_UpdateProcedural(Fvector& offs, Fvector& rot, bool aiming, u
         }
         const float ph = m_op22_breath_phase;
         const float br = ph < 0.4f ? op22_smooth01(ph / 0.4f) : (ph < 0.85f ? 1.f - op22_smooth01((ph - 0.4f) / 0.45f) : 0.f);
-        const float ab = k * (1.f + 1.8f * excite + 0.8f * fatigue);
+        const float ab = k * (1.f + 1.8f * excite + 0.8f * fatigue) * m_op22_breath_mul;
         offs.y += 0.0016f * ab * br;
         rot.x -= deg2rad(0.22f) * ab * br; // минус - ствол вверх
 
         // дрейф: медленное блуждание рук (шум, не синус)
-        const float ad = k * (1.f + 1.5f * fatigue + 0.6f * excite);
-        offs.x += 0.0010f * ad * op22_noise(t * 0.33f, 11);
-        offs.y += 0.0007f * ad * op22_noise(t * 0.29f, 23);
-        rot.y += deg2rad(0.20f) * ad * op22_noise(t * 0.31f, 37);
-        rot.x += deg2rad(0.14f) * ad * op22_noise(t * 0.27f, 41);
+        const float ad = k * (1.f + 1.5f * fatigue + 0.6f * excite) * kc * hold;
+        const float motor = _min(_max(g_op22_hud_motor, 0.f), 2.f);
+        const float dscale = 1.f + 1.2f * _min(motor, 1.f); // поправки гасят часть блуждания - видимый размах как прежде
+        float D[4] = {0.0010f * ad * dscale * op22_noise(t * 0.33f, 11), 0.0007f * ad * dscale * op22_noise(t * 0.29f, 23),
+                      deg2rad(0.20f) * ad * dscale * op22_noise(t * 0.31f, 37), deg2rad(0.14f) * ad * dscale * op22_noise(t * 0.27f, 41)};
+        // моторика: рука не держит ствол идеально ровно и не плывёт плавно - она копит ошибку и раз в 0,3-0,6 с
+        // (в прицеле - чаще и точнее) делает короткую поправку с колоколом скорости (профиль минимального рывка)
+        if (motor > 0.f)
+        {
+            if (m_op22_mc_dur > 0.f)
+            {
+                m_op22_mc_t += dt;
+                float u = m_op22_mc_t / m_op22_mc_dur;
+                clamp(u, 0.f, 1.f);
+                const float sj = u * u * u * (10.f + u * (-15.f + 6.f * u));
+                for (int i = 0; i < 4; ++i)
+                    m_op22_mc_c[i] = m_op22_mc_c0[i] + (m_op22_mc_c1[i] - m_op22_mc_c0[i]) * sj;
+                if (u >= 1.f)
+                    m_op22_mc_dur = 0.f;
+            }
+            m_op22_mc_next -= dt;
+            if (m_op22_mc_next <= 0.f && m_op22_mc_dur <= 0.f)
+            {
+                const float g = aiming ? ::Random.randF(0.85f, 1.f) : ::Random.randF(0.6f, 0.9f); // недоводка, как у руки
+                for (int i = 0; i < 4; ++i)
+                {
+                    m_op22_mc_c0[i] = m_op22_mc_c[i];
+                    m_op22_mc_c1[i] = D[i] * g * _min(motor, 1.f);
+                }
+                m_op22_mc_t = 0.f;
+                m_op22_mc_dur = ::Random.randF(0.16f, 0.26f);
+                m_op22_mc_next = (aiming ? ::Random.randF(0.2f, 0.35f) : ::Random.randF(0.3f, 0.6f)) / _max(motor, 0.5f);
+            }
+        }
+        else
+        {
+            for (int i = 0; i < 4; ++i)
+                m_op22_mc_c[i] = 0.f;
+            m_op22_mc_dur = 0.f;
+        }
+        offs.x += D[0] - m_op22_mc_c[0];
+        offs.y += D[1] - m_op22_mc_c[1];
+        rot.y += D[2] - m_op22_mc_c[2];
+        rot.x += D[3] - m_op22_mc_c[3];
 
-        // тремор ~8-10 Гц: у отдохнувшего почти незаметен, растёт с усталостью, ранами и после бега
-        const float at = g_op22_wpn_breath * (0.15f + 1.1f * fatigue + 1.6f * wound + 0.7f * excite);
+        // тремор ~8-10 Гц: у отдохнувшего почти незаметен, растёт с усталостью, ранами, после бега и резкого поворота
+        const float at = g_op22_wpn_breath * (0.15f + 1.1f * fatigue + 1.6f * wound + 0.7f * excite + 0.5f * m_op22_effort * bs) * kc *
+            (1.f + 0.8f * m_op22_ads_hold * bs);
         rot.x += deg2rad(0.035f) * at * op22_noise(t * 8.7f, 53);
         rot.y += deg2rad(0.035f) * at * op22_noise(t * 9.6f, 67);
     }
@@ -1064,6 +1245,45 @@ void CHudItem::op22_UpdateProcedural(Fvector& offs, Fvector& rot, bool aiming, u
         offs.y += 0.0009f * s * _sin(tg * PI_MUL_2 * 3.1f + 0.7f);
         rot.x += deg2rad(0.35f) * s * _sin(tg * PI_MUL_2 * 2.7f + 1.3f);
         rot.y += deg2rad(0.30f) * s * _sin(tg * PI_MUL_2 * 1.9f + 0.4f);
+    }
+
+    // OP22 (27.11, 3.251): все эти повороты рука делает вокруг опоры - приклада в плече или кисти, а не вокруг глаза:
+    // дульный срез ходит, а задняя часть почти стоит; смещение, которое даёт поворот вокруг опоры, добавляется к offs
+    if (g_op22_hud_pivot > 0.f && rot.square_magnitude() > 1e-12f)
+    {
+        Fvector P;
+        P.lerp(m_op22_pivot[0], m_op22_pivot[1], m_fZoomRotationFactor);
+        P.mul(_min(g_op22_hud_pivot, 2.f));
+        Fmatrix R, Rp;
+        R.identity();
+        R.rotateX(rot.x);
+        Rp.identity();
+        Rp.rotateY(rot.y);
+        R.mulA_43(Rp);
+        Rp.identity();
+        Rp.rotateZ(rot.z);
+        R.mulA_43(Rp);
+        Fvector RP;
+        R.transform_dir(RP, P);
+        offs.add(P).sub(RP);
+    }
+}
+
+// OP22 (27.11, 3.251): мягкий переход позы - пружина почти без перелёта (zeta) вместо линейной подтяжки: разгон и
+// торможение; время - как у прежнего перехода (T), op22_hud_soft больше - мягче
+void CHudItem::op22_Ease(Fvector& cur, Fvector& vel, const Fvector& tgt, float T, float zeta)
+{
+    float dt = Device.fTimeDelta;
+    clamp(dt, 0.f, 0.05f);
+    const float w = 2.15f / _max(T * g_op22_hud_soft, 0.02f), kk = w * w, c = 2.f * zeta * w;
+    const int n = _max(1, iCeil(dt / 0.004f));
+    const float h = dt / n;
+    for (int i = 0; i < n; ++i)
+    {
+        Fvector a;
+        a.sub(tgt, cur).mul(kk).mad(vel, -c);
+        vel.mad(a, h);
+        cur.mad(vel, h);
     }
 }
 
@@ -1116,7 +1336,7 @@ void CHudItem::UpdateInertion(Fmatrix& trans)
         {
             // OP22 (27.11): инерция 2-го порядка - ствол догоняет взгляд пружиной (затухание 0,72) и при резкой остановке
             // поворота чуть перелетает и возвращается, как оружие в руке; время догона - как у прежней (m_tendto_speed)
-            const float w = _tendto_speed * 1.6f / g_op22_hud_inertion_spring, k = w * w, c = 2.f * 0.72f * w;
+            const float w = _tendto_speed * 1.6f / g_op22_hud_inertion_spring, k = w * w, c = 2.f * (0.72f + 0.08f * _min(_max(g_op22_hud_motor, 0.f), 1.f)) * w;
             float dt = Device.fTimeDelta;
             clamp(dt, 0.f, 0.05f);
             const int n = _max(1, iCeil(dt / 0.004f));
@@ -1228,11 +1448,20 @@ void CHudItem::UpdateHudAdditional(Fmatrix& trans, const bool need_update_collis
 
             current_moving_rot.mul(-PI / 180.f); // Преобразуем углы в радианы
 
-            if (!current_moving_offs.similar(current_strafe[0], EPS))
-                current_strafe[0].lerp(current_strafe[0], current_moving_offs, fStepPerUpd);
-
-            if (!current_moving_rot.similar(current_strafe[1], EPS))
-                current_strafe[1].lerp(current_strafe[1], current_moving_rot, fStepPerUpd);
+            if (g_op22_hud_soft > 0.f) // OP22 (27.11, 3.251)
+            {
+                op22_Ease(current_strafe[0], m_op22_soft_v[0][0], current_moving_offs, fStrafeMaxTime, 0.8f);
+                op22_Ease(current_strafe[1], m_op22_soft_v[0][1], current_moving_rot, fStrafeMaxTime, 0.8f);
+            }
+            else
+            {
+                m_op22_soft_v[0][0].set(0.f, 0.f, 0.f);
+                m_op22_soft_v[0][1].set(0.f, 0.f, 0.f);
+                if (!current_moving_offs.similar(current_strafe[0], EPS))
+                    current_strafe[0].lerp(current_strafe[0], current_moving_offs, fStepPerUpd);
+                if (!current_moving_rot.similar(current_strafe[1], EPS))
+                    current_strafe[1].lerp(current_strafe[1], current_moving_rot, fStepPerUpd);
+            }
 
             summary_offset.add(current_strafe[0]);
             summary_rotate.add(current_strafe[1]);
@@ -1279,11 +1508,20 @@ void CHudItem::UpdateHudAdditional(Fmatrix& trans, const bool need_update_collis
             current_jump_rot.mul(koef);
             current_jump_rot.mul(-PI / 180.f); // Преобразуем углы в радианы
 
-            if (!current_jump_offs.similar(current_jump[0], EPS))
-                current_jump[0].lerp(current_jump[0], current_jump_offs, fStepPerUpd);
-
-            if (!current_jump_rot.similar(current_jump[1], EPS))
-                current_jump[1].lerp(current_jump[1], current_jump_rot, fStepPerUpd);
+            if (g_op22_hud_soft > 0.f) // OP22 (27.11, 3.251)
+            {
+                op22_Ease(current_jump[0], m_op22_soft_v[1][0], current_jump_offs, fJumpMaxTime, 0.6f);
+                op22_Ease(current_jump[1], m_op22_soft_v[1][1], current_jump_rot, fJumpMaxTime, 0.6f);
+            }
+            else
+            {
+                m_op22_soft_v[1][0].set(0.f, 0.f, 0.f);
+                m_op22_soft_v[1][1].set(0.f, 0.f, 0.f);
+                if (!current_jump_offs.similar(current_jump[0], EPS))
+                    current_jump[0].lerp(current_jump[0], current_jump_offs, fStepPerUpd);
+                if (!current_jump_rot.similar(current_jump[1], EPS))
+                    current_jump[1].lerp(current_jump[1], current_jump_rot, fStepPerUpd);
+            }
 
             summary_offset.add(current_jump[0]);
             summary_rotate.add(current_jump[1]);
@@ -1329,11 +1567,20 @@ void CHudItem::UpdateHudAdditional(Fmatrix& trans, const bool need_update_collis
             current_lookout_rot.mul(koef);
             current_lookout_rot.mul(-PI / 180.f); // Преобразуем углы в радианы
 
-            if (!current_lookout_offs.similar(current_lookout[0], EPS))
-                current_lookout[0].lerp(current_lookout[0], current_lookout_offs, fStepPerUpd);
-
-            if (!current_lookout_rot.similar(current_lookout[1], EPS))
-                current_lookout[1].lerp(current_lookout[1], current_lookout_rot, fStepPerUpd);
+            if (g_op22_hud_soft > 0.f) // OP22 (27.11, 3.251)
+            {
+                op22_Ease(current_lookout[0], m_op22_soft_v[2][0], current_lookout_offs, fLookoutMaxTime, 0.85f);
+                op22_Ease(current_lookout[1], m_op22_soft_v[2][1], current_lookout_rot, fLookoutMaxTime, 0.85f);
+            }
+            else
+            {
+                m_op22_soft_v[2][0].set(0.f, 0.f, 0.f);
+                m_op22_soft_v[2][1].set(0.f, 0.f, 0.f);
+                if (!current_lookout_offs.similar(current_lookout[0], EPS))
+                    current_lookout[0].lerp(current_lookout[0], current_lookout_offs, fStepPerUpd);
+                if (!current_lookout_rot.similar(current_lookout[1], EPS))
+                    current_lookout[1].lerp(current_lookout[1], current_lookout_rot, fStepPerUpd);
+            }
 
             summary_offset.add(current_lookout[0]);
             summary_rotate.add(current_lookout[1]);
@@ -1381,11 +1628,20 @@ void CHudItem::UpdateHudAdditional(Fmatrix& trans, const bool need_update_collis
             current_move_rot.mul(!pda && !missile);
             current_move_rot.mul(-PI / 180.f); // Преобразуем углы в радианы
 
-            if (!current_move_offs.similar(current_move[0], EPS))
-                current_move[0].lerp(current_move[0], current_move_offs, fStepPerUpd);
-
-            if (!current_move_rot.similar(current_move[1], EPS))
-                current_move[1].lerp(current_move[1], current_move_rot, fStepPerUpd);
+            if (g_op22_hud_soft > 0.f) // OP22 (27.11, 3.251)
+            {
+                op22_Ease(current_move[0], m_op22_soft_v[3][0], current_move_offs, fMoveMaxTime, 0.9f);
+                op22_Ease(current_move[1], m_op22_soft_v[3][1], current_move_rot, fMoveMaxTime, 0.9f);
+            }
+            else
+            {
+                m_op22_soft_v[3][0].set(0.f, 0.f, 0.f);
+                m_op22_soft_v[3][1].set(0.f, 0.f, 0.f);
+                if (!current_move_offs.similar(current_move[0], EPS))
+                    current_move[0].lerp(current_move[0], current_move_offs, fStepPerUpd);
+                if (!current_move_rot.similar(current_move[1], EPS))
+                    current_move[1].lerp(current_move[1], current_move_rot, fStepPerUpd);
+            }
 
             summary_offset.add(current_move[0]);
             summary_rotate.add(current_move[1]);
@@ -1438,11 +1694,20 @@ void CHudItem::UpdateHudAdditional(Fmatrix& trans, const bool need_update_collis
             current_walk_rot.mul(!pda && !missile);
             current_walk_rot.mul(-PI / 180.f); // Преобразуем углы в радианы
 
-            if (!current_walk_offs.similar(current_walk[0], EPS))
-                current_walk[0].lerp(current_walk[0], current_walk_offs, fStepPerUpd);
-
-            if (!current_walk_rot.similar(current_walk[1], EPS))
-                current_walk[1].lerp(current_walk[1], current_walk_rot, fStepPerUpd);
+            if (g_op22_hud_soft > 0.f) // OP22 (27.11, 3.251)
+            {
+                op22_Ease(current_walk[0], m_op22_soft_v[4][0], current_walk_offs, fWalkMaxTime, 0.85f);
+                op22_Ease(current_walk[1], m_op22_soft_v[4][1], current_walk_rot, fWalkMaxTime, 0.85f);
+            }
+            else
+            {
+                m_op22_soft_v[4][0].set(0.f, 0.f, 0.f);
+                m_op22_soft_v[4][1].set(0.f, 0.f, 0.f);
+                if (!current_walk_offs.similar(current_walk[0], EPS))
+                    current_walk[0].lerp(current_walk[0], current_walk_offs, fStepPerUpd);
+                if (!current_walk_rot.similar(current_walk[1], EPS))
+                    current_walk[1].lerp(current_walk[1], current_walk_rot, fStepPerUpd);
+            }
 
             summary_offset.add(current_walk[0]);
             summary_rotate.add(current_walk[1]);
@@ -1499,6 +1764,9 @@ void CHudItem::UpdateHudAdditional(Fmatrix& trans, const bool need_update_collis
     //====================================================//
 
     UpdateCollision(trans);
+
+    if (g_op22_hud_trace > 0.f || m_op22_ev) // OP22 (27.11, 3.251): трасса худа
+        op22_TraceWrite(trans, op22_offs, op22_rot, iMovingState);
 }
 
 float CHudItem::GetHudFov()
@@ -1561,6 +1829,21 @@ void CHudItem::CWeaponBobbing::Update(Fmatrix& m, Fmatrix& m2)
 
     // mmccxvii: Тряска рук при воздействии контролера
     const bool ControllerCondition = Actor()->PsyAuraAffect;
+
+    // OP22 (27.11, 3.251): походка от настоящих шагов (op22_hud_gait) вместо синусоиды; тряска от контролёра - прежняя
+    if (g_op22_hud_gait > 0.f && !ControllerCondition)
+    {
+        float k = (dwMState & ACTOR_DEFS::mcCrouch) ? m_fCrouchFactor : 1.f;
+        if (m_bZoomMode)
+        {
+            auto wpn = smart_cast<CWeapon*>(parent_hud_item);
+            k *= (wpn && wpn->IsScopeAttached() && !wpn->IsGrenadeMode()) ? m_fScopeZoomFactor : m_fZoomFactor;
+        }
+        const float A = isActorAccelerated(dwMState, m_bZoomMode) ? m_fAmplitudeRun : (is_limping ? m_fAmplitudeLimp : m_fAmplitudeWalk);
+        fReminderFactor = 0.f; // при выключении - прежнее покачивание с нуля
+        parent_hud_item->op22_GaitBob(m, m2, dwMState, A * k);
+        return;
+    }
 
     if ((dwMState & ACTOR_DEFS::mcAnyMove) || ControllerCondition)
 
@@ -1651,6 +1934,165 @@ void CHudItem::CWeaponBobbing::Update(Fmatrix& m, Fmatrix& m2)
         m2.k.set(mR.k);
         m2.j.set(mR.j);
     }
+}
+
+// OP22 (27.11, 3.251): походка - фаза идёт от шагов актора (op22_HudStep: удар пятки = 0), форма шага человеческая:
+// внизу на ударе пятки, вверху на середине опоры; вбок - к опорной ноге (период - два шага), крен и разворот плеч
+// запаздывают за боковым ходом; у каждого шага своя сила. Вход/выход из ходьбы - пружиной, перескок фазы сглажен.
+void CHudItem::op22_GaitBob(Fmatrix& m, Fmatrix& m2, u32 mstate, float amp)
+{
+    float dt = Device.fTimeDelta;
+    clamp(dt, 0.f, 0.05f);
+    const bool moving = (mstate & mcAnyMove) != 0;
+    {
+        const float w = 9.f, tgt = moving ? 1.f : 0.f;
+        const int n = _max(1, iCeil(dt / 0.004f));
+        const float h = dt / n;
+        for (int i = 0; i < n; ++i)
+        {
+            m_op22_gait_on_v += (w * w * (tgt - m_op22_gait_on) - 2.f * w * m_op22_gait_on_v) * h;
+            m_op22_gait_on += m_op22_gait_on_v * h;
+        }
+    }
+    if (moving)
+    {
+        m_op22_gait_phase += dt / _max(m_op22_gait_period, 0.2f);
+        if (m_op22_gait_phase >= 1.f) // шаг без звука (нет материала) - походка не встаёт
+        {
+            m_op22_gait_phase -= 1.f;
+            m_op22_gait_side = -m_op22_gait_side;
+            m_op22_gait_amp = 1.f + ::Random.randFs(0.15f);
+        }
+    }
+    const float on = _max(0.f, m_op22_gait_on);
+    const float a = amp * m_op22_gait_amp * on * g_op22_hud_gait;
+    const float p = m_op22_gait_phase, sd = m_op22_gait_side;
+    const float c2 = _cos(PI_MUL_2 * (p + 0.06f * _sin(PI_MUL_2 * p))); // быстрее вниз, медленнее вверх
+    Fvector tpos, trot;
+    tpos.set(0.55f * a * sd * _sin(PI * p), -0.9f * a * c2, 0.f);
+    trot.set(0.5f * a * c2, // ствол на миг клюёт на ударе пятки (rotateX: плюс - вниз)
+             0.7f * a * sd * _sin(PI * (p - 0.3f)), // разворот плеч
+             1.3f * a * sd * _sin(PI * (p - 0.15f))); // крен к опорной ноге
+    {
+        const float w = PI_MUL_2 * 6.f, kk = w * w, c = 2.f * 0.9f * w;
+        const int n = _max(1, iCeil(dt / 0.004f));
+        const float h = dt / n;
+        for (int i = 0; i < n; ++i)
+        {
+            Fvector q;
+            q.sub(tpos, m_op22_gait_out[0]).mul(kk).mad(m_op22_gait_out_v[0], -c);
+            m_op22_gait_out_v[0].mad(q, h);
+            m_op22_gait_out[0].mad(m_op22_gait_out_v[0], h);
+            q.sub(trot, m_op22_gait_out[1]).mul(kk).mad(m_op22_gait_out_v[1], -c);
+            m_op22_gait_out_v[1].mad(q, h);
+            m_op22_gait_out[1].mad(m_op22_gait_out_v[1], h);
+        }
+    }
+    if (m_op22_gait_out[0].square_magnitude() < 1e-14f && m_op22_gait_out[1].square_magnitude() < 1e-12f)
+        return;
+
+    Fmatrix R, Rp;
+    R.identity();
+    R.rotateX(m_op22_gait_out[1].x);
+    Rp.identity();
+    Rp.rotateY(m_op22_gait_out[1].y);
+    R.mulA_43(Rp);
+    Rp.identity();
+    Rp.rotateZ(m_op22_gait_out[1].z);
+    R.mulA_43(Rp);
+    Fvector P{}, RP;
+    if (g_op22_hud_pivot > 0.f)
+        P.lerp(m_op22_pivot[0], m_op22_pivot[1], m_fZoomRotationFactor).mul(_min(g_op22_hud_pivot, 2.f));
+    R.transform_dir(RP, P);
+    R.c.set(m_op22_gait_out[0]).add(P).sub(RP);
+    Fmatrix t;
+    t.mul_43(R, m);
+    m.set(t);
+    t.mul_43(R, m2);
+    m2.set(t);
+}
+
+// OP22 (27.11, 3.251): трасса худа для подстройки по измерению: op22_hud_trace 1 - пишет каждый кадр строку CSV в
+// userdata/logs/op22_hud_trace_<время>.csv, 0 - закрывает файл. Только основной предмет в руках.
+namespace
+{
+IWriter* g_op22_trace_w{};
+u32 g_op22_trace_frame{u32(-1)}, g_op22_trace_lines{};
+}
+
+void CHudItem::op22_TraceWrite(const Fmatrix& trans, const Fvector& offs, const Fvector& rot, u32 mstate)
+{
+    const u32 ev = m_op22_ev;
+    m_op22_ev = 0;
+    if (g_op22_hud_trace <= 0.f || g_op22_trace_lines > 400000)
+    {
+        if (g_op22_trace_w)
+        {
+            FS.w_close(g_op22_trace_w);
+            g_op22_trace_w = nullptr;
+            Msg("[OP22 trace] closed, %u lines", g_op22_trace_lines);
+        }
+        if (g_op22_hud_trace <= 0.f)
+            g_op22_trace_lines = 0;
+        return;
+    }
+    CActor* pA = Actor();
+    if (!pA || pA->inventory().ActiveItem() != m_item || g_op22_trace_frame == Device.dwFrame)
+        return;
+    g_op22_trace_frame = Device.dwFrame;
+    if (!g_op22_trace_w)
+    {
+        const std::time_t tt = std::time(nullptr);
+        string64 ts;
+        std::strftime(ts, sizeof(ts), "%y%m%d_%H%M%S", std::localtime(&tt));
+        string_path name;
+        xr_sprintf(name, "op22_hud_trace_%s.csv", ts);
+        g_op22_trace_w = FS.w_open("$logs$", name);
+        if (!g_op22_trace_w)
+        {
+            g_op22_hud_trace = 0.f;
+            return;
+        }
+        Msg("[OP22 trace] writing %s", name);
+        extern float g_op22_wpn_breath, g_op22_wpn_recoil;
+        string512 hdr;
+        xr_sprintf(hdr, "# smooth=%.2f motor=%.2f gait=%.2f soft=%.2f bank=%.2f pivot=%.2f breath=%.2f body=%.2f variety=%.2f steps=%.2f hit=%.2f ads_arc=%.2f recoil=%.2f "
+                        "inert=%.0f inert_spring=%.2f cam_follow=%.2f",
+                   g_op22_hud_smooth, g_op22_hud_motor, g_op22_hud_gait, g_op22_hud_soft, g_op22_hud_bank, g_op22_hud_pivot, g_op22_wpn_breath,
+                   g_op22_body_state, g_op22_hud_variety, g_op22_hud_steps, g_op22_hud_hit, g_op22_ads_arc, g_op22_wpn_recoil, g_op22_hud_inertion,
+                   g_op22_hud_inertion_spring, g_op22_cam_follow);
+        g_op22_trace_w->w_string(hdr);
+        xr_sprintf(hdr, "# section=%s", m_item ? m_item->object().cNameSect().c_str() : "?");
+        g_op22_trace_w->w_string(hdr);
+        g_op22_trace_w->w_string("t,dt,state,moving,zf,ev,anim,px,py,pz,yaw,pitch,roll,ox,oy,oz,rx,ry,rz,gait_y,gait_x,gait_roll,gait_phase,bank,turn,"
+                                 "strafe_roll,breath_mul,ads_hold,excite,effort,bone_raw_x,bone_raw_y,bone_raw_z,bone_x,bone_y,bone_z");
+    }
+    // поза худа относительно камеры: положение (мм) и углы (град)
+    Fvector d;
+    d.sub(trans.c, Device.vCameraPosition);
+    const Fvector &R = Device.vCameraRight, &U = Device.vCameraTop, &F = Device.vCameraDirection;
+    const float px = d.dotproduct(R) * 1000.f, py = d.dotproduct(U) * 1000.f, pz = d.dotproduct(F) * 1000.f;
+    const float yaw = rad2deg(atan2f(trans.k.dotproduct(R), trans.k.dotproduct(F)));
+    const float pitch = rad2deg(atan2f(trans.k.dotproduct(U), trans.k.dotproduct(F)));
+    const float roll = rad2deg(atan2f(-trans.j.dotproduct(R), trans.j.dotproduct(U)));
+    Fvector braw{}, bf{};
+    if (const op22_bone_filter* f = g_op22_trace_ref.f; f && g_op22_trace_ref.bone < f->count && f->raw.size() == f->count)
+    {
+        braw.set(f->raw[g_op22_trace_ref.bone]).mul(1000.f);
+        bf.set(f->pos[g_op22_trace_ref.bone]).mul(1000.f);
+    }
+    string1024 line;
+    xr_sprintf(line,
+               "%.4f,%.4f,%u,%d,%.3f,%u,%s,%.2f,%.2f,%.2f,%.3f,%.3f,%.3f,%.2f,%.2f,%.2f,%.3f,%.3f,%.3f,%.2f,%.2f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%."
+               "3f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f",
+               Device.fTimeGlobal, Device.fTimeDelta, GetState(), (mstate & mcAnyMove) ? ((mstate & mcSprint) ? 2 : 1) : 0, m_fZoomRotationFactor, ev,
+               (ev & 2) ? m_op22_ev_anm : "", px, py, pz, yaw, pitch, roll, offs.x * 1000.f, offs.y * 1000.f, offs.z * 1000.f, rad2deg(rot.x),
+               rad2deg(rot.y), rad2deg(rot.z), m_op22_gait_out[0].y * 1000.f, m_op22_gait_out[0].x * 1000.f, rad2deg(m_op22_gait_out[1].z),
+               m_op22_gait_phase, rad2deg(m_op22_bank), rad2deg(m_op22_turn), rad2deg(current_strafe[1].z), m_op22_breath_mul, m_op22_ads_hold,
+               m_op22_excite, m_op22_effort, braw.x, braw.y, braw.z, bf.x, bf.y, bf.z);
+    g_op22_trace_w->w_string(line);
+    if ((++g_op22_trace_lines & 255) == 0)
+        g_op22_trace_w->flush();
 }
 
 void CHudItem::GetBoneOffsetPosDir(const shared_str& bone_name, Fvector& dest_pos, Fvector& dest_dir, const Fvector& offset)
