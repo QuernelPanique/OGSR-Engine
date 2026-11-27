@@ -5,6 +5,11 @@
 class light;
 class light_Package; // OP22 (SSS 23): phase_ssfx_sss_ext
 
+// OP22: замер фаз кадра на видеокарте (op22_gpu_stats 1) - метки времени D3D11, результат через несколько кадров
+void op22_gpu_frame_begin();
+void op22_gpu_mark(LPCSTR name); // конец фазы name (время от прошлой метки)
+void op22_gpu_frame_end();
+
 static void dummy(){}
 
 class CRenderTarget : public IRender_Target

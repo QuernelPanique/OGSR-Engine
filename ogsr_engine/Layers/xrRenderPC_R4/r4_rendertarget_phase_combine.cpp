@@ -20,6 +20,7 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
     // OP22 (SSS 23): лучи прожекторов - размытие в уменьшенном разрешении и перенос в rt_Generic_3 (до сведения)
     if (RImplementation.o.ssfx_volumetric && m_bHasActiveVolumetric_spot)
         phase_ssfx_volumetric_blur(cmd_list);
+    op22_gpu_mark("beams_blur");
     // OP22: в кадре без лучей rt_Generic_3 не очищался - капли дождя (effects_rain.ps слоя) читают его
     if (RImplementation.o.ssfx_volumetric && !m_bHasActiveVolumetric)
         cmd_list.ClearRT(rt_Generic_3, {});
@@ -47,6 +48,8 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
         // позиции этого кадра - «прошлые» для следующего
         HW.get_context(cmd_list.context_id)->CopyResource(rt_ssfx_prevPos->pSurface, rt_Position->pSurface);
     }
+
+    op22_gpu_mark("ao_il");
 
     u_setrt(cmd_list, rt_Generic_0, nullptr, nullptr, nullptr, rt_Base_Depth->pZRT[cmd_list.context_id]);
     cmd_list.set_CullMode(CULL_NONE);
@@ -123,6 +126,8 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
         cmd_list.Render(D3DPT_TRIANGLELIST, 0, 0, 3, 0, 1);
     }
 
+    op22_gpu_mark("clouds_combine1");
+
     // Copy rt_Generic_0 to new RT
     HW.get_context(cmd_list.context_id)->CopyResource(rt_Generic_0_temp->pSurface, rt_Generic_0->pSurface);
 
@@ -165,9 +170,12 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
         HW.get_context(CHW::IMM_CTX_ID)->CopyResource(rt_Generic_0->pSurface, rt_Generic_scene_scratch->pSurface);
     }
 
+    op22_gpu_mark("ssr");
+
     // OP22 (SSS 23): обычная вода - отражения в уменьшенном разрешении, размытие, волны и сама вода (до прямого прохода)
     if (RImplementation.o.ssfx_water)
         phase_ssfx_water(cmd_list);
+    op22_gpu_mark("water");
 
     // OP22 (SSS 23): кадр для преломления стекла - уже с водой (как copy_glass xray-monolith)
     if (RImplementation.o.ssfx_glass)
@@ -185,6 +193,7 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
 
         RImplementation.render_forward();
     }
+    op22_gpu_mark("forward_rain_glass_particles");
 
     auto& dsgraph = RImplementation.get_imm_context();
 
@@ -195,6 +204,7 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
     //	combine light volume here
     if (m_bHasActiveVolumetric)
         phase_combine_volumetric(cmd_list);
+    op22_gpu_mark("hud_ui_beams_combine");
 
     // Distortion filter
     if (RImplementation.o.distortion_enabled && !dsgraph.mapDistort.empty())
@@ -357,6 +367,8 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
         cmd_list.set_Stencil(FALSE);
         g_pGamePersistent->Environment().RenderFlares(cmd_list, FALSE, ps_r2_ls_flags_ext.test(R2FLAGEXT_LENS_FLARE) && r_lens_flare_mode == old_style_flare, TRUE);
     }
+
+    op22_gpu_mark("distort_tonemap_aa_bloom");
 
     //	PP-if required
     {

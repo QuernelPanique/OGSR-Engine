@@ -298,6 +298,8 @@ void CRender::Render()
         return;
     }
 
+    op22_gpu_frame_begin(); // OP22: замер фаз кадра (op22_gpu_stats) - после выходов на кадрах без отрисовки
+
     constexpr float temporalCameraCutDistance = 5.f;
     constexpr float temporalCameraCutDirectionDot = 0.25f;
     if (Device.vCameraPosition.distance_to_sqr(Device.vCameraPositionSaved) > _sqr(temporalCameraCutDistance) ||
@@ -429,6 +431,8 @@ void CRender::Render()
         _RELEASE(res);
     }
 
+    op22_gpu_mark("gbuffer"); // OP22: небо, геометрия, трава
+
     // Wall marks
     if (Wallmarks)
     {
@@ -444,12 +448,16 @@ void CRender::Render()
         r_rain.sync();
     }
 
+    op22_gpu_mark("wallmarks_rain");
+
     // OP22 (SSS 23): экранные тени солнца проходом - до накопления солнца (r_sun.sync -> accum_direct_cascade)
     if (o.ssfx_sss && bSUN)
         Target->phase_ssfx_sss(cmd_list);
+    op22_gpu_mark("sss_sun");
     // OP22 (SSS 23): экранные тени ламп - до накопления ламп (render_lights)
     if (o.ssfx_sss_ext)
         Target->phase_ssfx_sss_ext(cmd_list, Lights.package);
+    op22_gpu_mark("sss_lamps");
 
     // Directional light - fucking sun
     if (bSUN)
@@ -461,6 +469,7 @@ void CRender::Render()
         }
         Target->accum_direct_blend(cmd_list);
     }
+    op22_gpu_mark("sun");
 
     {
         PIX_EVENT(DEFER_SELF_ILLUM);
@@ -526,12 +535,14 @@ void CRender::Render()
         Target->phase_accumulator(cmd_list); // init accum here
         render_lights(LP_normal_copy);
     }
+    op22_gpu_mark("emissive_lamps_beams");
 
     // Postprocess
     {
         PIX_EVENT(DEFER_COMBINE);
         Target->phase_combine(cmd_list); // calls CRender::render_forward()
     }
+    op22_gpu_frame_end();
 
     if (Details)
         Details->Clear();
@@ -540,6 +551,139 @@ void CRender::Render()
     LP_normal.vis_update();
 
     VERIFY(0 == mapDistort.size());
+}
+
+
+// ---------------------------------------------------------------------------------------------------------------------
+// OP22: замер фаз кадра на видеокарте (op22_gpu_stats 1). Метки TIMESTAMP на главном контексте, кадр в рамке
+// TIMESTAMP_DISJOINT; результат читается через OP22_GPU_FRAMES кадров без ожидания (не готово - кадр пропускается).
+// Раз в 5 с в лог: среднее мс каждой фазы (от прошлой метки до этой), всего на видеокарте, кадр процессора.
+namespace
+{
+constexpr int OP22_GPU_FRAMES = 4;
+constexpr int OP22_GPU_MARKS = 32;
+struct op22_gpu_frame_t
+{
+    ID3D11Query* disjoint{};
+    ID3D11Query* ts[OP22_GPU_MARKS]{};
+    LPCSTR name[OP22_GPU_MARKS]{};
+    int count{};
+    bool used{};
+};
+op22_gpu_frame_t op22_gpu_fr[OP22_GPU_FRAMES];
+int op22_gpu_cur{};
+bool op22_gpu_ready{}, op22_gpu_active{};
+double op22_gpu_acc[OP22_GPU_MARKS]{};
+LPCSTR op22_gpu_names[OP22_GPU_MARKS]{};
+int op22_gpu_nacc{};
+u32 op22_gpu_frames{}, op22_gpu_cpu_frames{};
+double op22_gpu_total{}, op22_gpu_cpu{};
+u32 op22_gpu_last_print{};
+
+bool op22_gpu_init()
+{
+    if (op22_gpu_ready)
+        return true;
+    for (auto& f : op22_gpu_fr)
+    {
+        D3D11_QUERY_DESC desc{};
+        desc.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
+        if (FAILED(HW.pDevice->CreateQuery(&desc, &f.disjoint)))
+            return false;
+        desc.Query = D3D11_QUERY_TIMESTAMP;
+        for (auto& q : f.ts)
+            if (FAILED(HW.pDevice->CreateQuery(&desc, &q)))
+                return false;
+    }
+    op22_gpu_ready = true;
+    return true;
+}
+
+void op22_gpu_collect(op22_gpu_frame_t& f)
+{
+    auto* ctx = HW.get_context(CHW::IMM_CTX_ID);
+    f.used = false;
+    D3D11_QUERY_DATA_TIMESTAMP_DISJOINT dj{};
+    if (ctx->GetData(f.disjoint, &dj, sizeof(dj), D3D11_ASYNC_GETDATA_DONOTFLUSH) != S_OK || dj.Disjoint || !dj.Frequency)
+        return;
+    UINT64 t[OP22_GPU_MARKS]{};
+    for (int i = 0; i < f.count; i++)
+        if (ctx->GetData(f.ts[i], &t[i], sizeof(UINT64), D3D11_ASYNC_GETDATA_DONOTFLUSH) != S_OK)
+            return;
+    const double k = 1000.0 / double(dj.Frequency);
+    for (int i = 1; i < f.count; i++)
+    {
+        op22_gpu_acc[i] += double(t[i] - t[i - 1]) * k;
+        op22_gpu_names[i] = f.name[i];
+    }
+    op22_gpu_nacc = std::max(op22_gpu_nacc, f.count);
+    op22_gpu_total += double(t[f.count - 1] - t[0]) * k;
+    op22_gpu_frames++;
+}
+} // namespace
+
+void op22_gpu_frame_begin()
+{
+    op22_gpu_active = false;
+    if (!ps_op22_gpu_stats || !op22_gpu_init())
+        return;
+
+    op22_gpu_cpu += Device.fTimeDelta * 1000.0;
+    op22_gpu_cpu_frames++;
+
+    // самый старый кадр - прочитать
+    auto& f = op22_gpu_fr[op22_gpu_cur];
+    if (f.used)
+        op22_gpu_collect(f);
+
+    if (Device.dwTimeGlobal - op22_gpu_last_print >= 5000 && op22_gpu_frames > 0)
+    {
+        string4096 line{};
+        int pos = sprintf_s(line, "[OP22 gpu] кадров %u: видеокарта %.2f мс, кадр процессора %.2f мс (%.0f FPS) |", op22_gpu_frames,
+                            op22_gpu_total / op22_gpu_frames, op22_gpu_cpu / std::max(1u, op22_gpu_cpu_frames),
+                            1000.0 / std::max(0.001, op22_gpu_cpu / std::max(1u, op22_gpu_cpu_frames)));
+        for (int i = 1; i < op22_gpu_nacc && pos > 0 && pos < int(sizeof(line)) - 64; i++)
+        {
+            const double ms = op22_gpu_acc[i] / op22_gpu_frames;
+            if (ms >= 0.05)
+                pos += sprintf_s(line + pos, sizeof(line) - pos, " %s %.2f", op22_gpu_names[i] ? op22_gpu_names[i] : "?", ms);
+        }
+        Msg("%s", line);
+        std::fill(std::begin(op22_gpu_acc), std::end(op22_gpu_acc), 0.0);
+        op22_gpu_frames = op22_gpu_cpu_frames = 0;
+        op22_gpu_total = op22_gpu_cpu = 0.0;
+        op22_gpu_nacc = 0;
+        op22_gpu_last_print = Device.dwTimeGlobal;
+    }
+
+    f.count = 0;
+    HW.get_context(CHW::IMM_CTX_ID)->Begin(f.disjoint);
+    op22_gpu_active = true;
+    op22_gpu_mark("start");
+}
+
+void op22_gpu_mark(LPCSTR name)
+{
+    if (!op22_gpu_active)
+        return;
+    auto& f = op22_gpu_fr[op22_gpu_cur];
+    if (f.count >= OP22_GPU_MARKS)
+        return;
+    HW.get_context(CHW::IMM_CTX_ID)->End(f.ts[f.count]);
+    f.name[f.count] = name;
+    f.count++;
+}
+
+void op22_gpu_frame_end()
+{
+    if (!op22_gpu_active)
+        return;
+    op22_gpu_mark("post");
+    auto& f = op22_gpu_fr[op22_gpu_cur];
+    HW.get_context(CHW::IMM_CTX_ID)->End(f.disjoint);
+    f.used = true;
+    op22_gpu_cur = (op22_gpu_cur + 1) % OP22_GPU_FRAMES;
+    op22_gpu_active = false;
 }
 
 void CRender::render_forward()
