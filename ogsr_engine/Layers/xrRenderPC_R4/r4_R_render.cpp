@@ -639,7 +639,7 @@ void op22_gpu_frame_begin()
     if (Device.dwTimeGlobal - op22_gpu_last_print >= 5000 && op22_gpu_frames > 0)
     {
         string4096 line{};
-        int pos = sprintf_s(line, "[OP22 gpu] кадров %u: видеокарта %.2f мс, кадр процессора %.2f мс (%.0f FPS) |", op22_gpu_frames,
+        int pos = sprintf_s(line, "[OP22 gpu] frames %u: GPU %.2f ms, CPU frame %.2f ms (%.0f FPS) |", op22_gpu_frames,
                             op22_gpu_total / op22_gpu_frames, op22_gpu_cpu / std::max(1u, op22_gpu_cpu_frames),
                             1000.0 / std::max(0.001, op22_gpu_cpu / std::max(1u, op22_gpu_cpu_frames)));
         for (int i = 1; i < op22_gpu_nacc && pos > 0 && pos < int(sizeof(line)) - 64; i++)
