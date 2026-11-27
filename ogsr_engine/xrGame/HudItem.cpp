@@ -851,6 +851,7 @@ float g_op22_hud_gait = 1.f; // походка от шагов вместо си
 float g_op22_hud_soft = 1.f; // мягкие (пружинные) переходы стрейфа/наклона/прыжка/приседа/ходьбы/стены, 0 - прежние
 float g_op22_hud_bank = 1.f; // крен оружия в сторону поворота мышью, 0 - выкл
 float g_op22_hud_pivot = 1.f; // повороты рук вокруг плеча/кисти, а не глаза, 0 - вокруг глаза
+float g_op22_hud_tremor = 1.f; // OP22 (27.11, 3.253): дрожь рук 8-10 Гц отдельно от дыхания, 0 - без дрожи
 
 // OP22: процедурная отдача и «дыхание» модели оружия в руках (22.11, решение пользователя; отключаемо).
 // Только вид модели худа: камера, разброс и пули - как в ОП (отдача камеры on_weapon_shot_start не меняется).
@@ -1209,7 +1210,7 @@ void CHudItem::op22_UpdateProcedural(Fvector& offs, Fvector& rot, bool aiming, u
         rot.x += D[3] - m_op22_mc_c[3];
 
         // тремор ~8-10 Гц: у отдохнувшего почти незаметен, растёт с усталостью, ранами, после бега и резкого поворота
-        const float at = g_op22_wpn_breath * (0.15f + 1.1f * fatigue + 1.6f * wound + 0.7f * excite + 0.5f * m_op22_effort * bs) * kc *
+        const float at = g_op22_wpn_breath * g_op22_hud_tremor * (0.15f + 1.1f * fatigue + 1.6f * wound + 0.7f * excite + 0.5f * m_op22_effort * bs) * kc *
             (1.f + 0.8f * m_op22_ads_hold * bs);
         rot.x += deg2rad(0.035f) * at * op22_noise(t * 8.7f, 53);
         rot.y += deg2rad(0.035f) * at * op22_noise(t * 9.6f, 67);

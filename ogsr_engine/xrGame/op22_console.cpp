@@ -285,6 +285,8 @@ void op22_register_console()
         add(xr_new<CCC_Float>("op22_hud_pivot", &g_op22_hud_pivot, 0.f, 2.f));
         add(xr_new<CCC_Float>("op22_hud_motor", &g_op22_hud_motor, 0.f, 2.f));
         add(xr_new<CCC_Float>("op22_hud_trace", &g_op22_hud_trace, 0.f, 1.f));
+        extern float g_op22_hud_tremor;
+        add(xr_new<CCC_Float>("op22_hud_tremor", &g_op22_hud_tremor, 0.f, 3.f));
     }
     str("bolt_visual", "bolt");
     str("hc_unarmed", "");
