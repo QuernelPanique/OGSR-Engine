@@ -1,5 +1,7 @@
 #include "StdAfx.h"
 #include "op22_options.h" // OP22
+#include "op22_hud_motion.h" // OP22: сглаживание поз, камера за действием
+#include "Weapon.h"
 #include "player_hud.h"
 #include "physic_item.h"
 #include "actor.h"
@@ -309,6 +311,28 @@ void attachable_hud_item::update(bool bForce)
         ka->UpdateTracks();
         ka->dcast_PKinematics()->CalculateBones_Invalidate();
         ka->dcast_PKinematics()->CalculateBones(TRUE);
+        // OP22: поза модели догоняет анимацию пружиной (op22_hud_motion.h); масса - предмета в руках
+        op22_hud_filter_bones(ka->dcast_PKinematics(), m_op22_filter, m_parent_hud_item ? m_parent_hud_item->item().Weight() : 1.f);
+    }
+
+    // OP22: камера за действием - по основному предмету, раз в кадр
+    if (m_attach_place_idx == 0 && m_parent_hud_item)
+    {
+        IKinematics* K{};
+        u16 bone = BI_NONE;
+        Fmatrix xf;
+        if (m_has_separated_hands)
+            m_parent->op22_hands_ref(0, K, bone, xf);
+        else
+        {
+            K = m_model;
+            bone = m_measures.m_fire_bone;
+            xf.set(m_item_transform);
+        }
+        CWeapon* W = smart_cast<CWeapon*>(m_parent_hud_item);
+        const bool firing = W && (W->GetState() == CWeapon::eFire || W->GetState() == CWeapon::eFire2);
+        const bool moving = Actor() && (Actor()->MovingState() & ACTOR_DEFS::mcAnyMove);
+        op22_cam_follow_feed(K, bone, xf, m_parent_hud_item->m_fZoomRotationFactor, firing, moving);
     }
 }
 
@@ -1178,6 +1202,11 @@ void player_hud::update(const Fmatrix& cam_trans)
         m_model_2->UpdateTracks();
         m_model_2->dcast_PKinematics()->CalculateBones_Invalidate();
         m_model_2->dcast_PKinematics()->CalculateBones(TRUE);       
+
+        // OP22: позы отдельных рук догоняют анимацию пружиной (op22_hud_motion.h); масса - предмета в этой руке
+        auto weight = [this](int i) { return m_attached_items[i] && m_attached_items[i]->m_parent_hud_item ? m_attached_items[i]->m_parent_hud_item->item().Weight() : 1.f; };
+        op22_hud_filter_bones(m_model->dcast_PKinematics(), m_op22_hands_filter[0], weight(0));
+        op22_hud_filter_bones(m_model_2->dcast_PKinematics(), m_op22_hands_filter[1], weight(1));
     }
 
     for (script_layer* anm : m_script_layers)
@@ -1557,6 +1586,14 @@ void player_hud::calc_transform(u16 attach_slot_idx, const Fmatrix& offset, Fmat
         result.set(m_transform);
         result.mulB_43(offset);
     }
+}
+
+// OP22: модель рук, кость крепления предмета и переход модель -> мир (камера за действием, op22_hud_motion.h)
+void player_hud::op22_hands_ref(u16 slot, IKinematics*& K, u16& bone, Fmatrix& xf)
+{
+    K = (slot == 0 ? m_model : m_model_2)->dcast_PKinematics();
+    bone = slot < m_ancors.size() ? m_ancors[slot] : u16(BI_NONE);
+    xf.set(slot == 0 ? m_transform : m_transform_2);
 }
 
 void player_hud::OnMovementChanged(ACTOR_DEFS::EMoveCommand cmd)

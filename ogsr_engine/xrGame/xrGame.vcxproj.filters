@@ -8671,6 +8671,9 @@
     <ClCompile Include="op22_console.cpp">
       <Filter>Core\Common\Console Commands</Filter>
     </ClCompile>
+    <ClCompile Include="op22_hud_motion.cpp">
+      <Filter>Core\Common\Console Commands</Filter>
+    </ClCompile>
     <ClCompile Include="ui\UILabel.cpp">
       <Filter>AI\AScript\ScriptClasses\UI\UIWindows\Label</Filter>
     </ClCompile>

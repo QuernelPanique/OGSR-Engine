@@ -262,6 +262,10 @@ void op22_register_console()
         // OP22 (26.11): живой 2D-прицел - сила отставания корпуса (Weapon.cpp op22_DrawLiveScope), 0 - прежний вид
         extern float g_op22_scope_live;
         add(xr_new<CCC_Float>("op22_scope_live", &g_op22_scope_live, 0.f, 3.f));
+        // OP22 (27.11): сглаживание и пружина поз рук/оружия, камера за действием (op22_hud_motion.h); 0 - выкл, 1 - норма
+        extern float g_op22_hud_smooth, g_op22_cam_follow;
+        add(xr_new<CCC_Float>("op22_hud_smooth", &g_op22_hud_smooth, 0.f, 3.f));
+        add(xr_new<CCC_Float>("op22_cam_follow", &g_op22_cam_follow, 0.f, 3.f));
     }
     str("bolt_visual", "bolt");
     str("hc_unarmed", "");

@@ -10,6 +10,7 @@
 class player_hud;
 class CHudItem;
 class CMotionDef;
+#include "op22_hud_motion.h" // OP22
 struct attachable_hud_item;
 
 struct motion_descr
@@ -307,6 +308,7 @@ public:
     // runtime positioning
     Fmatrix m_attach_offset;
     Fmatrix m_item_transform;
+    op22_bone_filter m_op22_filter; // OP22: сглаживание и пружина поз (op22_hud_motion.h)
 
     // props
     u32 m_upd_firedeps_frame;
@@ -439,6 +441,8 @@ public:
 
     IKinematicsAnimated* Model() { return m_model; }
     const Fmatrix& XFORM() const { return m_transform; }
+    // OP22: модель рук, кость крепления предмета и её переход модель -> мир (камера за действием)
+    void op22_hands_ref(u16 slot, IKinematics*& K, u16& bone, Fmatrix& xf);
 
 private:
     static void Thumb0Callback(CBoneInstance* B);
@@ -451,6 +455,7 @@ private:
     IKinematicsAnimated *m_model{}, *m_model_2{};
     xr_vector<u16> m_ancors;
     attachable_hud_item* m_attached_items[2]{};
+    op22_bone_filter m_op22_hands_filter[2]; // OP22: сглаживание поз отдельных рук
     xr_vector<attachable_hud_item*> m_pool;
 };
 
