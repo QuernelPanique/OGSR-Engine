@@ -276,8 +276,8 @@ CRenderTarget::CRenderTarget()
         rt_ssr1.create(r2_RT_ssr1, w, h, DXGI_FORMAT_R8G8B8A8_UNORM); // Generic RT
         rt_ssr2.create(r2_RT_ssr2, w, h, DXGI_FORMAT_R8G8B8A8_UNORM); // Temp RT 8B
 
-        // OP22 (SSS 23): AO/IL отдельными проходами - только если включены (op22_ssfx_ao_pass / op22_ssfx_il_pass)
-        if (ps_op22_ssfx_ao_pass || ps_op22_ssfx_il_pass)
+        // OP22 (SSS 23): AO/IL отдельными проходами - буферы всегда (на них ссылается combine.s; ~130 МБ при 1440p),
+        // шейдеры проходов - только при op22_ssfx_ao_pass / op22_ssfx_il_pass
         {
             rt_ssfx_temp.create(r2_RT_ssfx_temp, w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
             rt_ssfx_temp2.create(r2_RT_ssfx_temp2, w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
