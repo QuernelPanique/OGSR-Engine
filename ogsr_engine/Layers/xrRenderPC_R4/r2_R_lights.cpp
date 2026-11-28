@@ -259,6 +259,7 @@ void CRender::render_lights_shadowed(light_Package& LP)
         }
 
         cmd_list.Invalidate();
+        op22_gpu_mark("lamp_smaps"); // OP22 (28.11): карты теней ламп (выполнены при submit)
 
         light_tasks.clear();
         std::ranges::sort(L_spot_s, light_cmp);
@@ -277,9 +278,11 @@ void CRender::render_lights_shadowed(light_Package& LP)
             {
                 Target->rt_smap_lights->set_slice_read(p_light->vis.smap_ID);
                 Target->accum_spot(cmd_list, p_light);
+                op22_gpu_mark("lamp_light_shadowed"); // OP22 (28.11)
                 if (needVolumetric)
                 {
                     Target->accum_volumetric(cmd_list, p_light);
+                    op22_gpu_mark("lamp_beams"); // OP22 (28.11)
                 }
             }
 
@@ -314,6 +317,7 @@ void CRender::render_lights(light_Package& LP)
                 }
             }
             LP.v_point.clear();
+            op22_gpu_mark("lamp_point"); // OP22 (28.11)
         }
 
         // Spot lighting (unshadowed)
@@ -334,6 +338,7 @@ void CRender::render_lights(light_Package& LP)
                 }
             }
             LP.v_spot.clear();
+            op22_gpu_mark("lamp_spot"); // OP22 (28.11)
         }
     }
 }

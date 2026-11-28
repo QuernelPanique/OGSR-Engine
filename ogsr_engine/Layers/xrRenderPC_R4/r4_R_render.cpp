@@ -499,6 +499,7 @@ void CRender::Render()
             dsgraph.r_dsgraph_render_emissive(true);
         }
     }
+    op22_gpu_mark("emissive"); // OP22 (28.11): подфазы бывшего emissive_lamps_beams
 
     // Update incremental shadowmap-visibility solver
     if (!Lights_LastFrame.empty() && !ps_r2_ls_flags_ext.test(R2FLAGEXT_DISABLE_SMAPVIS))
@@ -535,7 +536,7 @@ void CRender::Render()
         Target->phase_accumulator(cmd_list); // init accum here
         render_lights(LP_normal_copy);
     }
-    op22_gpu_mark("emissive_lamps_beams");
+    op22_gpu_mark("lamps_rest"); // OP22 (28.11): до 3.275 весь блок - emissive_lamps_beams (= emissive + lamp_* + lamps_rest)
 
     // Postprocess
     {
@@ -561,7 +562,7 @@ void CRender::Render()
 namespace
 {
 constexpr int OP22_GPU_FRAMES = 4;
-constexpr int OP22_GPU_MARKS = 40; // OP22 (28.11): было 32, добавлены подметки ao/il/sss/ssr
+constexpr int OP22_GPU_MARKS = 128; // OP22 (28.11): было 32/40; метки в циклах по лампам (суммируются по имени)
 struct op22_gpu_frame_t
 {
     ID3D11Query* disjoint{};
@@ -611,12 +612,21 @@ void op22_gpu_collect(op22_gpu_frame_t& f)
         if (ctx->GetData(f.ts[i], &t[i], sizeof(UINT64), D3D11_ASYNC_GETDATA_DONOTFLUSH) != S_OK)
             return;
     const double k = 1000.0 / double(dj.Frequency);
+    // OP22 (28.11): сумма по имени метки (метка в цикле по лампам - одна строка, число меток в кадре может меняться)
     for (int i = 1; i < f.count; i++)
     {
-        op22_gpu_acc[i] += double(t[i] - t[i - 1]) * k;
-        op22_gpu_names[i] = f.name[i];
+        int j = 1;
+        while (j < op22_gpu_nacc && xr_strcmp(op22_gpu_names[j], f.name[i]) != 0)
+            j++;
+        if (j >= OP22_GPU_MARKS)
+            continue;
+        if (j >= op22_gpu_nacc)
+        {
+            op22_gpu_names[j] = f.name[i];
+            op22_gpu_nacc = j + 1;
+        }
+        op22_gpu_acc[j] += double(t[i] - t[i - 1]) * k;
     }
-    op22_gpu_nacc = std::max(op22_gpu_nacc, f.count);
     op22_gpu_total += double(t[f.count - 1] - t[0]) * k;
     op22_gpu_frames++;
 }
