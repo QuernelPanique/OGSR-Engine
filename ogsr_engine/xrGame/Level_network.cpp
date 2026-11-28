@@ -15,6 +15,7 @@
 #include "seniority_hierarchy_holder.h"
 #include "script_vars_storage.h"
 #include "LevelDebugScript.h"
+#include "xrServer_Objects.h" // OP22: CSE_Abstract::s_name в ClientSend
 
 constexpr int max_objects_size = 2 * 1024;
 constexpr int max_objects_size_in_save = 6 * 1024;
