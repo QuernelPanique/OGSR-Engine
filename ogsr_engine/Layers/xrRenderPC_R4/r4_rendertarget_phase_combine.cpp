@@ -226,11 +226,13 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
         }
     }
 
+    op22_gpu_mark("distort"); // OP22: подфаза блока постобработки (op22_gpu_stats)
     {
         // Perform blooming filter and distortion if needed
         cmd_list.set_Stencil(FALSE);
         phase_bloom(cmd_list); // HDR RT invalidated here
     }
+    op22_gpu_mark("bloom_old"); // OP22: подфаза блока постобработки (op22_gpu_stats)
 
     {
         PIX_EVENT(combine_tonemap);
@@ -238,6 +240,7 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
         HW.get_context(cmd_list.context_id)->CopyResource(rt_Generic_0->pSurface, rt_Generic_scene_scratch->pSurface);
     }
 
+    op22_gpu_mark("tonemap"); // OP22: подфаза блока постобработки (op22_gpu_stats)
     const bool need_heatvision = (ps_pnv_mode == 2 || ps_pnv_mode == 3);
     const bool need_3dss = !dsgraph.mapScopeHUDSorted.empty();
 
@@ -265,6 +268,7 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
         HW.get_context(cmd_list.context_id)->CopyResource(rt_Generic_combine->pSurface, rt_Postprocess_0->pSurface);
     }
 
+    op22_gpu_mark("aa_3dss_upscale"); // OP22: подфаза блока постобработки (op22_gpu_stats)
     // Sensor noise / lens after temporal upscaling. Before 3DSS so the reticle is not thermal-tinted.
     if (need_heatvision)
         phase_heatvision_overlay(cmd_list);
@@ -275,6 +279,7 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
         PIX_EVENT(phase_ss_ss);
         PhaseSSSS(cmd_list);
     }
+    op22_gpu_mark("sunshafts_ss"); // OP22: подфаза блока постобработки (op22_gpu_stats)
 
     if (need_3dss)
     {
@@ -292,18 +297,22 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
         dsgraph.r_dsgraph_render_scope_sorted(upscaled_3dss);
     }
 
+    op22_gpu_mark("scope3dss"); // OP22: подфаза блока постобработки (op22_gpu_stats)
     // Compute blur textures
     phase_blur(cmd_list);
+    op22_gpu_mark("blur"); // OP22: подфаза блока постобработки (op22_gpu_stats)
 
 #pragma todo("Simp: Если отключить новый блум, то старый, который рендерится до прицела, багует, потому что рендрится очень рано. Пока запретил отключение нового блума.")
     if (ps_r2_ls_flags.test(R2FLAG_SSFX_BLOOM))
         phase_ssfx_bloom(cmd_list);
+    op22_gpu_mark("bloom_ssfx"); // OP22: подфаза блока постобработки (op22_gpu_stats)
 
     if (!need_heatvision)
         phase_dof(cmd_list);
 
     if (!need_heatvision)
         phase_lut(cmd_list);
+    op22_gpu_mark("dof_lut"); // OP22: подфаза блока постобработки (op22_gpu_stats)
 
 /*
     if (scope_fake_radius > 0.f)
@@ -334,6 +343,7 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
     if (ps_r2_ls_flags_ext.test(R2FLAGEXT_RAIN_DROPS))
         phase_rain_drops(cmd_list);
 
+    op22_gpu_mark("scope2d_mask_nv_drops"); // OP22: подфаза блока постобработки (op22_gpu_stats)
     {
         PIX_EVENT(combine_2);
 
@@ -368,7 +378,7 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
         g_pGamePersistent->Environment().RenderFlares(cmd_list, FALSE, ps_r2_ls_flags_ext.test(R2FLAGEXT_LENS_FLARE) && r_lens_flare_mode == old_style_flare, TRUE);
     }
 
-    op22_gpu_mark("distort_tonemap_aa_bloom");
+    op22_gpu_mark("combine2_flares"); // OP22: до 3.270 весь блок от distort - одной меткой distort_tonemap_aa_bloom
 
     //	PP-if required
     {
@@ -932,8 +942,28 @@ void CRenderTarget::phase_ssfx_sss_ext(CBackend& cmd_list, const light_Package& 
 
     const float w = float(rt_ssfx_sss_tmp->dwWidth);
     const float h = float(rt_ssfx_sss_tmp->dwHeight);
+
+    // OP22 (28.11): проход по 4 лампам только если в его слотах есть лампа (днём/на открытом слоты обычно пусты -
+    // ~0.4 мс впустую). Освещение лампы без слота (op22_sss_id -1) канал не читает, так что пропуск картинку не меняет.
+    // История прохода (prev в ssfx_sss_ext.ps, вес до 0.97) после пропуска устарела - перед первым кадром с лампой
+    // очищается в 1 (= без тени, как пустой слот), чтобы не всплыла тень прежней лампы.
+    static bool pass_live[2]{};
+    bool any_live = false;
     for (int pass = 0; pass < 2; pass++)
     {
+        const bool live = std::any_of(g_op22_sss_slots + 4 * pass, g_op22_sss_slots + 4 * pass + 4, [](light* L) { return L != nullptr; });
+        if (live && !pass_live[pass])
+            cmd_list.ClearRT(pass == 0 ? rt_ssfx_sss_ext : rt_ssfx_sss_ext2, Fcolor{1.f, 1.f, 1.f, 1.f});
+        pass_live[pass] = live;
+        any_live |= live;
+    }
+    if (!any_live)
+        return;
+
+    for (int pass = 0; pass < 2; pass++)
+    {
+        if (!pass_live[pass])
+            continue; // правую/левую половину сведения читают только лампы этих слотов - их нет
         op22_ssfx_quad(cmd_list, rt_ssfx_sss_tmp, s_ssfx_sss->E[3 + pass], w, h, 1.0f, [&]() {
             cmd_list.set_c("m_current", Matrix_current);
             cmd_list.set_c("m_previous", Matrix_previous);
