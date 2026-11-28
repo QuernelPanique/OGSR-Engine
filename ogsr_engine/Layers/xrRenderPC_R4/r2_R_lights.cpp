@@ -277,6 +277,9 @@ void CRender::render_lights_shadowed(light_Package& LP)
             for (light* p_light : L_spot_s)
             {
                 Target->rt_smap_lights->set_slice_read(p_light->vis.smap_ID);
+                op22_gpu_count(0, 1); // OP22 (28.11)
+                op22_gpu_count(1, p_light->X.S.size * p_light->X.S.size / 1000);
+                op22_gpu_count(2, p_light->flags.bVolumetric ? 1 : 0); // свой флаг лучей (SSS 23 при ssfx_volumetric.x даёт лучи всем ближе 120 м)
                 Target->accum_spot(cmd_list, p_light);
                 op22_gpu_mark("lamp_light_shadowed"); // OP22 (28.11)
                 if (needVolumetric)
@@ -313,6 +316,7 @@ void CRender::render_lights(light_Package& LP)
             {
                 if (p_light->vis.visible)
                 {
+                    op22_gpu_count(3, 1); // OP22 (28.11)
                     Target->accum_point(cmd_list, p_light);
                 }
             }
@@ -334,6 +338,7 @@ void CRender::render_lights(light_Package& LP)
                 if (p_light->vis.visible)
                 {
                     p_light->optimize_smap_size();
+                    op22_gpu_count(4, 1); // OP22 (28.11)
                     Target->accum_spot(cmd_list, p_light);
                 }
             }

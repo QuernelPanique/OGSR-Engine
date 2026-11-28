@@ -8,6 +8,9 @@ class light_Package; // OP22 (SSS 23): phase_ssfx_sss_ext
 // OP22: замер фаз кадра на видеокарте (op22_gpu_stats 1) - метки времени D3D11, результат через несколько кадров
 void op22_gpu_frame_begin();
 void op22_gpu_mark(LPCSTR name); // конец фазы name (время от прошлой метки)
+// OP22 (28.11): счётчики ламп за кадр для строки [OP22 gpu]: 0 с тенью, 1 тысяч текселей их карт теней, 2 со своим флагом лучей,
+// 3 точечные без тени, 4 прожекторы без тени; op22_gpu_count - только когда замер включён
+void op22_gpu_count(int what, u32 n);
 void op22_gpu_frame_end();
 
 static void dummy(){}

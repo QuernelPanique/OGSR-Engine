@@ -580,6 +580,7 @@ int op22_gpu_nacc{};
 u32 op22_gpu_frames{}, op22_gpu_cpu_frames{};
 double op22_gpu_total{}, op22_gpu_cpu{};
 u32 op22_gpu_last_print{};
+double op22_gpu_cnt[5]{}; // OP22 (28.11): суммы счётчиков ламп
 
 bool op22_gpu_init()
 {
@@ -658,7 +659,14 @@ void op22_gpu_frame_begin()
             if (ms >= 0.05)
                 pos += sprintf_s(line + pos, sizeof(line) - pos, " %s %.2f", op22_gpu_names[i] ? op22_gpu_names[i] : "?", ms);
         }
+        if (pos > 0 && pos < int(sizeof(line)) - 96)
+        {
+            const double nf = std::max(1u, op22_gpu_cpu_frames);
+            sprintf_s(line + pos, sizeof(line) - pos, " | lamps shadowed %.1f (smap %.0fk) own_vol_flag %.1f point %.1f spot %.1f", op22_gpu_cnt[0] / nf,
+                      op22_gpu_cnt[1] / nf, op22_gpu_cnt[2] / nf, op22_gpu_cnt[3] / nf, op22_gpu_cnt[4] / nf);
+        }
         Msg("%s", line);
+        std::fill(std::begin(op22_gpu_cnt), std::end(op22_gpu_cnt), 0.0);
         std::fill(std::begin(op22_gpu_acc), std::end(op22_gpu_acc), 0.0);
         op22_gpu_frames = op22_gpu_cpu_frames = 0;
         op22_gpu_total = op22_gpu_cpu = 0.0;
@@ -670,6 +678,12 @@ void op22_gpu_frame_begin()
     HW.get_context(CHW::IMM_CTX_ID)->Begin(f.disjoint);
     op22_gpu_active = true;
     op22_gpu_mark("start");
+}
+
+void op22_gpu_count(int what, u32 n)
+{
+    if (op22_gpu_active && what >= 0 && what < 5)
+        op22_gpu_cnt[what] += n;
 }
 
 void op22_gpu_mark(LPCSTR name)

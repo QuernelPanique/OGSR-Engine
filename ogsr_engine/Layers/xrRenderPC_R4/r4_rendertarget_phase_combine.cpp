@@ -981,6 +981,7 @@ void CRenderTarget::phase_ssfx_sss_ext(CBackend& cmd_list, const light_Package& 
             cmd_list.set_c("m_current", Matrix_current);
             cmd_list.set_c("m_previous", Matrix_previous);
             cmd_list.set_c("id_offset", pass);
+            op22_set_tiles(cmd_list); // OP22 (28.11): клетки и для теней ламп
             for (u32 i = 0; i < 8; i++)
                 cmd_list.set_ca("lights_data", i, data[i]);
         });
