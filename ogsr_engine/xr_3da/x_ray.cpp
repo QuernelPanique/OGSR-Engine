@@ -229,8 +229,9 @@ void Startup()
         FS.file_delete("$app_data_root$", "op22_autoload");
         if (save_name[0])
         {
+            // как -start: команда load при запуске проверяет сейв скриптами до их загрузки и падает (проверено 28.11)
             string512 cmd;
-            xr_sprintf(cmd, "load %s", save_name);
+            xr_sprintf(cmd, "start server(%s/single/alife/load) client(localhost)", save_name);
             Msg("[OP22] op22_autoload: %s", cmd);
             Console->Execute(cmd);
         }
