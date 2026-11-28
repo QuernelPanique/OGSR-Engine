@@ -181,6 +181,7 @@ extern int ps_op22_ssfx_glass; // OP22 (SSS 23): стекло
 // OP22 (SSS 23): экранные тени солнца проходом SSS 22
 extern Fvector4 ps_ssfx_sss, ps_ssfx_sss_quality;
 extern int ps_op22_ssfx_sss;
+extern int ps_op22_ssfx_tiles; // OP22 (28.11)
 extern int ps_op22_terrain_height;
 extern int ps_op22_ssfx_sss_ext; // OP22 (SSS 23): экранные тени от ламп
 extern int ps_op22_gpu_stats; // OP22: время фаз кадра на видеокарте в лог // OP22: высоты деталей земли из _bump#.a для параллакса

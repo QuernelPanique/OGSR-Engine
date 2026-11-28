@@ -265,6 +265,7 @@ int ps_ssfx_il_quality = 32; // IL Samples (SSFX_IL_QUALITY; таблица на
 int ps_op22_ssfx_ao_pass = 0; // 1 - AO проходом SSS 23 (вместо SSDO/GTAO в combine_1), нужен перезапуск
 int ps_op22_ssfx_il_pass = 0; // 1 - IL проходом SSS 23 (вместо ssfx_indirect_light в combine_2), нужен перезапуск
 int ps_op22_ssr_always = 0; // 1 - отражения SSR не только в дождь
+int ps_op22_ssfx_tiles = 0; // OP22 (28.11): 1 - AO/IL/тени солнца SSS считают половину клеток 8x8 за кадр (остальные - прошлый кадр, если надёжен), на лету
 // OP22 (SSS 23): вода (значения по умолчанию - как в SSS 23 / xray-monolith)
 int ps_op22_ssfx_water = 0; // 1 - обычная вода SSS 23 (отдельная очередь, отражения в уменьшенном разрешении), нужен перезапуск
 Fvector4 ps_ssfx_water{1.0f, 0.8f, 1.0f, 0.0f}; // Res, Blur, Blur Perlin, -
@@ -1062,6 +1063,7 @@ void xrRender_initconsole()
     CMD4(CCC_Integer, "op22_ssfx_ao_pass", &ps_op22_ssfx_ao_pass, 0, 1);
     CMD4(CCC_Integer, "op22_ssfx_il_pass", &ps_op22_ssfx_il_pass, 0, 1);
     CMD4(CCC_Integer, "op22_ssr_always", &ps_op22_ssr_always, 0, 1);
+    CMD4(CCC_Integer, "op22_ssfx_tiles", &ps_op22_ssfx_tiles, 0, 1);
     // OP22 (SSS 23): вода
     CMD4(CCC_Integer, "op22_ssfx_water", &ps_op22_ssfx_water, 0, 1);
     CMD4(CCC_Vector4, "ssfx_water", &ps_ssfx_water, (Fvector4{1, 0, 0, 0}), (Fvector4{8, 1, 1, 0}));

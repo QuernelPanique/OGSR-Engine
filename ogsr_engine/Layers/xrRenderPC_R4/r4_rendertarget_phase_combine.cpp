@@ -49,7 +49,7 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
         HW.get_context(cmd_list.context_id)->CopyResource(rt_ssfx_prevPos->pSurface, rt_Position->pSurface);
     }
 
-    op22_gpu_mark("ao_il");
+    op22_gpu_mark("il_blur_copy"); // OP22 (28.11): до 3.274 весь блок - ao_il (= ao + ao_blur + il + il_blur_copy)
 
     u_setrt(cmd_list, rt_Generic_0, nullptr, nullptr, nullptr, rt_Base_Depth->pZRT[cmd_list.context_id]);
     cmd_list.set_CullMode(CULL_NONE);
@@ -159,6 +159,7 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
         });
         if (ssr_scissor)
             cmd_list.set_Scissor(nullptr);
+        op22_gpu_mark("ssr_trace");
 
         HW.get_context(CHW::IMM_CTX_ID)->CopyResource(rt_ssr1->pSurface, rt_ssr2->pSurface);
 
@@ -666,6 +667,13 @@ void CRenderTarget::op22_ssfx_quad(CBackend& cmd_list, const ref_rt& rt, ref_sel
     cmd_list.Render(D3DPT_TRIANGLELIST, Offset, 0, 4, 0, 2);
 }
 
+// OP22 (28.11): op22_ssfx_tiles - половина клеток 8x8 за кадр в проходах AO/IL/теней солнца (op22_tile_skip в
+// op22_sss23.h слоя): x - вкл, y - чётность кадра (шахматка меняется каждый кадр). 0 - шейдеры считают всё, как SSS 23.
+void CRenderTarget::op22_set_tiles(CBackend& cmd_list)
+{
+    cmd_list.set_c("op22_tiles", ps_op22_ssfx_tiles ? 1.f : 0.f, float(Device.dwFrame & 1), 0.f, 0.f);
+}
+
 // Векторы движения в формате SSS: xy = (dx, -dy) * 0.5 в UV, z - маска худа, w - флора (op22_ssfx_mv.ps из rt_Velocity)
 void CRenderTarget::phase_op22_ssfx_mv(CBackend& cmd_list)
 {
@@ -687,7 +695,9 @@ void CRenderTarget::phase_ssfx_ao(CBackend& cmd_list)
         cmd_list.set_c("ao_setup", ps_ssfx_ao);
         cmd_list.set_c("m_current", Matrix_current);
         cmd_list.set_c("m_previous", Matrix_previous);
+        op22_set_tiles(cmd_list);
     });
+    op22_gpu_mark("ao");
 
     // кадр - для учёта прошлого
     HW.get_context(cmd_list.context_id)->CopyResource(rt_ssfx_ao->pSurface, rt_ssfx_temp->pSurface);
@@ -702,6 +712,7 @@ void CRenderTarget::phase_ssfx_ao(CBackend& cmd_list)
             cmd_list.set_c("ao_setup", ps_ssfx_ao);
         });
     }
+    op22_gpu_mark("ao_blur");
 
     cmd_list.SetViewport({0.f, 0.f, w, h, 0.f, 1.f});
 }
@@ -856,7 +867,9 @@ void CRenderTarget::phase_ssfx_sss(CBackend& cmd_list)
     op22_ssfx_quad(cmd_list, rt_ssfx, s_ssfx_sss->E[0], w, h, 1.0f, [&]() {
         cmd_list.set_c("m_current", Matrix_current);
         cmd_list.set_c("m_previous", Matrix_previous);
+        op22_set_tiles(cmd_list);
     });
+    op22_gpu_mark("sss_sun_trace");
     op22_ssfx_quad(cmd_list, rt_ssfx_temp, s_ssfx_sss->E[1], w, h, 1.0f, [&]() { cmd_list.set_c("blur_setup", 0.f, 1.f, 0.f, 0.f); });
     op22_ssfx_quad(cmd_list, rt_ssfx_temp2, s_ssfx_sss->E[2], w, h, 1.0f, [&]() { cmd_list.set_c("blur_setup", 1.f, 0.f, 2.f, 0.f); });
 
@@ -991,7 +1004,9 @@ void CRenderTarget::phase_ssfx_il(CBackend& cmd_list)
         cmd_list.set_c("ao_setup", ps_ssfx_il);
         cmd_list.set_c("m_current", Matrix_current);
         cmd_list.set_c("m_previous", Matrix_previous);
+        op22_set_tiles(cmd_list);
     });
+    op22_gpu_mark("il");
 
     HW.get_context(cmd_list.context_id)->CopyResource(rt_ssfx_il->pSurface, rt_ssfx_temp2->pSurface);
 

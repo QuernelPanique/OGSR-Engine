@@ -305,6 +305,7 @@ public:
     void phase_ssfx_sss(CBackend& cmd_list); // OP22 (SSS 23): экранные тени солнца (до накопления солнца)
     void phase_ssfx_sss_ext(CBackend& cmd_list, const light_Package& LP); // OP22 (SSS 23): экранные тени ламп (до ламп)
     void op22_ssfx_frame_prep(CBackend& cmd_list); // OP22: раз за кадр - матрицы текущего/прошлого кадра и векторы движения SSS
+    void op22_set_tiles(CBackend& cmd_list); // OP22 (28.11): op22_ssfx_tiles
     void op22_ssfx_quad(CBackend& cmd_list, const ref_rt& rt, ref_selement& sh, float vw, float vh, float uv, const std::function<void()>& lambda);
     void phase_luminance(CBackend& cmd_list);
     void phase_combine(CBackend& cmd_list);

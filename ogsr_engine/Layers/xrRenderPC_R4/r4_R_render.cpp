@@ -561,7 +561,7 @@ void CRender::Render()
 namespace
 {
 constexpr int OP22_GPU_FRAMES = 4;
-constexpr int OP22_GPU_MARKS = 32;
+constexpr int OP22_GPU_MARKS = 40; // OP22 (28.11): было 32, добавлены подметки ao/il/sss/ssr
 struct op22_gpu_frame_t
 {
     ID3D11Query* disjoint{};
