@@ -39,6 +39,16 @@ void CRenderTarget::PhaseSSSS(CBackend& cmd_list)
     }
     else if (mode == SS_SS_OGSE)
     {
+        // OP22 (28.11): солнце в задней полусфере - в ssss_ogse_blur.ps ray_fade = saturate(angle_cos) = 0, лучи дают ноль,
+        // а финальный проход возвращает кадр как есть; маски rt_sunshafts_* никто больше не читает (s_mask_flare_* в
+        // combine.s шейдерами не используются) - пропуск пяти проходов даёт тот же кадр. Запас 0.001 - на округление CPU/GPU.
+        {
+            Fvector sd = g_pGamePersistent->Environment().CurrentEnv->sun_dir;
+            sd.normalize_safe();
+            if (-Device.vCameraDirection.dotproduct(sd) < -0.001f)
+                return;
+        }
+
         PIX_EVENT(phase_SS_SS_OGSE);
 
         // ***MASK GENERATION***
