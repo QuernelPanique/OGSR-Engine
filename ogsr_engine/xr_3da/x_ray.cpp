@@ -216,6 +216,25 @@ void Startup()
         if (pStartup)
             Console->Execute(pStartup + 1);
     }
+    // OP22 (28.11): автозамер (tools/engine/shots.py --perf) - сейв из файла userdata/op22_autoload, как -load
+    // (Lutris не меняем). Файл читается один раз и сразу удаляется, чтобы обычный запуск не грузил сейв сам.
+    if (FS.exist("$app_data_root$", "op22_autoload"))
+    {
+        string256 save_name{};
+        if (IReader* r = FS.r_open("$app_data_root$", "op22_autoload"))
+        {
+            r->r_string(save_name, sizeof(save_name));
+            FS.r_close(r);
+        }
+        FS.file_delete("$app_data_root$", "op22_autoload");
+        if (save_name[0])
+        {
+            string512 cmd;
+            xr_sprintf(cmd, "load %s", save_name);
+            Msg("[OP22] op22_autoload: %s", cmd);
+            Console->Execute(cmd);
+        }
+    }
 
     // Initialize APP
 

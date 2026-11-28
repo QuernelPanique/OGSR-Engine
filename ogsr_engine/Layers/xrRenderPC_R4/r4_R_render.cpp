@@ -580,7 +580,7 @@ int op22_gpu_nacc{};
 u32 op22_gpu_frames{}, op22_gpu_cpu_frames{};
 double op22_gpu_total{}, op22_gpu_cpu{};
 u32 op22_gpu_last_print{};
-double op22_gpu_cnt[5]{}; // OP22 (28.11): суммы счётчиков ламп
+double op22_gpu_cnt[9]{}; // OP22 (28.11): суммы счётчиков ламп (0-4) и вызовов отрисовки (5-8)
 
 bool op22_gpu_init()
 {
@@ -662,8 +662,11 @@ void op22_gpu_frame_begin()
         if (pos > 0 && pos < int(sizeof(line)) - 96)
         {
             const double nf = std::max(1u, op22_gpu_cpu_frames);
-            sprintf_s(line + pos, sizeof(line) - pos, " | lamps shadowed %.1f (smap %.0fk) own_vol_flag %.1f point %.1f spot %.1f", op22_gpu_cnt[0] / nf,
+            pos += sprintf_s(line + pos, sizeof(line) - pos, " | lamps shadowed %.1f (smap %.0fk) own_vol_flag %.1f point %.1f spot %.1f", op22_gpu_cnt[0] / nf,
                       op22_gpu_cnt[1] / nf, op22_gpu_cnt[2] / nf, op22_gpu_cnt[3] / nf, op22_gpu_cnt[4] / nf);
+            if (pos > 0 && pos < int(sizeof(line)) - 96)
+                sprintf_s(line + pos, sizeof(line) - pos, " | draws to_gbuffer %.0f (%.0fk tris) frame %.0f (%.0fk tris)", op22_gpu_cnt[5] / nf,
+                          op22_gpu_cnt[6] / nf, op22_gpu_cnt[7] / nf, op22_gpu_cnt[8] / nf);
         }
         Msg("%s", line);
         std::fill(std::begin(op22_gpu_cnt), std::end(op22_gpu_cnt), 0.0);
@@ -696,6 +699,17 @@ void op22_gpu_mark(LPCSTR name)
     HW.get_context(CHW::IMM_CTX_ID)->End(f.ts[f.count]);
     f.name[f.count] = name;
     f.count++;
+    // OP22 (28.11): вызовы отрисовки и треугольники основного контекста (RCache.stat копится с начала кадра)
+    if (!xr_strcmp(name, "gbuffer"))
+    {
+        op22_gpu_cnt[5] += RCache.stat.calls;
+        op22_gpu_cnt[6] += RCache.stat.polys / 1000.0;
+    }
+    else if (!xr_strcmp(name, "post"))
+    {
+        op22_gpu_cnt[7] += RCache.stat.calls;
+        op22_gpu_cnt[8] += RCache.stat.polys / 1000.0;
+    }
 }
 
 void op22_gpu_frame_end()
