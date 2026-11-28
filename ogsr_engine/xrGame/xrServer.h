@@ -8,6 +8,9 @@
 #include "game_sv_base.h"
 #include "id_generator.h"
 
+// OP22 (28.11 perf): индекс CSE выделяется при первом быстром поиске.
+#include <optional>
+
 /*#ifdef DEBUG
 //. #define SLOW_VERIFY_ENTITIES
 #endif*/
@@ -49,6 +52,14 @@ class xrServer : public IPureServer
 {
 private:
     xrS_entities entities;
+    // OP22 (28.11 perf): быстрый доступ для ClientSend с прежним порядком обхода entities.
+    std::optional<xr_unordered_map<u32, CSE_Abstract*>> m_client_entity_index;
+    void register_entity(CSE_Abstract* entity);
+
+    // OP22 (28.11 perf): посещённые ID относятся только к текущей репликации.
+    struct ConnectSpawnIds;
+    void Perform_connect_spawn(CSE_Abstract* E, xrClientData* to, NET_Packet& P, ConnectSpawnIds& visited);
+
     xr_multiset<svs_respawn> q_respawn;
 
     u16 m_iCurUpdatePacket;
@@ -90,7 +101,6 @@ public:
     IC u32 ID_max_used() const { return m_tID_Generator.max_used(); }
     IC u32 ID_next_fresh() const { return m_tID_Generator.next_fresh(); }
 
-    void Perform_connect_spawn(CSE_Abstract* E, xrClientData* to, NET_Packet& P);
     void Perform_transfer(NET_Packet& PR, NET_Packet& PT, CSE_Abstract* what, CSE_Abstract* from, CSE_Abstract* to);
     void Perform_reject(CSE_Abstract* what, CSE_Abstract* from, int delta);
     void Perform_destroy(CSE_Abstract* tpSE_Abstract, u32 mode);
@@ -136,6 +146,7 @@ public:
 
     xrClientData* ID_to_client(ClientID ID, bool ScanAll = false) { return (xrClientData*)(IPureServer::ID_to_client(ID, ScanAll)); }
     CSE_Abstract* ID_to_entity(u32 ID);
+    CSE_Abstract* FindEntityForClientSend(u32 ID); // OP22 (28.11 perf): поиск CSE для покадрового экспорта.
 
     // main
     virtual EConnect Connect(shared_str& session_name);

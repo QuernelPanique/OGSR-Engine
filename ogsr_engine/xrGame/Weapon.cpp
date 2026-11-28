@@ -1441,10 +1441,11 @@ void CWeapon::SpawnAmmo(u32 boxCurr, LPCSTR ammoSect, u32 ParentID)
         D->s_gameid = u8(GameID());
         D->s_RP = 0xff;
         D->ID = 0xffff;
+        // OP22 (28.11 perf): коробка патронов получает полный ID владельца.
         if (ParentID == 0xffffffff)
-            D->ID_Parent = (u16)H_Parent()->ID();
+            D->ID_Parent = H_Parent()->ID();
         else
-            D->ID_Parent = (u16)ParentID;
+            D->ID_Parent = ParentID;
 
         D->ID_Phantom = 0xffff;
         D->s_flags.assign(M_SPAWN_OBJECT_LOCAL);

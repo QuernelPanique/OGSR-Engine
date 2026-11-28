@@ -12,8 +12,12 @@
 #include "space_restriction_manager.h"
 #include "space_restriction_bridge.h"
 #include "object_broker.h"
+#include <algorithm>
+#include <string_view>
 
 const u32 time_to_delete = 300000;
+// OP22 (28.11 perf): пакетная смена глобальных ограничителей.
+int g_op22_restriction_batch = 1;
 
 struct CSpaceRestrictionManager::CClientRestriction
 {
@@ -98,10 +102,16 @@ shared_str CSpaceRestrictionManager::base_out_restrictions(ALife::_OBJECT_ID id)
     return ((*I).second.m_restriction);
 }
 
+// OP22 (28.11 perf): правило срока жизни одинаково для очистки и поиска в пакете.
+static bool expired_restriction(CSpaceRestriction* restriction)
+{
+    return restriction->released() && Device.dwTimeGlobal >= restriction->m_last_time_dec + time_to_delete;
+}
+
 IC void CSpaceRestrictionManager::collect_garbage()
 {
     std::erase_if(m_space_restrictions, [](auto& pair) {
-        if (pair.second->released() && (Device.dwTimeGlobal >= pair.second->m_last_time_dec + time_to_delete))
+        if (expired_restriction(pair.second))
         {
             xr_delete(pair.second);
             return true;
@@ -123,13 +133,19 @@ void CSpaceRestrictionManager::restrict(ALife::_OBJECT_ID id, shared_str out_res
     join_restrictions(merged_out_restrictions, _default_out_restrictions);
     join_restrictions(merged_in_restrictions, _default_in_restrictions);
 
+    // OP22 (28.11 perf): одиночная смена по-прежнему сразу очищает кэш.
+    set_client_restriction(id, out_restrictors, in_restrictors, merged_out_restrictions, merged_in_restrictions);
+    collect_garbage();
+}
+
+void CSpaceRestrictionManager::set_client_restriction(ALife::_OBJECT_ID id, shared_str base_out, shared_str base_in, shared_str merged_out, shared_str merged_in,
+                                                      bool expire_on_lookup)
+{
     CLIENT_RESTRICTIONS::iterator I = m_clients->find(id);
     VERIFY2((m_clients->end() == I) || !(*I).second.m_restriction || !(*I).second.m_restriction->applied(), "Restriction cannot be changed since its border is still applied!");
-    (*m_clients)[id].m_restriction = restriction(merged_out_restrictions, merged_in_restrictions);
-    (*m_clients)[id].m_base_out_restrictions = out_restrictors;
-    (*m_clients)[id].m_base_in_restrictions = in_restrictors;
-
-    collect_garbage();
+    (*m_clients)[id].m_restriction = restriction(merged_out, merged_in, expire_on_lookup);
+    (*m_clients)[id].m_base_out_restrictions = base_out;
+    (*m_clients)[id].m_base_in_restrictions = base_in;
 }
 
 void CSpaceRestrictionManager::unrestrict(ALife::_OBJECT_ID id)
@@ -156,7 +172,7 @@ bool CSpaceRestrictionManager::accessible(ALife::_OBJECT_ID id, u32 level_vertex
     return (true);
 }
 
-CSpaceRestrictionManager::CRestrictionPtr CSpaceRestrictionManager::restriction(shared_str out_restrictors, shared_str in_restrictors)
+CSpaceRestrictionManager::CRestrictionPtr CSpaceRestrictionManager::restriction(shared_str out_restrictors, shared_str in_restrictors, bool expire_on_lookup)
 {
     string4096 m_temp;
     if (!xr_strlen(out_restrictors) && !xr_strlen(in_restrictors))
@@ -168,9 +184,15 @@ CSpaceRestrictionManager::CRestrictionPtr CSpaceRestrictionManager::restriction(
     strconcat(sizeof(m_temp), m_temp, *out_restrictors, "\x01", *in_restrictors);
     shared_str space_restrictions = m_temp;
 
-    SPACE_RESTRICTIONS::const_iterator I = m_space_restrictions.find(space_restrictions);
+    const auto I = m_space_restrictions.find(space_restrictions);
     if (I != m_space_restrictions.end())
-        return ((*I).second);
+    {
+        // OP22 (28.11 perf): не оживляем запись, которую уже удалил бы проход после предыдущего клиента.
+        if (!expire_on_lookup || !expired_restriction(I->second))
+            return I->second;
+        xr_delete(I->second);
+        m_space_restrictions.erase(I);
+    }
 
     CSpaceRestriction* client_restriction = xr_new<CSpaceRestriction>(this, out_restrictors, in_restrictors);
     m_space_restrictions.insert(std::make_pair(space_restrictions, client_restriction));
@@ -294,6 +316,81 @@ void CSpaceRestrictionManager::change_restrictions(ALife::_OBJECT_ID id, shared_
 
 void CSpaceRestrictionManager::on_default_restrictions_changed()
 {
+    // OP22 (28.11 perf): обычные списки разбираем один раз, мусор собираем после всех клиентов.
+    if (g_op22_restriction_batch && !m_clients->empty())
+    {
+        struct ParsedList
+        {
+            xr_vector<std::string_view> names;
+            bool canonical = true;
+        };
+        string_unordered_map<shared_str, ParsedList> parsed;
+        const auto parse = [&parsed](const shared_str& list) -> const ParsedList& {
+            auto [it, inserted] = parsed.try_emplace(list);
+            auto& result = it->second;
+            if (!inserted || list.empty())
+                return result;
+
+            std::string_view remaining = it->first;
+            for (;;)
+            {
+                const auto separator = remaining.find(',');
+                const auto name = remaining.substr(0, separator);
+                if (name.empty() || name.size() >= sizeof(string4096) || std::ranges::any_of(name, [](unsigned char c) { return c <= ' '; }))
+                {
+                    result.canonical = false;
+                    break;
+                }
+                if (std::ranges::find(result.names, name) == result.names.end())
+                    result.names.push_back(name);
+                if (separator == std::string_view::npos)
+                    break;
+                remaining.remove_prefix(separator + 1);
+            }
+            return result;
+        };
+
+        const auto merge = [this, &parse](shared_str base, shared_str defaults, shared_str opposite) {
+            const auto& base_list = parse(base);
+            const auto& default_list = parse(defaults);
+            const auto& opposite_list = parse(opposite);
+            if (!base_list.canonical || !default_list.canonical || !opposite_list.canonical)
+            {
+                difference_restrictions(defaults, opposite);
+                join_restrictions(base, defaults);
+                return base;
+            }
+
+            string4096 merged;
+            strcpy_s(merged, *base);
+            for (const auto& name : default_list.names)
+            {
+                if (std::ranges::find(opposite_list.names, name) != opposite_list.names.end() ||
+                    std::ranges::find(base_list.names, name) != base_list.names.end())
+                    continue;
+                if (*merged)
+                    strcat_s(merged, ",");
+                strncat_s(merged, name.data(), name.size());
+            }
+            return shared_str(merged);
+        };
+
+        const shared_str default_out = default_out_restrictions();
+        const shared_str default_in = default_in_restrictions();
+        bool expire_on_lookup = false;
+        for (const auto& [id, client] : *m_clients)
+        {
+            const auto& base_out = client.m_base_out_restrictions;
+            const auto& base_in = client.m_base_in_restrictions;
+            const auto merged_out = merge(base_out, default_out, base_in);
+            const auto merged_in = merge(base_in, default_in, base_out);
+            set_client_restriction(id, base_out, base_in, merged_out, merged_in, expire_on_lookup);
+            expire_on_lookup = true;
+        }
+        collect_garbage();
+        return;
+    }
+
     CLIENT_RESTRICTIONS::const_iterator I = m_clients->begin();
     CLIENT_RESTRICTIONS::const_iterator E = m_clients->end();
     for (; I != E; ++I)

@@ -2,6 +2,27 @@
 #include "FidelityFX/host/ffx_fsr3.h"
 #include "FidelityFX/host/backends/dx11/ffx_dx11.h"
 
+// OP22 (28.11 perf): полноэкранный проход уже записал готовый цвет в scratch.
+void CRenderTarget::CommitSceneColor(CBackend& cmd_list)
+{
+    if (!ps_op22_rt_pingpong)
+    {
+        HW.get_context(cmd_list.context_id)->CopyResource(rt_Generic_0->pSurface, rt_Generic_scene_scratch->pSurface);
+        return;
+    }
+
+    // OP22 (28.11 perf): освобождаем прежние RTV/SRV, чтобы следующий проход заново привязал текстуры по имени.
+    cmd_list.set_RT(nullptr);
+    cmd_list.set_Textures(nullptr);
+    cmd_list.SRVSManager.Apply(cmd_list.context_id);
+    CRT& scene = *rt_Generic_0;
+    CRT& scratch = *rt_Generic_scene_scratch;
+    std::swap(scene.pSurface, scratch.pSurface);
+    std::swap(scene.pRT, scratch.pRT);
+    std::swap(scene.pUAView, scratch.pUAView);
+    scene.pTexture->swap_render_target_surface(*scratch.pTexture);
+}
+
 void CRenderTarget::ProcessSMAA(CBackend& cmd_list)
 {
     PIX_EVENT(SMAA);
@@ -10,7 +31,7 @@ void CRenderTarget::ProcessSMAA(CBackend& cmd_list)
     RenderScreenTriangle(cmd_list, rt_smaa_blendtex, s_pp_antialiasing->E[3]);
     RenderScreenTriangle(cmd_list, rt_Generic_scene_scratch, s_pp_antialiasing->E[4]);
 
-    HW.get_context(cmd_list.context_id)->CopyResource(rt_Generic_0->pSurface, rt_Generic_scene_scratch->pSurface);
+    CommitSceneColor(cmd_list); // OP22 (28.11 perf): результат смешивания SMAA становится текущим цветом.
 }
 
 void CRenderTarget::ProcessTAA(CBackend& cmd_list)
@@ -24,9 +45,9 @@ void CRenderTarget::ProcessTAA(CBackend& cmd_list)
     }
 
     RenderScreenTriangle(cmd_list, rt_Generic_scene_scratch, s_taa->E[0]);
-    HW.get_context(cmd_list.context_id)->CopyResource(rt_Generic_0->pSurface, rt_Generic_scene_scratch->pSurface);
-
-    HW.get_context(cmd_list.context_id)->CopyResource(rt_Generic_0_prev->pSurface, rt_Generic_scene_scratch->pSurface);
+    CommitSceneColor(cmd_list); // OP22 (28.11 perf): тот же результат TAA читают история и постобработка.
+    const ref_rt& result = ps_op22_rt_pingpong ? rt_Generic_0 : rt_Generic_scene_scratch;
+    HW.get_context(cmd_list.context_id)->CopyResource(rt_Generic_0_prev->pSurface, result->pSurface);
 }
 
 //*****************************************************************************************************
@@ -511,39 +532,6 @@ void CRenderTarget::ConfigureTemporalRenderSize()
         GetDisplayHeight());
 }
 
-static float saved_3dss_scale_factor{};
-bool CRenderTarget::reset_3dss_rendertarget(const bool need_reset)
-{
-    if (!need_reset && saved_3dss_scale_factor == ps_r_dlss_3dss_scale_factor)
-        return false;
-
-    saved_3dss_scale_factor = ps_r_dlss_3dss_scale_factor;
-
-    u32 saved_w{}, saved_h{};
-    bool empty_rt = !rt_Generic_combine_scope;
-    if (!empty_rt)
-    {
-        saved_w = rt_Generic_combine_scope->dwWidth;
-        saved_h = rt_Generic_combine_scope->dwHeight;
-        rt_Generic_combine_scope.destroy();
-    }
-
-    u32 w{}, h{};
-    for (float i{ps_r_dlss_3dss_scale_factor}; i >= 1.f; i -= 0.1f)
-    {
-        w = static_cast<u32>(std::ceil(static_cast<float>(Device.dwWidth) * i));
-        h = static_cast<u32>(std::ceil(static_cast<float>(Device.dwHeight) * i));
-        if (w < D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION && h < D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION)
-            break;
-    }
-    constexpr Flags32 flg{CRT::CreateUAV};
-    rt_Generic_combine_scope.create(r2_RT_generic_combine_scope, w, h, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, flg);
-
-    Msg("--[%s] 3D Scope render size: [%u, %u]", __FUNCTION__, w, h);
-
-    return empty_rt || saved_w != w || saved_h != h;
-}
-
 void CRenderTarget::InitDLSS()
 {
     if (ps_r_pp_aa_mode != DLSS)
@@ -721,17 +709,16 @@ public:
 
     bool Create(const FfxDimensions2D& maxRenderSize, const FfxDimensions2D& displaySize, ref_rt& out_rt, const u32 quality)
     {
+        // OP22 (28.11 perf): прежний контекст может ещё владеть ресурсами до смены выхода.
+        if (fsr_created)
+            Destroy();
+
         OutputRT = out_rt->pSurface;
         saved_w = out_rt->dwWidth;
         saved_h = out_rt->dwHeight;
         saved_maxRenderSize = maxRenderSize;
         saved_displaySize = displaySize;
         requestedQuality = quality;
-
-        if (fsr_created)
-        {
-            Destroy();
-        }
 
         if (HW.FeatureLevel < D3D_FEATURE_LEVEL_11_0)
         {
@@ -802,6 +789,7 @@ public:
         _RELEASE(dilatedDepth);
         _RELEASE(dilatedMotionVectors);
         _RELEASE(reconstructedPrevNearestDepth);
+        OutputRT = nullptr; // OP22 (28.11 perf): выход прицела может быть сразу освобождён.
         resetHistory = true;
     }
 
@@ -870,9 +858,44 @@ public:
     }
 
     void RequestHistoryReset() { resetHistory = true; }
+    // OP22 (28.11 perf): при отказе контекста прицела можно выбрать обычную линзу.
+    bool IsCreated() const { return fsr_created; }
 
     ~Fsr3Wrapper() { Destroy(); }
 } Fsr3Wrapper , Fsr3WrapperScope;
+
+bool CRenderTarget::reset_3dss_rendertarget(const bool need_reset)
+{
+    // OP22 (28.11 perf): запоминаем масштаб вместе с RT, чтобы первый вход после vid_restart создал ресурс.
+    if (!need_reset && rt_Generic_combine_scope && m_3dssScaleFactor == ps_r_dlss_3dss_scale_factor)
+        return false;
+
+    m_3dssScaleFactor = ps_r_dlss_3dss_scale_factor;
+
+    u32 w{}, h{};
+    for (float i{ps_r_dlss_3dss_scale_factor}; i >= 1.f; i -= 0.1f)
+    {
+        w = static_cast<u32>(std::ceil(static_cast<float>(Device.dwWidth) * i));
+        h = static_cast<u32>(std::ceil(static_cast<float>(Device.dwHeight) * i));
+        if (w < D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION && h < D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION)
+            break;
+    }
+    const bool sizeChanged = !rt_Generic_combine_scope || rt_Generic_combine_scope->dwWidth != w || rt_Generic_combine_scope->dwHeight != h;
+    // OP22 (28.11 perf): сохраняем выходной ресурс FSR, когда округление оставило те же размеры.
+    if (ps_op22_3dss_lazy_fsr && !sizeChanged)
+        return false;
+
+    // OP22 (28.11 perf): завершаем отдельный контекст перед сменой его выходного ресурса.
+    if (ps_op22_3dss_lazy_fsr)
+        Fsr3WrapperScope.Destroy();
+    rt_Generic_combine_scope.destroy();
+    constexpr Flags32 flg{CRT::CreateUAV};
+    rt_Generic_combine_scope.create(r2_RT_generic_combine_scope, w, h, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, flg);
+
+    Msg("--[%s] 3D Scope render size: [%u, %u]", __FUNCTION__, w, h);
+
+    return sizeChanged;
+}
 
 void CRenderTarget::InitFSR()
 {
@@ -888,7 +911,7 @@ void CRenderTarget::InitFSR()
         if (ps_r_pp_aa_mode == FSR3)
             ps_r_pp_aa_mode = TAA;
     }
-    else
+    else if (!ps_op22_3dss_lazy_fsr) // OP22 (28.11 perf): старый режим выделяет RT и контекст при запуске.
     {
         reset_3dss_rendertarget();
 
@@ -909,6 +932,24 @@ void CRenderTarget::ResetTemporalHistory()
     NGXWrapper.RequestHistoryReset();
     Fsr3Wrapper.RequestHistoryReset();
     Fsr3WrapperScope.RequestHistoryReset();
+}
+
+// OP22 (28.11 perf): сбрасываем накопление у метода, который получает кадр после переключения.
+void CRenderTarget::UpdateTemporalAAMethod(u32 mode)
+{
+    if (m_lastAAMethod == mode)
+        return;
+
+    m_lastAAMethod = mode;
+    if (!ps_op22_aa_history_reset)
+        return;
+
+    switch (mode)
+    {
+    case TAA: m_resetTemporalHistory = true; break;
+    case DLSS: NGXWrapper.RequestHistoryReset(); break;
+    case FSR3: Fsr3Wrapper.RequestHistoryReset(); break;
+    }
 }
 
 bool CRenderTarget::ProcessFSR(ID3D11Resource* reactiveMask)
@@ -940,8 +981,26 @@ bool CRenderTarget::ProcessFSR_3DSS(const bool need_reset)
 
     if (need_reset)
     {
-        InitFSR();
+        // OP22 (28.11 perf): изменение RT линзы требует пересоздать только её контекст.
+        if (ps_op22_3dss_lazy_fsr)
+        {
+            if (!rt_Generic_combine_scope || !rt_Generic_combine_scope->pUAView)
+                return false;
+
+            const FfxDimensions2D renderSize{GetRenderWidth(), GetRenderHeight()};
+            const FfxDimensions2D scopeSize{rt_Generic_combine_scope->dwWidth, rt_Generic_combine_scope->dwHeight};
+            if (!Fsr3WrapperScope.Create(renderSize, scopeSize, rt_Generic_combine_scope, FSR3_QUALITY_NATIVE_AA))
+                return false;
+        }
+        else
+        {
+            InitFSR();
+        }
     }
+
+    // OP22 (28.11 perf): если создание не удалось, используем обычную линзу до следующего изменения масштаба.
+    if (ps_op22_3dss_lazy_fsr && !Fsr3WrapperScope.IsCreated())
+        return false;
 
     if (!Fsr3WrapperScope.Draw())
     {
@@ -964,6 +1023,7 @@ bool CRenderTarget::PhaseAA(CBackend& cmd_list, ID3D11Resource* reactiveMask)
             if (!temporalOutput)
             {
                 ps_r_pp_aa_mode = FSR3;
+                UpdateTemporalAAMethod(FSR3); // OP22 (28.11 perf): резервный FSR получает кадр сразу.
                 temporalOutput = ProcessFSR();
                 if (!temporalOutput)
                     ps_r_pp_aa_mode = TAA;
@@ -995,9 +1055,20 @@ bool CRenderTarget::PhaseAA(CBackend& cmd_list, ID3D11Resource* reactiveMask)
 
 //*****************************************************************************************************
 
-bool CRenderTarget::Phase3DSSUpscale(CBackend& cmd_list)
+bool CRenderTarget::Phase3DSSUpscale(bool needScope)
 {
     if (ps_r_dlss_3dss_scale_factor <= 1.f)
+    {
+        // OP22 (28.11 perf): после снижения масштаба освобождаем только ресурсы прицела.
+        if (ps_op22_3dss_lazy_fsr && rt_Generic_combine_scope)
+        {
+            Fsr3WrapperScope.Destroy();
+            rt_Generic_combine_scope.destroy();
+        }
+        return false;
+    }
+
+    if (!needScope)
         return false;
 
     // Проверки на сглаживание для того, что для апскейлинга нам нужен taa джиттер

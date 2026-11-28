@@ -31,18 +31,12 @@ public:
     typedef xr_map<shared_str, CSpaceRestrictionBridge*> RESTRICTIONS;
 
 private:
-    enum
-    {
-        MAX_RESTRICTION_PER_TYPE_COUNT = u32(128),
-        dummy = u32(-1),
-    };
-
-private:
     RESTRICTIONS m_restrictions;
     shared_str m_default_out_restrictions;
     shared_str m_default_in_restrictions;
 
 protected:
+    // OP22 (28.11 perf): нормализация поддерживает списки длиннее 128 имён.
     shared_str normalize_string(shared_str space_restrictors);
     IC void collect_garbage();
     virtual void on_default_restrictions_changed() = 0;

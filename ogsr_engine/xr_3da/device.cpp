@@ -17,6 +17,7 @@
 #include "op22_parallel_jobs.h"
 #include <atomic>
 #include <limits>
+#include <mutex>
 
 extern int g_op22_frame_stats;
 
@@ -25,8 +26,14 @@ int g_op22_hitch_log = 1;
 int g_op22_hitch_ms = 20;
 static std::atomic<u64> op22_hitch_times[static_cast<unsigned>(Op22HitchStage::count)]{};
 
-Op22HitchTimer::Op22HitchTimer(Op22HitchStage stage, bool enabled)
-    : stage(stage), frame_tag(enabled ? static_cast<unsigned>(op22_hitch_times[static_cast<unsigned>(stage)].load(std::memory_order_relaxed) >> 32) : 0)
+// OP22 (28.11 perf): публикуем самое долгое имя вместе с результатами замера текстур.
+static std::mutex op22_hitch_texture_mutex;
+static string_path op22_hitch_texture_name{};
+static Op22FrameProfile::Clock::duration op22_hitch_texture_duration{};
+
+Op22HitchTimer::Op22HitchTimer(Op22HitchStage stage, bool enabled, const char* texture_name)
+    : stage(stage), frame_tag(enabled ? static_cast<unsigned>(op22_hitch_times[static_cast<unsigned>(stage)].load(std::memory_order_relaxed) >> 32) : 0),
+      texture_name(stage == Op22HitchStage::tex ? texture_name : nullptr)
 {
     if (frame_tag)
         started = Clock::now();
@@ -37,14 +44,26 @@ Op22HitchTimer::~Op22HitchTimer()
     if (!frame_tag)
         return;
 
-    const auto elapsed = static_cast<u64>(std::chrono::duration_cast<std::chrono::microseconds>(Clock::now() - started).count());
+    const auto duration = Clock::now() - started;
+    const auto elapsed = static_cast<u64>(std::chrono::duration_cast<std::chrono::microseconds>(duration).count());
+    // OP22 (28.11 perf): имя и счётчик текстур закрываются вместе при завершении кадра.
+    std::unique_lock lock(op22_hitch_texture_mutex, std::defer_lock);
+    if (texture_name)
+        lock.lock();
     auto& counter = op22_hitch_times[static_cast<unsigned>(stage)];
     u64 previous = counter.load(std::memory_order_relaxed);
     while ((previous >> 32) == frame_tag)
     {
         const auto total = std::min<u64>(static_cast<u32>(previous) + elapsed, (std::numeric_limits<u32>::max)());
         if (counter.compare_exchange_weak(previous, (u64(frame_tag) << 32) | total, std::memory_order_relaxed))
+        {
+            if (texture_name && (!*op22_hitch_texture_name || duration > op22_hitch_texture_duration))
+            {
+                strncpy_s(op22_hitch_texture_name, texture_name, _TRUNCATE);
+                op22_hitch_texture_duration = duration;
+            }
             break;
+        }
     }
 }
 
@@ -57,25 +76,36 @@ static void op22_hitch_begin()
         counter.store(u64(frame_tag) << 32, std::memory_order_relaxed);
 }
 
-static void op22_hitch_finish(const Op22FrameProfile& profile, bool in_game)
+// OP22 (28.11 perf): раннее ожидание проверяем отдельно от работы кадра.
+static void op22_hitch_finish(const Op22FrameProfile& profile, bool in_game, float early_wait = 0.f)
 {
     const auto now = Op22FrameProfile::Clock::now();
     float times[static_cast<unsigned>(Op22HitchStage::count)];
+    // OP22 (28.11 perf): запоздавший таймер не добавит имя после сброса счётчика кадра.
+    std::unique_lock texture_lock(op22_hitch_texture_mutex);
     for (unsigned i = 0; i < static_cast<unsigned>(Op22HitchStage::count); ++i)
         times[i] = static_cast<float>(static_cast<u32>(op22_hitch_times[i].exchange(0, std::memory_order_relaxed))) / 1000.f;
 
     const float present_wait = times[static_cast<unsigned>(Op22HitchStage::present_wait)];
     const float total = Op22FrameProfile::milliseconds(now - profile.started) - present_wait;
+    const float threshold = static_cast<float>(g_op22_hitch_ms);
     static Op22FrameProfile::Tick last{};
-    if (!in_game || total <= static_cast<float>(g_op22_hitch_ms) || (last != Op22FrameProfile::Tick{} && now - last < std::chrono::milliseconds(100)))
+    const bool log = in_game && (total > threshold || early_wait > threshold) && (last == Op22FrameProfile::Tick{} || now - last >= std::chrono::milliseconds(100));
+    string_path texture_name;
+    if (log)
+        strcpy_s(texture_name, *op22_hitch_texture_name ? op22_hitch_texture_name : "-");
+    *op22_hitch_texture_name = 0;
+    op22_hitch_texture_duration = {};
+    texture_lock.unlock();
+    if (!log)
         return;
 
     last = now;
-    Msg("[OP22 hitch] frame=%u total=%.2f update=%.2f draw=%.2f wait=%.2f gc=%.2f alife=%.2f destroy=%.2f spawn=%.2f tex=%.2f",
-        Device.dwFrame, total, profile.sample.update, profile.sample.draw, profile.sample.wait + present_wait,
+    Msg("[OP22 hitch] frame=%u total=%.2f update=%.2f draw=%.2f wait=%.2f early_wait=%.2f gc=%.2f alife=%.2f destroy=%.2f spawn=%.2f tex=%.2f tex_name=%s",
+        Device.dwFrame, total, profile.sample.update, profile.sample.draw, profile.sample.wait + present_wait, early_wait,
         times[static_cast<unsigned>(Op22HitchStage::gc)], times[static_cast<unsigned>(Op22HitchStage::alife)],
         times[static_cast<unsigned>(Op22HitchStage::destroy)], times[static_cast<unsigned>(Op22HitchStage::spawn)],
-        times[static_cast<unsigned>(Op22HitchStage::tex)]);
+        times[static_cast<unsigned>(Op22HitchStage::tex)], texture_name);
 }
 
 //#define LOG_SECOND_THREAD_STATS
@@ -296,10 +326,18 @@ void CRenderDevice::on_idle()
     {
         ZoneScoped;
 
+        // OP22 (28.11 perf): замеряем ожидание до старта таймера работы кадра.
+        const bool op22_hitch = g_op22_hitch_log && g_op22_ingame && g_pGameLevel && b_is_Active && !dwPrecacheFrame && !load_screen_renderer.b_registered;
+        float op22_early_wait = 0.f;
         // OP22 (28.11 perf): ждём до ввода и FrameMove, вне загрузки и предзагрузки.
         if (b_is_Active && !dwPrecacheFrame && !load_screen_renderer.b_registered && (!pApp || !pApp->IsLoading()) &&
             m_pRender && ::Render)
+        {
+            const auto started = op22_hitch ? Op22FrameProfile::Clock::now() : Op22FrameProfile::Tick{};
             m_pRender->WaitForFrameLatency();
+            if (op22_hitch)
+                op22_early_wait = Op22FrameProfile::milliseconds(Op22FrameProfile::Clock::now() - started);
+        }
 
 #ifdef LOG_SECOND_THREAD_STATS
         const auto FrameStartTime = std::chrono::high_resolution_clock::now();
@@ -318,7 +356,6 @@ void CRenderDevice::on_idle()
         }
 
         // OP22 (28.11 perf): измеряем игровой кадр и закрываем счётчики даже при переходе к загрузке.
-        const bool op22_hitch = g_op22_hitch_log && g_op22_ingame && g_pGameLevel && b_is_Active && !dwPrecacheFrame && !load_screen_renderer.b_registered;
         Op22FrameProfile op22_profile(g_op22_frame_stats > 1 && g_pGameLevel, op22_hitch);
         if (op22_hitch)
             op22_hitch_begin();
@@ -506,7 +543,7 @@ void CRenderDevice::on_idle()
         {
             const bool in_game = g_op22_ingame && g_pGameLevel && !op22_profile.sample.precache && !dwPrecacheFrame &&
                 !load_screen_renderer.b_registered && g_loading_events.empty();
-            op22_hitch_finish(op22_profile, in_game);
+            op22_hitch_finish(op22_profile, in_game, op22_early_wait); // OP22 (28.11 perf): передаём раннее ожидание отдельно.
         }
         op22_profile.finish();
         FrameMark;

@@ -55,7 +55,7 @@ IC CMemoryObject<T>::CMemoryObject()
 }
 
 template <typename T>
-IC bool CMemoryObject<T>::operator==(u16 id) const
+IC bool CMemoryObject<T>::operator==(ALife::_OBJECT_ID id) const // OP22 (28.11 perf): без обрезания ключа поиска.
 {
     return (object_id(m_object) == id);
 }
@@ -86,7 +86,8 @@ IC void CMemoryObject<T>::fill(const T* game_object, const T* self, const squad_
 }
 
 template <typename T>
-IC u16 object_id(const T* object)
+IC ALife::_OBJECT_ID object_id(const T* object)
 {
-    return (object ? u16(object->ID()) : u16(0xffff));
+    // OP22 (28.11 perf): сохраняем старшие биты ID и прежний признак отсутствия объекта.
+    return (object ? object->ID() : ALife::_OBJECT_ID(0xffff));
 }

@@ -11,10 +11,12 @@ class Op22HitchTimer
     using Clock = std::chrono::steady_clock;
     const Op22HitchStage stage;
     const unsigned frame_tag;
+    // OP22 (28.11 perf): имя ресурса действительно до выхода из области замера.
+    const char* const texture_name;
     Clock::time_point started{};
 
 public:
-    explicit Op22HitchTimer(Op22HitchStage stage, bool enabled = true);
+    explicit Op22HitchTimer(Op22HitchStage stage, bool enabled = true, const char* texture_name = nullptr);
     ~Op22HitchTimer();
     Op22HitchTimer(const Op22HitchTimer&) = delete;
     Op22HitchTimer& operator=(const Op22HitchTimer&) = delete;

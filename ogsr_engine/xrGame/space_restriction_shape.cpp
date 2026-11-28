@@ -12,6 +12,11 @@
 #include "level_graph.h"
 #include "space_restrictor.h"
 #include "graph_engine.h"
+#include <algorithm>
+#include <cmath>
+
+// OP22 (28.11 perf): отсев границы по Z до вычисления высот углов клетки.
+int g_op22_restriction_border_z = 1;
 
 struct CBorderMergePredicate
 {
@@ -77,7 +82,28 @@ void CSpaceRestrictionShape::fill_shape(const CCF_Shape::shape_def& shape)
     }
     default: NODEFAULT;
     }
-    ai().level_graph().iterate_vertices(start, dest, CBorderMergePredicate(this));
+    const auto& graph = ai().level_graph();
+    const CBorderMergePredicate merge(this);
+    if (g_op22_restriction_border_z)
+    {
+        // OP22 (28.11 perf): составная зона проверяет все фигуры, поэтому берём общую сферу.
+        const float offset = std::abs(graph.header().cell_size() * .5f - EPS_L);
+        graph.iterate_vertices(start, dest, [&](const CLevelGraph::CVertex& vertex) {
+            if (const Fsphere* bounds = m_restrictor->prepared_bounds())
+            {
+                float x, z;
+                graph.unpack_xz(vertex, x, z);
+                const float closest_z = std::clamp(bounds->P.z, z - offset, z + offset);
+                const float gap = bounds->P.z - closest_z;
+                const float radius = bounds->R + default_radius;
+                if (gap * gap > radius * radius)
+                    return;
+            }
+            merge(vertex);
+        });
+    }
+    else
+        graph.iterate_vertices(start, dest, merge);
 
 #ifdef DEBUG
     ai().level_graph().iterate_vertices(start, dest, CShapeTestPredicate(this));

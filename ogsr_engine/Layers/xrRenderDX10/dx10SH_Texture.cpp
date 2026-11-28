@@ -153,6 +153,17 @@ void CTexture::surface_set(ID3DBaseTexture* surf)
     }
 }
 
+// OP22 (28.11 perf): сохраняем имена и ссылки шейдеров, переставляем ресурс и его SRV без пересоздания.
+void CTexture::swap_render_target_surface(CTexture& other)
+{
+    VERIFY(desc_Width == other.desc_Width && desc_Height == other.desc_Height);
+    VERIFY(curr_slice == -1 && other.curr_slice == -1);
+    std::swap(pSurface, other.pSurface);
+    std::swap(m_pSRView, other.m_pSRView);
+    std::swap(srv_all, other.srv_all);
+    srv_per_slice.swap(other.srv_per_slice);
+}
+
 ID3DBaseTexture* CTexture::surface_get() const
 {
     //if (pSurface)
@@ -358,8 +369,8 @@ void CTexture::Load(const char* Name)
         }
     } op22_t(Name);
 
-    // OP22 (28.11 perf): суммируем реальные загрузки текстур в игровом кадре.
-    const Op22HitchTimer timer(Op22HitchStage::tex);
+    // OP22 (28.11 perf): суммируем загрузки и отмечаем имя самой долгой текстуры кадра.
+    const Op22HitchTimer timer(Op22HitchStage::tex, true, Name);
     Preload(Name);
 
     // Check for OGM

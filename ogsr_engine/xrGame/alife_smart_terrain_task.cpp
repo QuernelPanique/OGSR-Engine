@@ -18,9 +18,19 @@
 #include "game_graph.h"
 #endif
 
+// OP22 (28.11 perf): кэшируем поиск точки, сохраняя вызовы task() из офлайн A-Life.
+int g_op22_patrol_point_cache = 1;
+
 void CALifeSmartTerrainTask::setup_patrol_point(const shared_str& patrol_path_name, const u32& patrol_point_index)
 {
     VERIFY(!m_patrol_point);
+
+    if (g_op22_patrol_point_cache)
+    {
+        m_patrol_point = ai().patrol_paths().task_point(patrol_path_name, patrol_point_index);
+        VERIFY(m_patrol_point);
+        return;
+    }
 
     const CPatrolPath* patrol_path = ai().patrol_paths().path(patrol_path_name);
     VERIFY(patrol_path);

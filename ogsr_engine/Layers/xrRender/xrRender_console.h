@@ -170,6 +170,7 @@ extern Fvector4 ps_ssfx_ssr_1, ps_ssfx_ssr_2;
 // OP22 (SSS 23): AO/IL отдельными проходами
 extern Fvector4 ps_ssfx_ao, ps_ssfx_ao_setup1, ps_ssfx_il, ps_ssfx_il_setup1;
 extern int ps_ssfx_ao_quality, ps_ssfx_il_quality, ps_op22_ssfx_ao_pass, ps_op22_ssfx_il_pass, ps_op22_ssr_always;
+extern int ps_op22_ssfx_safe_switches; // OP22 (28.11 perf): синхронное применение переключателей SSS.
 // OP22 (SSS 23): вода
 extern Fvector4 ps_ssfx_water, ps_ssfx_water_setup1, ps_ssfx_water_setup2;
 extern Fvector3 ps_ssfx_water_quality;
@@ -186,6 +187,8 @@ extern int ps_op22_terrain_height;
 extern int ps_op22_ssfx_sss_ext; // OP22 (SSS 23): экранные тени от ламп
 // OP22 (28.11 perf): переключатели ожидания кадра, сэмплеров, частиц, FSR3 и копии глубины.
 extern int ps_op22_present_wait_early, ps_op22_upscale_mipbias, ps_op22_particles_opt, ps_op22_fsr3_reactive, ps_op22_skip_unused_dof_copy;
+// OP22 (28.11 perf): переключатели новых путей рендера.
+extern int ps_op22_rt_pingpong, ps_op22_scope2d_branch, ps_op22_3dss_lazy_fsr, ps_op22_aa_history_reset;
 extern int ps_op22_gpu_stats; // OP22: время фаз кадра на видеокарте в лог // OP22: высоты деталей земли из _bump#.a для параллакса
 
 extern ECORE_API float ps_r__opt_dist;

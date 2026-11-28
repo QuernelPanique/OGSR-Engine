@@ -142,7 +142,8 @@ void CUIPdaContactsWnd::Update()
 {
     if (TRUE == m_flags.test(flNeedUpdate))
     {
-        const u16 selected = m_op22_selected;
+        // OP22 (28.11 perf): восстанавливаем выбор контакта по полному ID.
+        const u32 selected = m_op22_selected;
         RemoveAll();
 
         CPda* pPda = Actor()->GetPDA();
@@ -165,7 +166,8 @@ void CUIPdaContactsWnd::Update()
     inherited::Update();
 }
 
-void CUIPdaContactsWnd::AddContact(CPda* pda, u16 owner_id)
+// OP22 (28.11 perf): net_Find получает полный ID владельца КПК.
+void CUIPdaContactsWnd::AddContact(CPda* pda, u32 owner_id)
 {
     VERIFY(pda);
 

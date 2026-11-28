@@ -14,6 +14,10 @@
 #include "..\xr_3da\XR_IOConsole.h"
 #include "ui/UIInventoryUtilities.h"
 
+// OP22 (28.11 perf): переключатель быстрого поиска CSE для ClientSend.
+#include <atomic>
+extern std::atomic<bool> g_op22_cse_lookup;
+
 bool g_op22_ids_wide = false; // OP22 (id32): в игре есть ID >= 0xfffe (op22_id32_io.h)
 int g_op22_id_test_start = 0; // OP22 (id32): тест - свежие ID объектов с этого номера (70000 - выше старого предела 65534)
 
@@ -70,6 +74,26 @@ CSE_Abstract* xrServer::ID_to_entity(u32 ID)
         return I->second;
     else
         return 0;
+}
+
+// OP22 (28.11 perf): строим индекс из текущей карты, в том числе при включении посреди игры.
+CSE_Abstract* xrServer::FindEntityForClientSend(u32 ID)
+{
+    if (!g_op22_cse_lookup.load(std::memory_order_relaxed))
+    {
+        m_client_entity_index.reset();
+        return ID_to_entity(ID);
+    }
+    if (ID == 0xffff)
+        return nullptr;
+
+    if (!m_client_entity_index)
+        m_client_entity_index.emplace(entities.begin(), entities.end());
+
+    const auto it = m_client_entity_index->find(ID);
+    CSE_Abstract* entity = it == m_client_entity_index->end() ? nullptr : it->second;
+    VERIFY(entity == ID_to_entity(ID));
+    return entity;
 }
 
 //--------------------------------------------------------------------
@@ -512,6 +536,13 @@ void xrServer::SendTo_LL(ClientID ID, void* data, u32 size, u32 dwFlags, u32 dwT
 //--------------------------------------------------------------------
 CSE_Abstract* xrServer::entity_Create(LPCSTR name) { return F_entity_Create(name); }
 
+// OP22 (28.11 perf): индекс получает только записи, принятые основной картой.
+void xrServer::register_entity(CSE_Abstract* entity)
+{
+    if (entities.emplace(entity->ID, entity).second && m_client_entity_index)
+        m_client_entity_index->emplace(entity->ID, entity);
+}
+
 void xrServer::entity_Destroy(CSE_Abstract*& P)
 {
 #ifdef DEBUG
@@ -519,6 +550,9 @@ void xrServer::entity_Destroy(CSE_Abstract*& P)
 #endif
     R_ASSERT(P);
     entities.erase(P->ID);
+    // OP22 (28.11 perf): убрать запись индекса до освобождения и повторной выдачи ID.
+    if (m_client_entity_index)
+        m_client_entity_index->erase(P->ID);
     m_tID_Generator.vfFreeID(P->ID, Device.TimerAsync());
 
     if (P->owner && P->owner->owner == P)

@@ -59,6 +59,9 @@ private:
     u32 m_max_x;
     u32 m_max_z;
 
+    // OP22 (28.11 perf): поиск по сетке возвращает невалидный ID, когда нужен полный проход.
+    u32 nearest_vertex_id_in_grid(const Fvector& position) const;
+
 public:
     u32 nearest_vertex_id(const Fvector& position) const;
 

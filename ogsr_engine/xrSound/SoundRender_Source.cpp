@@ -17,58 +17,62 @@ CSoundRender_Source::CSoundRender_Source()
 
 CSoundRender_Source::~CSoundRender_Source() { unload(); }
 
-bool ov_can_continue_read(int res)
+// OP22 (28.11 perf): диагностика ошибки без повторного чтения той же строки PCM.
+static void log_ov_read_error(long res)
 {
     switch (res)
     {
-    case 0:
-        return false;
-        // info
-    case OV_HOLE:
-        Msg("Vorbisfile encoutered missing or corrupt data in the bitstream. Recovery is normally automatic and this return code is for informational purposes only.");
-        return true;
-    case OV_EBADLINK:
-        Msg("The given link exists in the Vorbis data stream, but is not decipherable due to garbacge or corruption.");
-        return true;
-        // error
-    case OV_FALSE: Msg("Not true, or no data available"); return false;
-    case OV_EREAD: Msg("Read error while fetching compressed data for decode"); return false;
-    case OV_EFAULT: Msg("Internal inconsistency in decode state. Continuing is likely not possible."); return false;
-    case OV_EIMPL: Msg("Feature not implemented"); return false;
-    case OV_EINVAL: Msg("Either an invalid argument, or incompletely initialized argument passed to libvorbisfile call"); return false;
-    case OV_ENOTVORBIS: Msg("The given file/data was not recognized as Ogg Vorbis data."); return false;
-    case OV_EBADHEADER: Msg("The file/data is apparently an Ogg Vorbis stream, but contains a corrupted or undecipherable header."); return false;
-    case OV_EVERSION: Msg("The bitstream format revision of the given stream is not supported."); return false;
-    case OV_ENOSEEK: Msg("The given stream is not seekable"); return false;
+    case OV_HOLE: Msg("! Vorbis: missing or corrupt data in the bitstream"); break;
+    case OV_EBADLINK: Msg("! Vorbis: corrupt link in the bitstream"); break;
+    default: Msg("! Vorbis: PCM read failed (%ld)", res); break;
     }
-    return false;
 }
 
 void CSoundRender_Source::i_decompress(OggVorbis_File* ovf, char* _dest, u32 size) const
 {
-    long TotalRet = 0;
+    u32 decoded = 0;
+    u32 recoverable = 0;
 
-    // Read loop
-    // Read loop
-    while (TotalRet < static_cast<long>(size))
+    // OP22 (28.11 perf): отрицательный код не двигает курсор, недочитанный PCM заполняем тишиной.
+    // OV_HOLE/OV_EBADLINK - восстановимые (как раньше, читаем дальше), но не больше 16 раз подряд.
+    while (decoded < size)
     {
-        const auto ret = ov_read(ovf, _dest + TotalRet, size - TotalRet, 0, 2, 1, nullptr);
-        if (ret <= 0 && !ov_can_continue_read(ret))
+        const auto ret = ov_read(ovf, _dest + decoded, static_cast<int>(size - decoded), 0, 2, 1, nullptr);
+        if (ret <= 0)
+        {
+            if (ret < 0)
+                log_ov_read_error(ret);
+            if ((ret == OV_HOLE || ret == OV_EBADLINK) && ++recoverable < 16)
+                continue;
             break;
-        TotalRet += ret;
+        }
+        recoverable = 0;
+        decoded += static_cast<u32>(ret);
     }
+    if (decoded < size)
+        ZeroMemory(_dest + decoded, size - decoded);
 }
 
 void CSoundRender_Source::i_decompress(OggVorbis_File* ovf, float* _dest, u32 size) const
 {
+    // OP22 (28.11 perf): считаем только декодированные кадры и обнуляем остаток в байтах.
     s32 left = s32(size / m_wformat.nBlockAlign);
+    const u32 remainder = size % m_wformat.nBlockAlign;
+    u32 recoverable = 0;
     while (left)
     {
         float** pcm;
         long samples = ov_read_float(ovf, &pcm, left, nullptr);
 
-        if (samples <= 0 && !ov_can_continue_read(samples))
+        if (samples <= 0)
+        {
+            if (samples < 0)
+                log_ov_read_error(samples);
+            if ((samples == OV_HOLE || samples == OV_EBADLINK) && ++recoverable < 16)
+                continue; // OP22 (28.11 perf): восстановимая ошибка - читаем дальше, как раньше
             break;
+        }
+        recoverable = 0;
 
         if (samples > left)
             samples = left;
@@ -79,4 +83,6 @@ void CSoundRender_Source::i_decompress(OggVorbis_File* ovf, float* _dest, u32 si
 
         left -= samples;
     }
+    if (left || remainder)
+        ZeroMemory(_dest, left * m_wformat.nBlockAlign + remainder);
 }

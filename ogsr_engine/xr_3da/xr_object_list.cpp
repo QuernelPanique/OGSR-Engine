@@ -11,6 +11,12 @@
 #include "CustomHUD.h"
 #include "op22_frame_profile.h"
 
+// OP22 (28.11 perf): переключатель быстрых путей удаления.
+#include <atomic>
+#include <iterator>
+
+extern std::atomic<bool> g_op22_destroy_lookup;
+
 class fClassEQ
 {
     CLASS_ID cls;
@@ -414,8 +420,17 @@ void CObjectList::Destroy(CObject* O)
         std::erase(m_crows, O);
     }
 
-    // active/inactive
-    auto _i = std::find(objects_active.begin(), objects_active.end(), O);
+    // OP22 (28.11 perf): хвост удаляем без поиска, сохраняя порядок обоих списков.
+    const bool fast_lookup = g_op22_destroy_lookup.load(std::memory_order_relaxed);
+    const bool sleeping_tail = fast_lookup && !objects_sleeping.empty() && objects_sleeping.back() == O;
+    auto _i = objects_active.end();
+    if (!sleeping_tail)
+    {
+        if (fast_lookup && !objects_active.empty() && objects_active.back() == O)
+            _i = std::prev(objects_active.end());
+        else
+            _i = std::find(objects_active.begin(), objects_active.end(), O);
+    }
     if (_i != objects_active.end())
     {
         objects_active.erase(_i);
@@ -424,11 +439,14 @@ void CObjectList::Destroy(CObject* O)
     }
     else
     {
-        auto _ii = std::find(objects_sleeping.begin(), objects_sleeping.end(), O);
+        // OP22 (28.11 perf): при выгрузке sleeping.back() уже известен.
+        auto _ii = sleeping_tail ? std::prev(objects_sleeping.end()) : std::find(objects_sleeping.begin(), objects_sleeping.end(), O);
         if (_ii != objects_sleeping.end())
         {
             objects_sleeping.erase(_ii);
             VERIFY(std::find(objects_sleeping.begin(), objects_sleeping.end(), O) == objects_sleeping.end());
+            // OP22 (28.11 perf): проверяем уникальность объекта и между списками.
+            VERIFY(!sleeping_tail || std::find(objects_active.begin(), objects_active.end(), O) == objects_active.end());
         }
         else
             FATAL("! Unregistered object being destroyed");
@@ -479,6 +497,10 @@ void CObjectList::register_object_to_destroy(CObject* object_to_destroy)
     VERIFY(!registered_object_to_destroy(object_to_destroy));
     //	Msg("CObjectList::register_object_to_destroy [%x]", object_to_destroy);
     destroy_queue.push_back(object_to_destroy);
+
+    // OP22 (28.11 perf): пропускаем обход для объектов, у которых заведомо нет детей.
+    if (g_op22_destroy_lookup.load(std::memory_order_relaxed) && !object_to_destroy->m_ever_had_children.load(std::memory_order_relaxed))
+        return;
 
     auto it = objects_active.begin();
     auto it_e = objects_active.end();

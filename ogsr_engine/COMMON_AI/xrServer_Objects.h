@@ -188,7 +188,8 @@ SPHBonesData saved_bones;
 ALife::_OBJECT_ID source_id; // for break only; OP22 (id32)
 virtual void load(NET_Packet& tNetPacket);
 virtual bool need_save() const { return (!_flags.test(flNotSave)); }
-virtual void set_sorce_id(u16 si) { source_id = si; }
+// OP22 (28.11 perf): сеттер принимает ID той же ширины, что и поле.
+virtual void set_sorce_id(ALife::_OBJECT_ID si) { source_id = si; }
 virtual ALife::_OBJECT_ID get_source_id() { return source_id; } // OP22 (id32)
 virtual CSE_Abstract* cast_abstract() { return 0; }
 

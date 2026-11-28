@@ -35,6 +35,8 @@ void CSoundRender_Emitter::update(float dt)
         bRewind = FALSE;
     }
 
+    // OP22 (28.11 perf): между допуском и стартом здесь нет других операций с целями.
+    CSoundRender_Target* available = nullptr;
     switch (m_current_state)
     {
     case stStopped: break;
@@ -55,11 +57,11 @@ void CSoundRender_Emitter::update(float dt)
         occluder_volume = SoundRender->get_occlusion(p_source.position, .2f, occluder);
         smooth_volume = p_source.base_volume * p_source.volume * (owner_data->s_type == st_Effect ? psSoundVEffects * psSoundVFactor : psSoundVMusic) * (b2D ? 1.f : occluder_volume);
 
-        if (update_culling(dt))
+        if (update_culling(dt, available))
         {
             m_current_state = stPlaying;
             set_cursor(0);
-            SoundRender->i_start(this);
+            SoundRender->i_start(this, available);
         }
         else
             m_current_state = stSimulating;
@@ -81,11 +83,11 @@ void CSoundRender_Emitter::update(float dt)
         occluder_volume = SoundRender->get_occlusion(p_source.position, .2f, occluder);
         smooth_volume = p_source.base_volume * p_source.volume * (owner_data->s_type == st_Effect ? psSoundVEffects * psSoundVFactor : psSoundVMusic) * (b2D ? 1.f : occluder_volume);
         
-        if (update_culling(dt))
+        if (update_culling(dt, available))
         {
             m_current_state = stPlayingLooped;
             set_cursor(0);
-            SoundRender->i_start(this);
+            SoundRender->i_start(this, available);
         }
         else
             m_current_state = stSimulatingLooped;
@@ -111,7 +113,7 @@ void CSoundRender_Emitter::update(float dt)
         }
         else
         {
-            if (!update_culling(dt))
+            if (!update_culling(dt, available))
             {
                 // switch to: SIMULATE
                 m_current_state = stSimulating; // switch state
@@ -142,7 +144,7 @@ void CSoundRender_Emitter::update(float dt)
             u32 ptr = calc_cursor(fTimeStarted, fTime, get_length_sec(), p_source.freq, source()->m_wformat); //--#SM+#--
             set_cursor(ptr);
 
-            if (update_culling(dt))
+            if (update_culling(dt, available))
             {
                 // switch to: PLAY
                 m_current_state = stPlaying;
@@ -153,7 +155,7 @@ void CSoundRender_Emitter::update(float dt)
                                                                             source()->m_wformat);
                                 set_cursor					(ptr);
                 */
-                SoundRender->i_start(this);
+                SoundRender->i_start(this, available);
             }
         }
         break;
@@ -169,7 +171,7 @@ void CSoundRender_Emitter::update(float dt)
             fTimeToPropagade += fDeltaTime;
             break;
         }
-        if (!update_culling(dt))
+        if (!update_culling(dt, available))
         {
             // switch to: SIMULATE
             m_current_state = stSimulatingLooped; // switch state
@@ -188,14 +190,14 @@ void CSoundRender_Emitter::update(float dt)
             fTimeToPropagade += fDeltaTime;
             break;
         }
-        if (update_culling(dt))
+        if (update_culling(dt, available))
         {
             // switch to: PLAY
             m_current_state = stPlayingLooped; // switch state
             u32 ptr = calc_cursor(fTimeStarted, fTime, get_length_sec(), p_source.freq, source()->m_wformat); //--#SM+#--
             set_cursor(ptr);
 
-            SoundRender->i_start(this);
+            SoundRender->i_start(this, available);
         }
         break;
     }
@@ -285,7 +287,8 @@ IC void volume_lerp(float& c, float t, float s, float dt)
     c += (diff / diff_a) * mot;
 }
 #include "..\COMMON_AI\ai_sounds.h"
-BOOL CSoundRender_Emitter::update_culling(float dt)
+// OP22 (28.11 perf): пропускаем найденную цель через проверку слышимости до старта.
+BOOL CSoundRender_Emitter::update_culling(float dt, CSoundRender_Target*& available)
 {
     if (b2D)
     {
@@ -326,7 +329,7 @@ BOOL CSoundRender_Emitter::update_culling(float dt)
     if (target)
         return TRUE;
     else
-        return SoundRender->i_allow_play(this);
+        return SoundRender->i_allow_play(this, available);
 }
 
 float CSoundRender_Emitter::priority() { return b2D ? 1000.f : smooth_volume * att() * priority_scale; }

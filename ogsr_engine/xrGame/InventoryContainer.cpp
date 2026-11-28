@@ -42,7 +42,8 @@ u32 CInventoryContainer::CalcItems(SItemsInfo& info) const
 
     for (auto it = m_items.begin(); it != m_items.end(); it++)
     {
-        u16 id = *it;
+        // OP22 (28.11 perf): ищем содержимое контейнера по полному ID.
+        const u32 id = *it;
         PIItem itm = smart_cast<PIItem>(objs.net_Find(id));
         if (itm)
         {

@@ -11,6 +11,39 @@
 #include "..\xr_3da\IGame_Persistent.h"
 #include "../xr_3da/op22_frame_profile.h"
 
+// OP22 (28.11 perf): проверяем ожидающего родителя по ID, сохраняя FIFO очереди.
+#include <atomic>
+extern std::atomic<bool> g_op22_spawn_parent_index;
+
+bool CLevel::has_pending_spawn(u32 id)
+{
+    if (!g_op22_spawn_parent_index.load(std::memory_order_relaxed))
+    {
+        m_pending_spawn_ids.reset();
+        return std::any_of(game_spawn_queue.begin(), game_spawn_queue.end(), [id](const CSE_Abstract* entity) { return entity->ID == id; });
+    }
+
+    if (!m_pending_spawn_ids)
+    {
+        m_pending_spawn_ids.emplace();
+        for (const CSE_Abstract* entity : game_spawn_queue)
+            ++(*m_pending_spawn_ids)[entity->ID];
+    }
+    return m_pending_spawn_ids->contains(id);
+}
+
+// OP22 (28.11 perf): снимаем ровно одну запись при извлечении или отмене спавна.
+void CLevel::forget_pending_spawn(u32 id)
+{
+    if (!m_pending_spawn_ids)
+        return;
+
+    const auto it = m_pending_spawn_ids->find(id);
+    VERIFY(it != m_pending_spawn_ids->end());
+    if (--it->second == 0)
+        m_pending_spawn_ids->erase(it);
+}
+
 void CLevel::cl_Process_Spawn(NET_Packet& P)
 {
     // Begin analysis
@@ -44,22 +77,14 @@ void CLevel::cl_Process_Spawn(NET_Packet& P)
     {
         const CSE_ALifeMonsterAbstract* monster = smart_cast<CSE_ALifeMonsterAbstract*>(E);
         const CSE_ALifeTraderAbstract* trader = smart_cast<CSE_ALifeTraderAbstract*>(E);
-        bool postpone = (trader || monster) && !is_removing_objects();
-        if (!postpone)
-        {
-            for (const auto& it : game_spawn_queue)
-            {
-                if (E->ID_Parent == it->ID)
-                {
-                    postpone = true;
-                    break;
-                }
-            }
-        }
+        // OP22 (28.11 perf): прежнее условие отсрочки с быстрым поиском родителя.
+        const bool postpone = ((trader || monster) && !is_removing_objects()) || has_pending_spawn(E->ID_Parent);
         if (postpone)
         {
             //Msg( "* [%s]: delay spawn ID[%d] ID_Parent[%d] name_replace[%s]", __FUNCTION__, E->ID, E->ID_Parent, E->name_replace() );
             game_spawn_queue.push_back(E);
+            if (m_pending_spawn_ids) // OP22 (28.11 perf): добавляем ID только для отложенного спавна.
+                ++(*m_pending_spawn_ids)[E->ID];
             return;
         }
     }
@@ -217,6 +242,7 @@ void CLevel::ProcessGameSpawns()
     {
         CSE_Abstract* E = game_spawn_queue.front();
         game_spawn_queue.pop_front();
+        forget_pending_spawn(E->ID); // OP22 (28.11 perf): извлечённый NPC больше не считается ожидающим.
         //Msg( "* [%s]: delayed spawn dwFrame[%u] ID[%d] ID_Parent[%d] name_replace[%s]", __FUNCTION__, Device.dwFrame, E->ID, E->ID_Parent, E->name_replace() );
         g_sv_Spawn(E);
         if (smart_cast<CSE_ALifeMonsterAbstract*>(E) || smart_cast<CSE_ALifeTraderAbstract*>(E))
@@ -241,6 +267,7 @@ void CLevel::ProcessGameSpawns()
         std::erase_if(game_spawn_queue, [&](auto& E) {
             if (E->ID_Parent == trader->ID)
             {
+                forget_pending_spawn(E->ID); // OP22 (28.11 perf): дети остаются в очереди до завершения семейного спавна.
                 F_entity_Destroy(E);
                 return true;
             }
@@ -262,6 +289,7 @@ void CLevel::ProcessGameSpawnsDestroy(u32 dest, u16 type, NET_Packet& P) // OP22
                                                   {
                                                       // Msg( "* [CLevel::ProcessGameSpawnsDestroy]: delayed spawn GE_DESTROY dest[%d] ID[%d] ID_Parent[%d] name_replace[%s]", dest,
                                                       // E->ID, E->ID_Parent, E->name_replace() );
+                                                      forget_pending_spawn(E->ID); // OP22 (28.11 perf): отмена убирает ID из индекса.
                                                       F_entity_Destroy(E);
                                                       return true;
                                                   }

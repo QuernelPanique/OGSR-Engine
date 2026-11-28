@@ -21,7 +21,10 @@ CSpaceRestrictionHolder::~CSpaceRestrictionHolder() { clear(); }
 
 void CSpaceRestrictionHolder::clear()
 {
-#pragma todo("SIMP: need fix ASAN report here!")
+    // OP22 (28.11 perf): уничтожаем реализации и отпускаем ссылки композиций, пока все мосты живы.
+    for (const auto& [name, bridge] : m_restrictions)
+        bridge->change_implementation(nullptr);
+
     std::erase_if(m_restrictions, [](auto& pair) {
         xr_delete(pair.second);
         return true;
@@ -36,9 +39,8 @@ shared_str CSpaceRestrictionHolder::normalize_string(shared_str space_restrictor
     if (!n)
         return ("");
 
-    // 1. parse the string, copying to temp buffer with leading zeroes, storing pointers in vector
-    LPSTR* strings = (LPSTR*)_alloca(MAX_RESTRICTION_PER_TYPE_COUNT * sizeof(LPSTR));
-    LPSTR* string_current = strings;
+    // OP22 (28.11 perf): список имён растёт по мере разбора, сохраняя прежнюю сортировку.
+    xr_vector<LPSTR> strings;
 
     LPSTR temp_string = (LPSTR)_alloca((n + 1) * sizeof(char));
     LPCSTR I = *space_restrictors;
@@ -52,36 +54,27 @@ shared_str CSpaceRestrictionHolder::normalize_string(shared_str space_restrictor
         }
 
         *i = 0;
-        VERIFY(u32(string_current - strings) < MAX_RESTRICTION_PER_TYPE_COUNT);
-        *string_current = j;
-        ++string_current;
+        strings.push_back(j);
         j = i + 1;
     }
-    if (string_current == strings)
+    if (strings.empty())
         return (space_restrictors);
 
     *i = 0;
-    VERIFY(u32(string_current - strings) < MAX_RESTRICTION_PER_TYPE_COUNT);
-    *string_current = j;
-    ++string_current;
+    strings.push_back(j);
 
-    // 2. sort the vector (svector???)
-    std::sort(strings, string_current, pred_str());
+    std::sort(strings.begin(), strings.end(), pred_str());
 
     // 3. copy back to another temp string, based on sorted vector
     LPSTR result_string = (LPSTR)_alloca((n + 1) * sizeof(char));
     LPSTR pointer = result_string;
+    for (LPCSTR name : strings)
     {
-        LPSTR* I = strings;
-        LPSTR* E = string_current;
-        for (; I != E; ++I)
-        {
-            for (LPSTR i = *I; *i; ++i, ++pointer)
-                *pointer = *i;
+        for (; *name; ++name, ++pointer)
+            *pointer = *name;
 
-            *pointer = ',';
-            ++pointer;
-        }
+        *pointer = ',';
+        ++pointer;
     }
     *(pointer - 1) = 0;
 

@@ -13,6 +13,9 @@
 #include "xrServer.h"
 #include "xr_level_controller.h"
 
+// OP22 (28.11 perf): создаём индекс очереди спавна только для быстрого поиска.
+#include <optional>
+
 class CHUDManager;
 class CParticlesObject;
 class xrServer;
@@ -135,12 +138,17 @@ public:
     BOOL m_bGameConfigStarted;
     BOOL game_configured;
     NET_Queue_Event* game_events;
-    xr_deque<CSE_Abstract*> game_spawn_queue;
     xrServer* Server;
     GlobalFeelTouch m_feel_deny;
     xr_vector<u32> m_just_destroyed; // OP22 (id32)
 
 private:
+    // OP22 (28.11 perf): счётчики сохраняют наличие ID при нескольких записях с одним номером.
+    xr_deque<CSE_Abstract*> game_spawn_queue;
+    std::optional<xr_unordered_map<u32, size_t>> m_pending_spawn_ids;
+    bool has_pending_spawn(u32 id);
+    void forget_pending_spawn(u32 id);
+
     // preload sounds registry
     DEFINE_MAP(shared_str, ref_sound, SoundRegistryMap, SoundRegistryMapIt);
     SoundRegistryMap sound_registry;

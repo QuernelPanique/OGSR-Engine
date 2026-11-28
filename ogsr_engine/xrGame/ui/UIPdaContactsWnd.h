@@ -34,7 +34,8 @@ public:
     virtual void Show(bool status);
     virtual void SendMessage(CUIWindow*, s16, void*) override;
 
-    void AddContact(CPda* pda, u16 owner_id);
+    // OP22 (28.11 perf): сохраняем полный ID владельца КПК из списка контактов.
+    void AddContact(CPda* pda, u32 owner_id);
     void RemoveContact(CPda* pda);
     void RemoveAll();
     void Reload();

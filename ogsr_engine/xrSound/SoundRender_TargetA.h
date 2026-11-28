@@ -14,7 +14,16 @@ class CSoundRender_TargetA : public CSoundRender_Target
     float cache_gain{};
     float cache_pitch{};
 
-    ALuint buf_block{};
+    // OP22 (28.11 perf): последние применённые параметры конкретного источника AL.
+    struct AlParameters
+    {
+        float min_distance;
+        float max_distance;
+        Fvector position;
+        BOOL relative;
+        float rolloff;
+    } m_al_parameters{};
+    bool m_al_parameters_valid{};
 
 private:
     void fill_block(ALuint BufferID);
@@ -34,6 +43,8 @@ public:
     virtual void update();
 
     void source_changed();
+    // OP22 (28.11 perf): принудительная отправка параметров после snd_restart.
+    void invalidate_parameters() { m_al_parameters_valid = false; }
 
     virtual void fill_parameters(CSoundRender_Core* core);
 

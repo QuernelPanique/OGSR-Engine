@@ -22,6 +22,8 @@ public:
 #endif
 
 protected:
+    // OP22 (28.11 perf): общий радиус пробы для проверки и отсева границы.
+    static constexpr float default_radius = EPS_L;
     void process_borders();
 
 public:

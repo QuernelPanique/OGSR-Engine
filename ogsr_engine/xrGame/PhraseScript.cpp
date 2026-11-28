@@ -10,6 +10,77 @@
 #include "ui/xrUIXmlParser.h"
 #include "actor.h"
 
+// OP22 (28.11 perf): кэш выражений диалога, по умолчанию используем свежие замыкания.
+int g_op22_dialog_chunk_cache = 0;
+
+namespace
+{
+char dialog_chunk_cache_key;
+
+luabind::object compile_dialog_chunk(LPCSTR code)
+{
+    auto& scripts = ai().script_engine();
+    luabind::functor<luabind::object> loadstring;
+    scripts.functor("loadstring", loadstring);
+    if (!g_op22_dialog_chunk_cache)
+        return loadstring(code);
+
+    // OP22 (28.11 perf): используем кэш только для исходного loadstring и текущего окружения VM.
+    auto* L = scripts.lua();
+    const int top = lua_gettop(L);
+    lua_pushlightuserdata(L, &dialog_chunk_cache_key);
+    lua_rawget(L, LUA_REGISTRYINDEX);
+    const int cache = top + 1;
+    lua_rawgeti(L, cache, 1);
+    loadstring.pushvalue();
+    const bool original_loader = lua_rawequal(L, -1, -2);
+    lua_pop(L, 2);
+    if (!original_loader)
+    {
+        lua_settop(L, top);
+        return loadstring(code);
+    }
+
+    lua_pushstring(L, code);
+    lua_rawget(L, cache);
+    if (lua_isfunction(L, -1))
+    {
+        lua_getfenv(L, -1);
+        lua_pushvalue(L, LUA_GLOBALSINDEX);
+        const bool current_environment = lua_rawequal(L, -1, -2);
+        lua_pop(L, 2);
+        if (current_environment)
+        {
+            luabind::detail::lua_reference ref;
+            ref.set(L);
+            lua_settop(L, top);
+            return luabind::object(L, ref, true);
+        }
+    }
+    lua_pop(L, 1);
+
+    luabind::object chunk = loadstring(code);
+    if (chunk.is_valid() && chunk.type() == LUA_TFUNCTION)
+    {
+        lua_pushstring(L, code);
+        chunk.pushvalue();
+        lua_rawset(L, cache);
+    }
+    lua_settop(L, top);
+    return chunk;
+}
+} // namespace
+
+// OP22 (28.11 perf): ключи и чанки принадлежат реестру и исчезают при закрытии VM.
+void op22_init_dialog_chunk_cache(lua_State* L)
+{
+    lua_pushlightuserdata(L, &dialog_chunk_cache_key);
+    lua_createtable(L, 1, 0);
+    lua_getfield(L, LUA_GLOBALSINDEX, "loadstring");
+    lua_rawseti(L, -2, 1);
+    lua_rawset(L, LUA_REGISTRYINDEX);
+}
+
 CPhraseScript::CPhraseScript() {}
 CPhraseScript::~CPhraseScript() {}
 
@@ -118,10 +189,8 @@ bool CPhraseScript::Precondition(const CGameObject* pSpeakerGO, LPCSTR dialog_id
             predicate_result = lua_function(pSpeakerGO->lua_game_object());
         else
         { // Функтор с аргументами
-            luabind::functor<luabind::object> loadstring_functor;
-            ai().script_engine().functor("loadstring", loadstring_functor);
             ConditionString = "return " + ConditionString;
-            luabind::object ret_obj = loadstring_functor(ConditionString.c_str()); // Создаём функцию из строки через loadstring
+            luabind::object ret_obj = compile_dialog_chunk(ConditionString.c_str()); // OP22 (28.11 perf): берём скомпилированное условие.
             auto ret_func = luabind::object_cast<luabind::functor<luabind::object>>(ret_obj); // OP22: nil-safe, see below // Первое возвращённое loadstring значение должно быть функцией
             ASSERT_FMT_DBG(ret_func, "Loadstring returns nil for code: %s", ConditionString.c_str()); // Если это не функция, значит loadstring вернул nil и что-то пошло не так
             // Вызываем созданную функцию и передаём ей дефолтные аргументы. Они прилетят после аргументов, прописанных явно, если например сделать так:
@@ -162,10 +231,8 @@ void CPhraseScript::Action(const CGameObject* pSpeakerGO, LPCSTR dialog_id, LPCS
             lua_function(pSpeakerGO->lua_game_object(), dialog_id);
         else
         { // Функтор с аргументами
-            luabind::functor<luabind::object> loadstring_functor;
-            ai().script_engine().functor("loadstring", loadstring_functor);
             ActionString = "return " + ActionString;
-            luabind::object ret_obj = loadstring_functor(ActionString.c_str()); // Создаём функцию из строки через loadstring
+            luabind::object ret_obj = compile_dialog_chunk(ActionString.c_str()); // OP22 (28.11 perf): берём скомпилированное действие.
             auto ret_func = luabind::object_cast<luabind::functor<void>>(ret_obj); // Первое возвращённое loadstring значение должно быть функцией
             ASSERT_FMT_DBG(ret_func, "Loadstring returns nil for code: %s", ActionString.c_str()); // Если это не функция, значит loadstring вернул nil и что-то пошло не так
             // Вызываем созданную функцию и передаём ей дефолтные аргументы. Они прилетят после аргументов, прописанных явно, если например сделать так:
@@ -199,10 +266,8 @@ bool CPhraseScript::Precondition(const CGameObject* pSpeakerGO1, const CGameObje
             predicate_result = lua_function(pSpeakerGO1->lua_game_object(), pSpeakerGO2->lua_game_object(), dialog_id, phrase_id, next_phrase_id);
         else
         { // Функтор с аргументами
-            luabind::functor<luabind::object> loadstring_functor;
-            ai().script_engine().functor("loadstring", loadstring_functor);
             ConditionString = "return " + ConditionString;
-            luabind::object ret_obj = loadstring_functor(ConditionString.c_str()); // Создаём функцию из строки через loadstring
+            luabind::object ret_obj = compile_dialog_chunk(ConditionString.c_str()); // OP22 (28.11 perf): берём скомпилированное условие.
             auto ret_func = luabind::object_cast<luabind::functor<luabind::object>>(ret_obj); // OP22: nil-safe, see below // Первое возвращённое loadstring значение должно быть функцией
             ASSERT_FMT_DBG(ret_func, "Loadstring returns nil for code: %s", ConditionString.c_str()); // Если это не функция, значит loadstring вернул nil и что-то пошло не так
             // Вызываем созданную функцию и передаём ей дефолтные аргументы. Они прилетят после аргументов, прописанных явно, если например сделать так:
@@ -245,10 +310,8 @@ void CPhraseScript::Action(const CGameObject* pSpeakerGO1, const CGameObject* pS
             lua_function(pSpeakerGO1->lua_game_object(), pSpeakerGO2->lua_game_object(), dialog_id, phrase_id);
         else
         { // Функтор с аргументами
-            luabind::functor<luabind::object> loadstring_functor;
-            ai().script_engine().functor("loadstring", loadstring_functor);
             ActionString = "return " + ActionString;
-            luabind::object ret_obj = loadstring_functor(ActionString.c_str()); // Создаём функцию из строки через loadstring
+            luabind::object ret_obj = compile_dialog_chunk(ActionString.c_str()); // OP22 (28.11 perf): берём скомпилированное действие.
             auto ret_func = luabind::object_cast<luabind::functor<void>>(ret_obj); // Первое возвращённое loadstring значение должно быть функцией
             ASSERT_FMT_DBG(ret_func, "Loadstring returns nil for code: %s", ActionString.c_str()); // Если это не функция, значит loadstring вернул nil и что-то пошло не так
             // Вызываем созданную функцию и передаём ей дефолтные аргументы. Они прилетят после аргументов, прописанных явно, если например сделать так:
@@ -270,10 +333,8 @@ LPCSTR CPhraseScript::GetScriptText(LPCSTR str_to_translate, const CGameObject* 
         return lua_function(pSpeakerGO1->lua_game_object(), pSpeakerGO2->lua_game_object(), dialog_id, phrase_id);
     else
     { // Функтор с аргументами
-        luabind::functor<luabind::object> loadstring_functor;
-        ai().script_engine().functor("loadstring", loadstring_functor);
         ScriptTextString = "return " + ScriptTextString;
-        luabind::object ret_obj = loadstring_functor(ScriptTextString.c_str()); // Создаём функцию из строки через loadstring
+        luabind::object ret_obj = compile_dialog_chunk(ScriptTextString.c_str()); // OP22 (28.11 perf): берём скомпилированный чанк текста.
         auto ret_func = luabind::object_cast<luabind::functor<const char*>>(ret_obj); // Первое возвращённое loadstring значение должно быть функцией
         ASSERT_FMT_DBG(ret_func, "Loadstring returns nil for code: %s", ScriptTextString.c_str()); // Если это не функция, значит loadstring вернул nil и что-то пошло не так
         // Вызываем созданную функцию и передаём ей дефолтные аргументы. Они прилетят после аргументов, прописанных явно, если например сделать так:

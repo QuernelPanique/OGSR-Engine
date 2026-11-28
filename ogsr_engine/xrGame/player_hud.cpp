@@ -311,8 +311,8 @@ void attachable_hud_item::update(bool bForce)
         ka->UpdateTracks();
         ka->dcast_PKinematics()->CalculateBones_Invalidate();
         ka->dcast_PKinematics()->CalculateBones(TRUE);
-        // OP22: поза модели догоняет анимацию пружиной (op22_hud_motion.h); масса - предмета в руках
-        op22_hud_filter_bones(ka->dcast_PKinematics(), m_op22_filter, m_parent_hud_item ? m_parent_hud_item->item().Weight() : 1.f);
+        // OP22 (28.11 perf): пружина модели и пружина рук используют один вес предмета за кадр.
+        op22_hud_filter_bones(ka->dcast_PKinematics(), m_op22_filter, m_parent_hud_item ? m_parent_hud_item->op22_HudPoseWeight() : 1.f);
     }
 
     // OP22: камера за действием - по основному предмету, раз в кадр
@@ -1220,8 +1220,11 @@ void player_hud::update(const Fmatrix& cam_trans)
         m_model_2->dcast_PKinematics()->CalculateBones_Invalidate();
         m_model_2->dcast_PKinematics()->CalculateBones(TRUE);       
 
-        // OP22: позы отдельных рук догоняют анимацию пружиной (op22_hud_motion.h); масса - предмета в этой руке
-        auto weight = [this](int i) { return m_attached_items[i] && m_attached_items[i]->m_parent_hud_item ? m_attached_items[i]->m_parent_hud_item->item().Weight() : 1.f; };
+        // OP22 (28.11 perf): используем вес того же предмета при сглаживании отдельных рук.
+        auto weight = [this](int i) {
+            const auto* attached = m_attached_items[i];
+            return attached && attached->m_parent_hud_item ? attached->m_parent_hud_item->op22_HudPoseWeight() : 1.f;
+        };
         op22_hud_filter_bones(m_model->dcast_PKinematics(), m_op22_hands_filter[0], weight(0));
         op22_hud_filter_bones(m_model_2->dcast_PKinematics(), m_op22_hands_filter[1], weight(1));
     }

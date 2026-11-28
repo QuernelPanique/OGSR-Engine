@@ -2,6 +2,7 @@
 
 #include <al.h>
 #include <efx-presets.h>
+#include <array> // OP22 (28.11 perf): кэш свойств EFX.
 
 #include "SoundRender.h"
 #include "SoundRender_Environment.h"
@@ -62,6 +63,8 @@ protected:
     CSoundRender_Environment* m_op22_authored{};
     CSoundRender_Environment m_op22_env;
     void op22_acoustics(const Fvector& P);
+    // OP22 (28.11 perf): очищаем пробы при смене геометрии или скачке камеры.
+    void reset_op22_acoustics();
 
     // Containers
     xr_vector<CSoundRender_Source*> s_sources;
@@ -127,10 +130,6 @@ public:
     void i_eax_listener_set(CSound_environment* E);
     void i_eax_commit_setting();
 
-    // efx listener
-    void i_efx_listener_set(CSound_environment* E);
-    bool i_efx_commit_setting();
-
     virtual CSound_environment* DbgCurrentEnv() override { return e_target; }
     virtual void DbgCurrentEnvPaused(bool v) override { e_currentPaused = v; }
     virtual void DbgCurrentEnvSave() override { env_save_all(); }
@@ -139,10 +138,11 @@ public:
     CSoundRender_Source* i_create_source(LPCSTR name);
     void i_destroy_source(CSoundRender_Source* S);
     CSoundRender_Emitter* i_play(ref_sound* S, BOOL _loop, float delay);
-    void i_start(CSoundRender_Emitter* E);
+    // OP22 (28.11 perf): допуск может передать уже найденную цель прямо в старт.
+    void i_start(CSoundRender_Emitter* E, CSoundRender_Target* T);
     void i_stop(CSoundRender_Emitter* E);
     void i_rewind(CSoundRender_Emitter* E);
-    BOOL i_allow_play(CSoundRender_Emitter* E);
+    BOOL i_allow_play(CSoundRender_Emitter* E, CSoundRender_Target*& available);
 
     virtual void object_relcase(CObject* obj);
 
@@ -160,6 +160,15 @@ protected: // EFX
     EFXEAXREVERBPROPERTIES efx_reverb{};
     ALuint effect{};
     ALuint slot{};
+
+    // OP22 (28.11 perf): кэш применённых свойств и состояние отправок EFX.
+    std::array<ALfloat, 12> m_efx_parameters{};
+    bool m_efx_parameters_valid{};
+    bool m_efx_slot_had_effect{};
+    bool m_efx_sends_muted{};
+    bool i_efx_apply(const CSoundRender_Environment& env);
+    bool i_efx_set_slot(ALuint value);
+    void update_efx_sends(bool enabled);
 
     bool EFXTestSupport();
     void InitAlEFXAPI();

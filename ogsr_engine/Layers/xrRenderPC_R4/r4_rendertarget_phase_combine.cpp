@@ -27,22 +27,39 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
 
     // OP22 (SSS 23, Ascii1457; перенос из xray-monolith / SSS UPDATE 23.2): AO и IL отдельными проходами до combine_1.
     // Матрицы текущего/прошлого кадра - для учёта прошлого кадра в шейдерах (как Matrix_current/previous в monolith).
-    if (ps_op22_ssfx_ao_pass || ps_op22_ssfx_il_pass || RImplementation.o.ssfx_sss)
+    // OP22 (28.11 perf): перед AO/IL проверяем шейдеры, цели размытия и буферы истории.
+    const auto rt_ready = [](const ref_rt& rt) { return rt && rt->pRT && rt->pSurface; };
+    const bool safe_switches = RImplementation.o.ssfx_safe_switches;
+    const bool ao_enabled = RImplementation.ssfx_ao_pass_enabled();
+    const bool il_enabled = RImplementation.ssfx_il_pass_enabled();
+    const bool check_ao_il = safe_switches && (ao_enabled || il_enabled);
+    const bool temp_ready = !check_ao_il || rt_ready(rt_ssfx_temp);
+    const bool temp2_ready = !check_ao_il || rt_ready(rt_ssfx_temp2);
+    const bool shared_ready = !check_ao_il || (s_ssfx_ao && rt_ready(rt_ssfx_temp3));
+    const bool ao_ready = ao_enabled && shared_ready && temp_ready &&
+        (!safe_switches || (rt_ready(rt_ssfx_ao) && s_ssfx_ao->E[0] && s_ssfx_ao->E[1] && s_ssfx_ao->E[2]));
+    const bool il_ready = il_enabled && shared_ready && temp2_ready &&
+        (!safe_switches || (rt_ready(rt_ssfx_il) && s_ssfx_ao->E[3] && s_ssfx_ao->E[4] && s_ssfx_ao->E[5]));
+    if ((ao_ready || il_ready || RImplementation.o.ssfx_sss) &&
+        (!safe_switches || (s_op22_ssfx_mv && s_op22_ssfx_mv->E[0] && rt_ready(rt_ssfx_motion_vectors) && rt_ready(rt_ssfx_prevPos) &&
+                           rt_Position && rt_Position->pSurface)))
     {
         PIX_EVENT(op22_ssfx_ao_il);
         op22_ssfx_frame_prep(cmd_list); // матрицы и векторы движения (если экранные тени уже не посчитали их до солнца)
 
-        if (ps_op22_ssfx_ao_pass || ps_op22_ssfx_il_pass)
+        if (ao_ready || il_ready)
         {
             Fcolor clear_color;
             clear_color.set(0.f, 0.f, 0.f, 1.f);
-            cmd_list.ClearRT(rt_ssfx_temp->pRT, clear_color);
-            cmd_list.ClearRT(rt_ssfx_temp2->pRT, clear_color);
+            if (temp_ready)
+                cmd_list.ClearRT(rt_ssfx_temp->pRT, clear_color);
+            if (temp2_ready)
+                cmd_list.ClearRT(rt_ssfx_temp2->pRT, clear_color);
         }
 
-        if (ps_op22_ssfx_ao_pass && ps_ssfx_ao.y > 0)
+        if (ao_ready && ps_ssfx_ao.y > 0)
             phase_ssfx_ao(cmd_list);
-        if (ps_op22_ssfx_il_pass && ps_ssfx_il.y > 0)
+        if (il_ready && ps_ssfx_il.y > 0)
             phase_ssfx_il(cmd_list);
 
         // позиции этого кадра - «прошлые» для следующего
@@ -240,7 +257,7 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
         {
             PIX_EVENT(combine_distort);
             RenderScreenTriangle(cmd_list, rt_Generic_scene_scratch, s_combine->E[1]);
-            HW.get_context(cmd_list.context_id)->CopyResource(rt_Generic_0->pSurface, rt_Generic_scene_scratch->pSurface);
+            CommitSceneColor(cmd_list); // OP22 (28.11 perf): маска FSR и блум читают готовый цвет с искажениями.
         }
     }
 
@@ -265,7 +282,7 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
     {
         PIX_EVENT(combine_tonemap);
         RenderScreenTriangle(cmd_list, rt_Generic_scene_scratch, s_combine->E[2]);
-        HW.get_context(cmd_list.context_id)->CopyResource(rt_Generic_0->pSurface, rt_Generic_scene_scratch->pSurface);
+        CommitSceneColor(cmd_list); // OP22 (28.11 perf): тепловизор и AA получают готовый цвет после тонмаппинга.
     }
 
     op22_gpu_mark("tonemap"); // OP22: подфаза блока постобработки (op22_gpu_stats)
@@ -276,8 +293,10 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
     if (need_heatvision)
         phase_heatvision(cmd_list);
 
-    const bool upscaled_3dss = (need_3dss && Phase3DSSUpscale(cmd_list));
+    const bool upscaled_3dss = Phase3DSSUpscale(need_3dss);
 
+    // OP22 (28.11 perf): запоминаем фактический метод перед AA, включая SMAA и выключенный режим.
+    UpdateTemporalAAMethod(ps_r_pp_aa_mode);
     bool temporalOutput{false};
     if (ps_r_pp_aa_mode) // должно быть перед 3DSS
     {
@@ -351,8 +370,11 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
     if (Device.op22_scope2d.w > 0.f && Device.op22_scope2d.z > 0.f && Device.dwFrame - Device.op22_scope2d_frame <= 1)
     {
         PIX_EVENT(phase_op22_scope2d);
-        RenderScreenTriangle(cmd_list, rt_Generic_combine, s_op22_scope2d->E[0]);
+        // OP22 (28.11 perf): вне линзы шейдер может пропустить аберрацию и размытие.
+        RenderScreenTriangle(cmd_list, rt_Generic_combine, s_op22_scope2d->E[0],
+            [&]() { cmd_list.set_c("op22_scope2d_branch", float(ps_op22_scope2d_branch)); });
         HW.get_context(cmd_list.context_id)->CopyResource(rt_Postprocess_0->pSurface, rt_Generic_combine->pSurface);
+        op22_gpu_mark("scope2d"); // OP22 (28.11 perf): замер оптики вместе с её копией.
     }
 
 #pragma todo("Simp: эффект шлема багует в прицеле, надо бы придумать решение получше")

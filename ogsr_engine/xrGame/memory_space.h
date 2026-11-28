@@ -130,7 +130,8 @@ struct CMemoryObject : public SMemoryObject
     _flags<squad_mask_type> m_squad_mask;
 
     IC CMemoryObject();
-    IC bool operator==(u16 id) const;
+    // OP22 (28.11 perf): сравниваем полный ID записи памяти.
+    IC bool operator==(ALife::_OBJECT_ID id) const;
     IC void fill(const T* game_object, const T* self, const squad_mask_type& mask);
     bool is_valid() const { return m_object && m_object->m_spawned; }
 };

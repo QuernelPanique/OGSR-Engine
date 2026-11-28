@@ -2,16 +2,25 @@
 
 #include "xrMessages.h"
 
+// OP22 (28.11 perf): общий переключатель копирования локальных событий.
+#include <atomic>
+extern std::atomic<bool> g_op22_net_event_queue;
+
 class NET_Event
 {
 public:
-    u16 ID;
-    u32 timestamp;
-    u16 type;
-    u32 destination; // OP22 (id32)
+    // OP22 (28.11 perf): у M_SPAWN нет полей обычного события.
+    u16 ID{};
+    u32 timestamp{};
+    u16 type{};
+    u32 destination{}; // OP22 (id32)
     xr_vector<u8> data;
 
 public:
+    NET_Event() = default;
+    // OP22 (28.11 perf): добавляем в очередь только полностью прочитанную запись.
+    explicit NET_Event(NET_Packet& P) { import(P); }
+
     void import(NET_Packet& P)
     {
         data.clear();
@@ -70,6 +79,13 @@ public:
 public:
     IC void insert(NET_Packet& P)
     {
+        // OP22 (28.11 perf): заполняем запись на месте и экономим копию массива данных.
+        if (g_op22_net_event_queue.load(std::memory_order_relaxed))
+        {
+            queue.emplace_back(P);
+            return;
+        }
+
         NET_Event E;
         E.import(P);
         queue.push_back(E);

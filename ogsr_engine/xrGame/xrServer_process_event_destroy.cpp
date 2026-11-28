@@ -69,6 +69,21 @@ void xrServer::Process_event_destroy(NET_Packet& P, ClientID sender, u32 time, u
     }
     else
     {
+        // OP22 (28.11 perf): при заполнении отправляем накопленные события и продолжаем тот же обход.
+        if (!pEventPack)
+            pEventPack = &P2;
+
+        const auto append_event = [this, pEventPack, MODE](const NET_Packet& event) {
+            R_ASSERT(event.B.count <= 0xff);
+            if (pEventPack->B.count + sizeof(u8) + event.B.count >= NET_PacketSizeLimit)
+            {
+                SendBroadcast(BroadcastCID, *pEventPack, MODE);
+                pEventPack->w_begin(M_EVENT_PACK);
+            }
+            pEventPack->w_u8(u8(event.B.count));
+            pEventPack->w(event.B.data, event.B.count);
+        };
+
         NET_Packet tmpP;
         if (0xffff != parent_id && Process_event_reject(P, sender, time, parent_id, ID, false))
         {
@@ -76,17 +91,11 @@ void xrServer::Process_event_destroy(NET_Packet& P, ClientID sender, u32 time, u
             tmpP.w_id(id_dest); // OP22 (id32)
             tmpP.w_u8(1);
 
-            if (!pEventPack)
-                pEventPack = &P2;
-
-            pEventPack->w_u8(u8(tmpP.B.count));
-            pEventPack->w(&tmpP.B.data, tmpP.B.count);
+            append_event(tmpP);
         };
 
-        game->u_EventGen(tmpP, GE_DESTROY, id_dest); //-V595
-
-        pEventPack->w_u8(u8(tmpP.B.count));
-        pEventPack->w(&tmpP.B.data, tmpP.B.count);
+        game->u_EventGen(tmpP, GE_DESTROY, id_dest);
+        append_event(tmpP);
     }
 
     if (NULL == pEPack && NULL != pEventPack)

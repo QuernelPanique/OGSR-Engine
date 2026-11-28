@@ -7,6 +7,8 @@
 #include <efx.h>
 
 xr_vector<u8> g_target_temp_data;
+// OP22 (28.11 perf): прежний логический размер для режима совместимости.
+static u32 g_legacy_target_block{};
 
 CSoundRender_TargetA::CSoundRender_TargetA() : CSoundRender_Target()
 {
@@ -19,6 +21,8 @@ CSoundRender_TargetA::~CSoundRender_TargetA() {}
 
 BOOL CSoundRender_TargetA::_initialize()
 {
+    // OP22 (28.11 perf): после создания источника кэш пуст.
+    invalidate_parameters();
     inherited::_initialize();
     // initialize buffer
     A_CHK(alGenBuffers(sdef_target_count, pBuffers));
@@ -42,9 +46,10 @@ BOOL CSoundRender_TargetA::_initialize()
 
 void CSoundRender_TargetA::alAuxInit(ALuint slot)
 {
-    A_CHK(alSource3i(pSource, AL_AUXILIARY_SEND_FILTER, slot, 0, AL_FILTER_NULL));
     m_op22_slot = slot; // OP22
-    m_op22_dry = false;
+    // OP22 (28.11 perf): при возврате EFX играющий 2D-звук сразу остаётся сухим.
+    m_op22_dry = op22_snd_efx_toggle && slot != AL_EFFECTSLOT_NULL && m_pEmitter && m_pEmitter->b2D;
+    A_CHK(alSource3i(pSource, AL_AUXILIARY_SEND_FILTER, m_op22_dry ? AL_EFFECTSLOT_NULL : slot, 0, AL_FILTER_NULL));
 }
 
 void CSoundRender_TargetA::_destroy()
@@ -65,9 +70,11 @@ void CSoundRender_TargetA::start(CSoundRender_Emitter* E)
 {
     inherited::start(E);
 
-    // Calc storage
-    buf_block = sdef_target_block * E->source()->m_wformat.nAvgBytesPerSec / 1000;
-    g_target_temp_data.resize(buf_block);
+    // OP22 (28.11 perf): смена эмиттера сбрасывает кэш, общий размер нужен только для старого пути.
+    invalidate_parameters();
+    g_legacy_target_block = sdef_target_block * E->source()->m_wformat.nAvgBytesPerSec / 1000;
+    if (!op22_snd_pcm_block)
+        g_target_temp_data.resize(g_legacy_target_block);
 }
 
 void CSoundRender_TargetA::render()
@@ -83,6 +90,8 @@ void CSoundRender_TargetA::render()
 
 void CSoundRender_TargetA::stop()
 {
+    // OP22 (28.11 perf): stop меняет относительный режим источника AL.
+    invalidate_parameters();
     if (rendering)
     {
         A_CHK(alSourceStop(pSource));
@@ -199,18 +208,33 @@ void CSoundRender_TargetA::fill_parameters(CSoundRender_Core* core)
 
     inherited::fill_parameters(core);
 
-    // 3D params
+    // OP22 (28.11 perf): проверяем каждое значение точно, без порога для 3D-параметров.
     VERIFY2(m_pEmitter, SE->source()->file_name());
-    A_CHK(alSourcef(pSource, AL_REFERENCE_DISTANCE, m_pEmitter->p_source.min_distance));
-
-    VERIFY2(m_pEmitter, SE->source()->file_name());
-    A_CHK(alSourcef(pSource, AL_MAX_DISTANCE, m_pEmitter->p_source.max_distance));
-
-    VERIFY2(m_pEmitter, SE->source()->file_name());
-    A_CHK(alSource3f(pSource, AL_POSITION, m_pEmitter->p_source.position.x, m_pEmitter->p_source.position.y, -m_pEmitter->p_source.position.z));
-
-    VERIFY2(m_pEmitter, SE->source()->file_name());
-    A_CHK(alSourcei(pSource, AL_SOURCE_RELATIVE, m_pEmitter->b2D));
+    const auto& params = m_pEmitter->p_source;
+    const AlParameters current{params.min_distance, params.max_distance, params.position, m_pEmitter->b2D, psSoundRolloff};
+    const auto& last = m_al_parameters;
+    const bool cache_enabled = op22_snd_al_cache;
+    const bool refresh = !cache_enabled || !m_al_parameters_valid;
+    bool changed = false;
+    const auto set_float = [&](ALenum prop, float value, float old_value) {
+        if (refresh || value != old_value)
+        {
+            A_CHK(alSourcef(pSource, prop, value));
+            changed = true;
+        }
+    };
+    set_float(AL_REFERENCE_DISTANCE, current.min_distance, last.min_distance);
+    set_float(AL_MAX_DISTANCE, current.max_distance, last.max_distance);
+    if (refresh || current.position.x != last.position.x || current.position.y != last.position.y || current.position.z != last.position.z)
+    {
+        A_CHK(alSource3f(pSource, AL_POSITION, current.position.x, current.position.y, -current.position.z));
+        changed = true;
+    }
+    if (refresh || current.relative != last.relative)
+    {
+        A_CHK(alSourcei(pSource, AL_SOURCE_RELATIVE, current.relative));
+        changed = true;
+    }
 
     // OP22 (26.11): 2D-звук (в голове игрока) не уходит в эффект помещения; цель общая - переключаем по эмиттеру
     if (bEFX && m_op22_slot != AL_EFFECTSLOT_NULL && !!m_pEmitter->b2D != m_op22_dry)
@@ -219,7 +243,18 @@ void CSoundRender_TargetA::fill_parameters(CSoundRender_Core* core)
         A_CHK(alSource3i(pSource, AL_AUXILIARY_SEND_FILTER, m_op22_dry ? AL_EFFECTSLOT_NULL : m_op22_slot, 0, AL_FILTER_NULL));
     }
 
-    A_CHK(alSourcef(pSource, AL_ROLLOFF_FACTOR, psSoundRolloff));
+    set_float(AL_ROLLOFF_FACTOR, current.rolloff, last.rolloff);
+    if (cache_enabled && changed)
+    {
+        const ALenum error = alGetError();
+        m_al_parameters_valid = error == AL_NO_ERROR;
+        if (m_al_parameters_valid)
+            m_al_parameters = current;
+        else
+            Msg("! OpenAL: source parameters failed: %s", alGetString(error));
+    }
+    else if (!cache_enabled)
+        invalidate_parameters();
 
     VERIFY2(m_pEmitter, SE->source()->file_name());
     float _gain = m_pEmitter->smooth_volume;
@@ -245,7 +280,17 @@ void CSoundRender_TargetA::fill_block(ALuint BufferID)
 {
     R_ASSERT(m_pEmitter);
 
-    m_pEmitter->fill_block(g_target_temp_data.data(), g_target_temp_data.size());
+    // OP22 (28.11 perf): длительность блока определяет текущий источник, общий буфер хранит только данные.
+    u32 block = g_legacy_target_block;
+    if (op22_snd_pcm_block)
+    {
+        const auto& source_format = m_pEmitter->source()->m_wformat;
+        const u32 frames = static_cast<u32>(u64{sdef_target_block} * source_format.nSamplesPerSec / 1000);
+        block = frames * source_format.nBlockAlign;
+    }
+    if (g_target_temp_data.size() < block)
+        g_target_temp_data.resize(block);
+    m_pEmitter->fill_block(g_target_temp_data.data(), block);
 
     const auto& wvf = m_pEmitter->source()->m_wformat;
     const bool mono = wvf.nChannels == 1;
@@ -260,10 +305,12 @@ void CSoundRender_TargetA::fill_block(ALuint BufferID)
         format = mono ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16;
     }
 
-    A_CHK(alBufferData(BufferID, format, g_target_temp_data.data(), g_target_temp_data.size(), m_pEmitter->source()->m_wformat.nSamplesPerSec));
+    A_CHK(alBufferData(BufferID, format, g_target_temp_data.data(), block, wvf.nSamplesPerSec));
 }
 void CSoundRender_TargetA::source_changed()
 {
+    // OP22 (28.11 perf): при переходе к присоединённому источнику параметры отправятся заново.
+    invalidate_parameters();
     dettach();
     attach();
 }

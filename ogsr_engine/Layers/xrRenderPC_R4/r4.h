@@ -51,6 +51,7 @@ struct light_ctx;
 class CRender : public IRender_interface, public pureFrame
 {
     friend class dxStatsRender;
+    void update_ssfx_options(); // OP22 (28.11 perf): читаем настройки перед созданием RT и шейдеров.
 
 public:
     enum : u32
@@ -80,6 +81,10 @@ public:
         u32 ssfx_glass : 1; // OP22 (SSS 23): op22_ssfx_glass при запуске
         u32 ssfx_sss : 1; // OP22 (SSS 23): op22_ssfx_sss при запуске
         u32 ssfx_sss_ext : 1; // OP22 (SSS 23): op22_ssfx_sss_ext при запуске
+        // OP22 (28.11 perf): общий снимок для проходов и их шейдерных вариантов.
+        u32 ssfx_safe_switches : 1;
+        u32 ssfx_ao_pass : 1;
+        u32 ssfx_il_pass : 1;
     } o;
     struct _stats
     {
@@ -248,6 +253,9 @@ public:
     virtual void destroy();
     virtual void reset_begin();
     virtual void reset_end();
+    // OP22 (28.11 perf): без защиты используем прежние значения AO/IL на лету.
+    bool ssfx_ao_pass_enabled() const;
+    bool ssfx_il_pass_enabled() const;
 
     virtual void level_Load(IReader*);
     virtual void level_Unload();

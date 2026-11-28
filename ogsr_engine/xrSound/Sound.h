@@ -28,6 +28,14 @@ XRSOUND_API extern float psSoundTimeFactor; //--#SM+#--
 
 XRSOUND_API extern BOOL snd_enable_float_pcm;
 
+// OP22 (28.11 perf): переключатели оптимизаций и исправлений звукового кадра.
+XRSOUND_API extern BOOL op22_snd_static_occ;
+XRSOUND_API extern BOOL op22_snd_al_cache;
+XRSOUND_API extern BOOL op22_snd_target_search;
+XRSOUND_API extern BOOL op22_snd_pcm_block;
+XRSOUND_API extern BOOL op22_snd_acoustics_update;
+XRSOUND_API extern BOOL op22_snd_efx_toggle;
+
 // Flags
 enum
 {

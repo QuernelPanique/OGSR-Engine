@@ -100,7 +100,8 @@ void CUIStalkersRankingWnd::Show(bool status)
 
 extern CSE_ALifeTraderAbstract* ch_info_get_from_id(u32 id);
 
-bool GreaterRankPred(const u16& h1, const u16& h2)
+// OP22 (28.11 perf): сортируем рейтинг по данным NPC с полными ID.
+bool GreaterRankPred(u32 h1, u32 h2)
 {
     CSE_ALifeTraderAbstract* t1 = ch_info_get_from_id(h1);
     CSE_ALifeTraderAbstract* t2 = ch_info_get_from_id(h2);
@@ -149,7 +150,8 @@ void CUIStalkersRankingWnd::FillList()
         int i = 0;
         while (i < 20 && i < g_all_statistic_humans.size())
         {
-            u16 id = g_all_statistic_humans[i];
+            // OP22 (28.11 perf): сохраняем полный ID при заполнении рейтинга.
+            const u32 id = g_all_statistic_humans[i];
             CSE_ALifeTraderAbstract* pT = ch_info_get_from_id(id);
             if (pT)
             {

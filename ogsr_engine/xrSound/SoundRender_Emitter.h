@@ -105,7 +105,8 @@ public:
     void start(ref_sound* _owner, BOOL _loop, float delay);
     void cancel(); // manager forces out of rendering
     void update(float dt);
-    BOOL update_culling(float dt);
+    // OP22 (28.11 perf): результат допуска живёт только в текущем обновлении эмиттера.
+    BOOL update_culling(float dt, CSoundRender_Target*& available);
     void update_environment(float dt);
     void rewind();
     virtual void stop(BOOL bDeffered);

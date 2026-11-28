@@ -35,6 +35,21 @@ CHudItem::CHudItem()
     m_current_motion_def = nullptr;
 }
 
+// OP22 (28.11 perf): обходим магазины и читаем вес обвесов один раз за кадр для HUD.
+int g_op22_hud_weight_cache = 1;
+float CHudItem::op22_HudPoseWeight() const
+{
+    if (!g_op22_hud_weight_cache)
+        return item().Weight();
+
+    if (m_op22_hud_weight_frame != Device.dwFrame)
+    {
+        m_op22_hud_weight = item().Weight();
+        m_op22_hud_weight_frame = Device.dwFrame;
+    }
+    return m_op22_hud_weight;
+}
+
 DLL_Pure* CHudItem::_construct()
 {
     m_object = smart_cast<CPhysicItem*>(this);

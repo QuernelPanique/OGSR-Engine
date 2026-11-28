@@ -26,6 +26,9 @@ void CPatrolPathStorage::load_raw(const CLevelGraph* level_graph, const CGameLev
     if (!chunk)
         return;
 
+    // OP22 (28.11 perf): сбрасываем поиск точек при загрузке путей.
+    const std::scoped_lock lock(m_task_points_mutex);
+    m_task_points.clear();
     u32 chunk_iterator;
     for (IReader* sub_chunk = chunk->open_chunk_iterator(chunk_iterator); sub_chunk; sub_chunk = chunk->open_chunk_iterator(chunk_iterator, sub_chunk))
     {
@@ -44,6 +47,9 @@ void CPatrolPathStorage::load_raw(const CLevelGraph* level_graph, const CGameLev
 
 void CPatrolPathStorage::append_from_ini(CInifile& way_inifile)
 {
+    // OP22 (28.11 perf): INI может заменить уже закэшированный путь.
+    const std::scoped_lock lock(m_task_points_mutex);
+    m_task_points.clear();
     int i{}, r{};
     for (const auto& it : way_inifile.sections())
     {
@@ -69,6 +75,9 @@ void CPatrolPathStorage::append_from_ini(CInifile& way_inifile)
 
 void CPatrolPathStorage::load(IReader& stream)
 {
+    // OP22 (28.11 perf): прежние точки не входят в новый реестр.
+    const std::scoped_lock lock(m_task_points_mutex);
+    m_task_points.clear();
     IReader* chunk;
 
     chunk = stream.open_chunk(0);
@@ -136,12 +145,38 @@ void CPatrolPathStorage::save(IWriter& stream)
     stream.close_chunk();
 }
 
-void CPatrolPathStorage::remove_path(shared_str patrol_name) { m_registry.erase(patrol_name); }
+// OP22 (28.11 perf): скриптовые удаление и замена сбрасывают запись пути.
+void CPatrolPathStorage::remove_path(shared_str patrol_name)
+{
+    const std::scoped_lock lock(m_task_points_mutex);
+    m_task_points.erase(patrol_name);
+    m_registry.erase(patrol_name);
+}
 
 void CPatrolPathStorage::add_path(shared_str patrol_name, CPatrolPath* path)
 {
-    remove_path(patrol_name);
+    const std::scoped_lock lock(m_task_points_mutex);
+    m_task_points.erase(patrol_name);
+    m_registry.erase(patrol_name);
     m_registry.insert(std::make_pair(patrol_name, path));
+}
+
+// OP22 (28.11 perf): повторный запрос задачи переиспользует саму точку, включая её текущие данные.
+const CPatrolPoint* CPatrolPathStorage::task_point(const shared_str& patrol_name, u32 index) const
+{
+    const std::scoped_lock lock(m_task_points_mutex);
+    if (const auto path_points = m_task_points.find(patrol_name); path_points != m_task_points.end())
+    {
+        const auto point = path_points->second.find(index);
+        if (point != path_points->second.end())
+            return point->second;
+    }
+
+    const CPatrolPath* patrol_path = path(patrol_name);
+    VERIFY(patrol_path);
+    const auto* result = &patrol_path->vertex(index)->data();
+    m_task_points[patrol_name].emplace(index, result);
+    return result;
 }
 
 const CPatrolPath* CPatrolPathStorage::safe_path(shared_str patrol_name, bool no_assert, bool on_level) const

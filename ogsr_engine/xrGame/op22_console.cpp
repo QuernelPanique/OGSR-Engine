@@ -14,6 +14,11 @@
 void op22_hud_layout_parse(LPCSTR s); // OP22: ui/UIMainIngameWnd.cpp - редактор HUD
 void op22_hud_edit_cmd();
 
+// OP22 (28.11 perf): переключатели оптимизаций Lua и диалогов для проверки A/B.
+namespace luabind { extern int op22_lua_pcall_cache; }
+extern int g_op22_lua_functor_lookup;
+extern int g_op22_dialog_chunk_cache;
+
 namespace
 {
 Flags32 g_flags{};
@@ -193,10 +198,33 @@ public:
 
 LPCSTR op22_font_profile_key() { return g_font_profile < g_font_profiles.size() ? g_font_profiles[g_font_profile].second.c_str() : nullptr; }
 
+int g_op22_frame9_cache = 1; // OP22 (28.11 perf): сохраняем раскладку плиток рамки между отрисовками.
+
 void op22_register_console()
 {
+    // OP22 (28.11 perf): 0 отключает соответствующий быстрый путь.
+    add(xr_new<CCC_Integer>("op22_lua_pcall_cache", &luabind::op22_lua_pcall_cache, 0, 1));
+    add(xr_new<CCC_Integer>("op22_lua_functor_lookup", &g_op22_lua_functor_lookup, 0, 1));
+    add(xr_new<CCC_Integer>("op22_dialog_chunk_cache", &g_op22_dialog_chunk_cache, 0, 1));
+    // OP22 (28.11 perf): переключатели кэша веса для пружин HUD и геометрии рамок.
+    extern int g_op22_hud_weight_cache;
+    add(xr_new<CCC_Integer>("op22_hud_weight_cache", &g_op22_hud_weight_cache, 0, 1));
+    add(xr_new<CCC_Integer>("op22_frame9_cache", &g_op22_frame9_cache, 0, 1));
+    // OP22 (28.11 perf): переключатели для сравнения оптимизаций с прежними путями.
+    extern int g_op22_nearest_vertex_fast, g_op22_restriction_batch, g_op22_restriction_border_z;
+    extern int g_op22_patrol_point_cache, g_op22_save_preview_cache, g_op22_inventory_grid_fast;
+    add(xr_new<CCC_Integer>("op22_nearest_vertex_fast", &g_op22_nearest_vertex_fast, 0, 1));
+    add(xr_new<CCC_Integer>("op22_restriction_batch", &g_op22_restriction_batch, 0, 1));
+    add(xr_new<CCC_Integer>("op22_restriction_border_z", &g_op22_restriction_border_z, 0, 1));
+    add(xr_new<CCC_Integer>("op22_patrol_point_cache", &g_op22_patrol_point_cache, 0, 1));
+    add(xr_new<CCC_Integer>("op22_save_preview_cache", &g_op22_save_preview_cache, 0, 1));
+    add(xr_new<CCC_Integer>("op22_inventory_grid_fast", &g_op22_inventory_grid_fast, 0, 1));
+
     extern int g_op22_pda_tab; // OP22: read by op22_skills_page.script
     add(xr_new<CCC_Integer>("op22_pda_tab", &g_op22_pda_tab, 0, 100000));
+    // OP22 (28.11 perf): переключатель последовательного обхода ячеек для сравнения со старым поиском.
+    extern int g_op22_ui_linear_scan;
+    add(xr_new<CCC_Integer>("op22_ui_linear_scan", &g_op22_ui_linear_scan, 0, 1));
     // яркость окна опций ОП: гамма, яркость, контраст - через коррекцию изображения OGSR
     alias("rs_c_gamma", 1.f, 0.5f, 1.5f, "ssfx_gamma");
     alias("rs_c_brightness", 1.f, 0.5f, 1.5f, "ssfx_exposure");

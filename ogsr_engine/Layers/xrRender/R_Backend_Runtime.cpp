@@ -4,6 +4,7 @@
 
 #include "../xrRenderDX10/StateManager/dx10StateManager.h"
 #include "../xrRenderDX10/StateManager/dx10ShaderResourceStateCache.h"
+#include <span> // OP22 (28.11 perf): пустой набор для отвязки SRV при смене целей.
 
 void CBackend::OnFrameEnd()
 {
@@ -144,12 +145,10 @@ void CBackend::set_Textures(STextureList* _T)
     int _last_ds = -1;
     int _last_cs = -1;
 
-    STextureList::iterator _it = _T->begin();
-    const STextureList::iterator _end = _T->end();
-
-    for (; _it != _end; ++_it)
+    // OP22 (28.11 perf): nullptr очищает привязки всех ранее использованных слотов.
+    const auto bindings = _T ? std::span{_T->data(), _T->size()} : std::span<STextureList::value_type>{};
+    for (auto& loader : bindings)
     {
-        std::pair<u32, ref_texture>& loader = *_it;
         const u32 load_id = loader.first;
         CTexture* load_surf = &*loader.second;
 

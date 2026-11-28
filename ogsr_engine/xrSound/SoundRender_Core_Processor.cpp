@@ -78,6 +78,11 @@ void CSoundRender_Core::update(const Fvector& P, const Fvector& D, const Fvector
         }
     }
 
+    // OP22 (28.11 perf): переключаем маршрутизацию до обновления и запуска целей.
+    const bool effects_enabled = psSoundFlags.test(ss_EAX);
+    if (bEFX)
+        update_efx_sends(effects_enabled);
+
     // Get currently rendering emitters
     // Msg	("! update: targets");
     s_targets_defer.clear();
@@ -108,8 +113,12 @@ void CSoundRender_Core::update(const Fvector& P, const Fvector& D, const Fvector
             s_targets_defer[it]->fill_parameters(this);
     }
 
+    // OP22 (28.11 perf): большой скачок слушателя обнуляет пробы даже вне динамической зоны.
+    if (op22_snd_acoustics_update && P.distance_to_sqr(listener_position()) > 20.f * 20.f)
+        reset_op22_acoustics();
+
     // update EAX or EFX
-    if (psSoundFlags.test(ss_EAX) && (bEAX || bEFX))
+    if (effects_enabled && (bEAX || bEFX))
     {
         static shared_str curr_env;
 
@@ -131,6 +140,9 @@ void CSoundRender_Core::update(const Fvector& P, const Fvector& D, const Fvector
             op22_acoustics(P);
             if (m_op22_ready)
                 e_target = &m_op22_env;
+            // OP22 (28.11 perf): на время сбора новых лучей плавно идём к штатной среде.
+            else if (op22_snd_acoustics_update)
+                e_target = m_op22_authored;
         }
         else
         {
@@ -151,8 +163,8 @@ void CSoundRender_Core::update(const Fvector& P, const Fvector& D, const Fvector
         }
         else if (bEFX)
         {
-            i_efx_listener_set(&e_current);
-            bEFX = i_efx_commit_setting();
+            // OP22 (28.11 perf): одинаковые настройки не копируются в слот повторно.
+            bEFX = i_efx_apply(e_current);
 
             if (!bEFX)
             {
@@ -187,6 +199,31 @@ void CSoundRender_Core::update(const Fvector& P, const Fvector& D, const Fvector
     bLocked = FALSE;
 }
 
+// OP22 (28.11 perf): snd_efx выключает слот и отправки, сохраняя доступность EFX.
+void CSoundRender_Core::update_efx_sends(bool enabled)
+{
+    const bool mute = op22_snd_efx_toggle && !enabled;
+    if (mute == m_efx_sends_muted)
+        return;
+
+    if (mute)
+    {
+        alGetError();
+        i_efx_set_slot(AL_EFFECT_NULL);
+        m_efx_parameters_valid = false;
+    }
+    else if (!enabled && m_efx_slot_had_effect)
+    {
+        // Возвращаем последнее состояние слота при отключении самой правки.
+        alGetError();
+        i_efx_set_slot(effect);
+    }
+
+    for (CSoundRender_Target* target : s_targets)
+        target->alAuxInit(mute ? AL_EFFECTSLOT_NULL : slot);
+    m_efx_sends_muted = mute;
+}
+
 static u32 g_saved_event_count = 0;
 void CSoundRender_Core::update_events()
 {
@@ -201,6 +238,8 @@ void CSoundRender_Core::update_events()
 
 void CSoundRender_Core::statistic(CSound_stats* dest, CSound_stats_ext* ext)
 {
+    // OP22 (28.11 perf): чтение целей и эмиттеров синхронизировано со звуковым проходом.
+    std::scoped_lock lock{m_bLocked};
     if (dest)
     {
         dest->_rendered = 0;
@@ -376,6 +415,16 @@ const Fvector& op22_dir(u32 i)
 }
 } // namespace
 
+// OP22 (28.11 perf): частичный набор лучей не переносится в новую точку или геометрию.
+void CSoundRender_Core::reset_op22_acoustics()
+{
+    m_op22_ready = false;
+    m_op22_ray = 0;
+    m_op22_open = 1.f;
+    for (float& distance : m_op22_dist)
+        distance = 0.f;
+}
+
 void CSoundRender_Core::op22_acoustics(const Fvector& P)
 {
     // один луч за раз, не чаще 15 мс
@@ -393,7 +442,8 @@ void CSoundRender_Core::op22_acoustics(const Fvector& P)
         else if (!m_op22_ready)
             return;
     }
-    else if (!m_op22_ready)
+    // OP22 (28.11 perf): без нового луча сохраняем смесь, интерполяция идёт в update().
+    else if (!m_op22_ready || op22_snd_acoustics_update)
         return;
 
     const float* d = m_op22_dist;

@@ -10,12 +10,29 @@
 #include "../../Include/xrRender/UIRender.h"
 #include "../../Include/xrRender/UIShader.h"
 
+extern int g_op22_frame9_cache; // OP22 (28.11 perf): переиспользование раскладки рамки.
+
 struct op22_frame9
 {
     ui_shader sh;
     float C{}, P{};
     bool ok{};
 
+private:
+    // OP22 (28.11 perf): вершины берутся из декартова произведения двух закэшированных осей.
+    struct seg
+    {
+        float s0, s1, t0, t1;
+    };
+    struct axis
+    {
+        float lo{}, hi{};
+        xr_vector<seg> segments;
+    };
+    mutable axis cached_x, cached_y;
+    mutable float cached_c{}, cached_p{}, cached_C{}, cached_P{};
+
+public:
     void init(LPCSTR spec)
     {
         ok = false;
@@ -43,10 +60,6 @@ struct op22_frame9
         c = _min(c, _min((b.x - a.x) * .5f, (b.y - a.y) * .5f));
         if (c <= 0.f)
             return;
-        struct seg
-        {
-            float s0, s1, t0, t1;
-        };
         auto split = [&](float lo, float hi, xr_vector<seg>& out) {
             out.clear();
             out.push_back({lo, lo + c, 0.f, C / N});
@@ -57,9 +70,36 @@ struct op22_frame9
             }
             out.push_back({hi - c, hi, (C + P) / N, 1.f});
         };
-        static xr_vector<seg> xs, ys;
-        split(a.x, b.x, xs);
-        split(a.y, b.y, ys);
+        // OP22 (28.11 perf): сравниваем точные экранные координаты и параметры раскладки, включая масштаб.
+        static xr_vector<seg> scratch_x, scratch_y;
+        const bool cache = g_op22_frame9_cache != 0;
+        auto& xs = cache ? cached_x.segments : scratch_x;
+        auto& ys = cache ? cached_y.segments : scratch_y;
+        if (cache)
+        {
+            const bool same_tiles = cached_c == c && cached_p == p && cached_C == C && cached_P == P;
+            if (!same_tiles || cached_x.lo != a.x || cached_x.hi != b.x)
+            {
+                split(a.x, b.x, xs);
+                cached_x.lo = a.x;
+                cached_x.hi = b.x;
+            }
+            if (!same_tiles || cached_y.lo != a.y || cached_y.hi != b.y)
+            {
+                split(a.y, b.y, ys);
+                cached_y.lo = a.y;
+                cached_y.hi = b.y;
+            }
+            cached_c = c;
+            cached_p = p;
+            cached_C = C;
+            cached_P = P;
+        }
+        else
+        {
+            split(a.x, b.x, xs);
+            split(a.y, b.y, ys);
+        }
         UIRender->SetShader(*sh);
         UIRender->StartPrimitive(u32(xs.size() * ys.size() * 6), IUIRender::ptTriList, UI()->m_currentPointType);
         for (const seg& X : xs)

@@ -26,6 +26,14 @@ int psSoundCacheSizeMB = 32;
 
 BOOL snd_enable_float_pcm{TRUE};
 
+// OP22 (28.11 perf): звуковые правки включены по умолчанию.
+BOOL op22_snd_static_occ{TRUE};
+BOOL op22_snd_al_cache{TRUE};
+BOOL op22_snd_target_search{TRUE};
+BOOL op22_snd_pcm_block{TRUE};
+BOOL op22_snd_acoustics_update{TRUE};
+BOOL op22_snd_efx_toggle{TRUE};
+
 CSoundRender_Core* SoundRender = 0;
 CSound_manager_interface* Sound = 0;
 
@@ -219,7 +227,17 @@ void CSoundRender_Core::_restart()
 
 void CSoundRender_Core::set_handler(sound_event* E) { Handler = E; }
 
-void CSoundRender_Core::set_geometry_occ(CDB::MODEL* M) { geom_MODEL = M; }
+void CSoundRender_Core::set_geometry_occ(CDB::MODEL* M)
+{
+    // OP22 (28.11 perf): новый уровень не наследует пробы старой геометрии.
+    std::scoped_lock lock{m_bLocked};
+    if (op22_snd_acoustics_update && geom_MODEL != M)
+    {
+        reset_op22_acoustics();
+        bListenerMoved = TRUE;
+    }
+    geom_MODEL = M;
+}
 
 void CSoundRender_Core::set_geometry_som(IReader* I)
 {
@@ -580,46 +598,65 @@ bool CSoundRender_Core::EFXTestSupport()
     err = alGetError();
     ASSERT_FMT_DBG(err == AL_NO_ERROR, "!![%s] OpenAL EFX error: [%s]", __FUNCTION__, alGetString(err));
 
+    // OP22 (28.11 perf): у нового слота пока нет эффекта и применённых настроек.
+    m_efx_parameters_valid = false;
+    m_efx_slot_had_effect = false;
+    m_efx_sends_muted = op22_snd_efx_toggle && !psSoundFlags.test(ss_EAX);
     return true;
 }
 
 inline static float mB_to_gain(float mb) { return powf(10.0f, mb / 2000.0f); }
 
-void CSoundRender_Core::i_efx_listener_set(CSound_environment* _E)
+// OP22 (28.11 perf): применяем только изменившиеся свойства, слот копирует их после обновления.
+bool CSoundRender_Core::i_efx_apply(const CSoundRender_Environment& env)
 {
-    const auto E = static_cast<CSoundRender_Environment*>(_E);
-
     // http://openal.org/pipermail/openal/2014-March/000083.html
-    float density = powf(E->EnvironmentSize, 3.0f) / 16.0f;
+    float density = powf(env.EnvironmentSize, 3.0f) / 16.0f;
     if (density > 1.0f)
         density = 1.0f;
 
-    alEffectf(effect, AL_REVERB_DENSITY, density);
-    alEffectf(effect, AL_REVERB_DIFFUSION, E->EnvironmentDiffusion);
-    alEffectf(effect, AL_REVERB_GAIN, mB_to_gain(E->Room));
-    alEffectf(effect, AL_REVERB_GAINHF, mB_to_gain(E->RoomHF));
-    alEffectf(effect, AL_REVERB_DECAY_TIME, E->DecayTime);
-    alEffectf(effect, AL_REVERB_DECAY_HFRATIO, E->DecayHFRatio);
-    alEffectf(effect, AL_REVERB_REFLECTIONS_GAIN, mB_to_gain(E->Reflections));
-    alEffectf(effect, AL_REVERB_REFLECTIONS_DELAY, E->ReflectionsDelay);
-    alEffectf(effect, AL_REVERB_LATE_REVERB_DELAY, E->ReverbDelay);
-    alEffectf(effect, AL_REVERB_LATE_REVERB_GAIN, mB_to_gain(E->Reverb));
-    alEffectf(effect, AL_REVERB_AIR_ABSORPTION_GAINHF, mB_to_gain(E->AirAbsorptionHF));
-    alEffectf(effect, AL_REVERB_ROOM_ROLLOFF_FACTOR, E->RoomRolloffFactor);
+    const std::array<ALfloat, 12> values{
+        density, env.EnvironmentDiffusion, mB_to_gain(env.Room), mB_to_gain(env.RoomHF), env.DecayTime,
+        env.DecayHFRatio, mB_to_gain(env.Reflections), env.ReflectionsDelay, env.ReverbDelay, mB_to_gain(env.Reverb),
+        mB_to_gain(env.AirAbsorptionHF), env.RoomRolloffFactor,
+    };
+    constexpr std::array<ALenum, 12> properties{
+        AL_REVERB_DENSITY, AL_REVERB_DIFFUSION, AL_REVERB_GAIN, AL_REVERB_GAINHF, AL_REVERB_DECAY_TIME,
+        AL_REVERB_DECAY_HFRATIO, AL_REVERB_REFLECTIONS_GAIN, AL_REVERB_REFLECTIONS_DELAY, AL_REVERB_LATE_REVERB_DELAY,
+        AL_REVERB_LATE_REVERB_GAIN, AL_REVERB_AIR_ABSORPTION_GAINHF, AL_REVERB_ROOM_ROLLOFF_FACTOR,
+    };
+
+    const bool cache_enabled = op22_snd_al_cache;
+    const bool refresh = !cache_enabled || !m_efx_parameters_valid;
+    bool changed = false;
+    for (size_t i = 0; i < values.size(); ++i)
+    {
+        if (refresh || values[i] != m_efx_parameters[i])
+        {
+            alEffectf(effect, properties[i], values[i]);
+            changed = true;
+        }
+    }
+    if (!changed)
+        return true;
+
+    const ALenum property_error = alGetError();
+    const bool applied = i_efx_set_slot(effect);
+    m_efx_slot_had_effect = applied;
+    m_efx_parameters_valid = cache_enabled && applied && property_error == AL_NO_ERROR;
+    if (m_efx_parameters_valid)
+        m_efx_parameters = values;
+    return applied;
 }
 
-bool CSoundRender_Core::i_efx_commit_setting()
+// OP22 (28.11 perf): один путь назначения эффекта и снятия его со слота.
+bool CSoundRender_Core::i_efx_set_slot(ALuint value)
 {
-    alGetError();
-    /* Tell the effect slot to use the loaded effect object. Note that the this
-     * effectively copies the effect properties. You can modify or delete the
-     * effect object afterward without affecting the effect slot.
-     */
-    alAuxiliaryEffectSloti(slot, AL_EFFECTSLOT_EFFECT, effect);
+    alAuxiliaryEffectSloti(slot, AL_EFFECTSLOT_EFFECT, value);
     ALenum err = alGetError();
     if (err != AL_NO_ERROR)
     {
-        Msg("!![%s] OpenAL EFX commit error: [%s]. EFX will be disabled.", __FUNCTION__, alGetString(err));
+        Msg("!![%s] OpenAL EFX slot error: [%s]", __FUNCTION__, alGetString(err));
         return false;
     }
 

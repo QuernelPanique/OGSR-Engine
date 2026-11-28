@@ -264,6 +264,7 @@ int ps_ssfx_ao_quality = 4; // AO Samples (define SSFX_AO_QUALITY, нужен п
 int ps_ssfx_il_quality = 32; // IL Samples (SSFX_IL_QUALITY; таблица направлений screenspace_common.h - 32)
 int ps_op22_ssfx_ao_pass = 0; // 1 - AO проходом SSS 23 (вместо SSDO/GTAO в combine_1), нужен перезапуск
 int ps_op22_ssfx_il_pass = 0; // 1 - IL проходом SSS 23 (вместо ssfx_indirect_light в combine_2), нужен перезапуск
+int ps_op22_ssfx_safe_switches = 1; // OP22 (28.11 perf): применяем переключатели вместе с пересозданием RT.
 int ps_op22_ssr_always = 0; // 1 - отражения SSR не только в дождь
 int ps_op22_ssfx_tiles = 0; // OP22 (28.11): 1 - AO/IL/тени солнца SSS считают половину клеток 8x8 за кадр (остальные - прошлый кадр, если надёжен), на лету
 // OP22 (SSS 23): вода (значения по умолчанию - как в SSS 23 / xray-monolith)
@@ -283,6 +284,9 @@ int ps_op22_upscale_mipbias = 1;
 int ps_op22_particles_opt = 1;
 int ps_op22_fsr3_reactive = 0;
 int ps_op22_skip_unused_dof_copy = 1;
+// OP22 (28.11 perf): переключатели для сравнения рендера с исходным путём.
+int ps_op22_smap_cache = 0, ps_op22_rt_pingpong = 1, ps_op22_scope2d_branch = 1;
+int ps_op22_3dss_lazy_fsr = 1, ps_op22_aa_history_reset = 1;
 int ps_op22_terrain_height = 0; // OP22: 1 - параллакс земли берёт высоту из альфы _bump# деталей (у цветных текстур ОП альфа = 255 - плоско), нужен перезапуск
 int ps_op22_ssfx_sss = 0; // OP22 (SSS 23): 1 - экранные тени солнца отдельным проходом SSS 22 (учёт прошлого кадра, размытие), нужен перезапуск
 Fvector4 ps_ssfx_sss{1.0f, 1.0f, 1.0f, 0.0f}; // Dir Len, Omni Len, Grass shadows, -
@@ -1068,6 +1072,7 @@ void xrRender_initconsole()
     CMD4(CCC_Integer, "ssfx_il_quality", &ps_ssfx_il_quality, 16, 32);
     CMD4(CCC_Integer, "op22_ssfx_ao_pass", &ps_op22_ssfx_ao_pass, 0, 1);
     CMD4(CCC_Integer, "op22_ssfx_il_pass", &ps_op22_ssfx_il_pass, 0, 1);
+    CMD4(CCC_Integer, "op22_ssfx_safe_switches", &ps_op22_ssfx_safe_switches, 0, 1); // OP22 (28.11 perf): применяется при vid_restart.
     CMD4(CCC_Integer, "op22_ssr_always", &ps_op22_ssr_always, 0, 1);
     CMD4(CCC_Integer, "op22_ssfx_tiles", &ps_op22_ssfx_tiles, 0, 1);
     // OP22 (SSS 23): вода
@@ -1089,6 +1094,12 @@ void xrRender_initconsole()
     CMD4(CCC_Integer, "op22_particles_opt", &ps_op22_particles_opt, 0, 1);
     CMD4(CCC_Integer, "op22_fsr3_reactive", &ps_op22_fsr3_reactive, 0, 1);
     CMD4(CCC_Integer, "op22_skip_unused_dof_copy", &ps_op22_skip_unused_dof_copy, 0, 1);
+    // OP22 (28.11 perf): кэш теней пока зарезервирован, остальные переключатели работают при отрисовке.
+    CMD4(CCC_Integer, "op22_smap_cache", &ps_op22_smap_cache, 0, 1);
+    CMD4(CCC_Integer, "op22_rt_pingpong", &ps_op22_rt_pingpong, 0, 1);
+    CMD4(CCC_Integer, "op22_scope2d_branch", &ps_op22_scope2d_branch, 0, 1);
+    CMD4(CCC_Integer, "op22_3dss_lazy_fsr", &ps_op22_3dss_lazy_fsr, 0, 1);
+    CMD4(CCC_Integer, "op22_aa_history_reset", &ps_op22_aa_history_reset, 0, 1);
     CMD4(CCC_Vector4, "ssfx_sss", &ps_ssfx_sss, (Fvector4{0, 0, 0, 0}), (Fvector4{3, 3, 1, 1}));
     CMD4(CCC_Vector4, "ssfx_sss_quality", &ps_ssfx_sss_quality, (Fvector4{1, 1, 0, 0}), (Fvector4{24, 12, 1, 1}));
     CMD4(CCC_Vector4, "ssfx_volumetric", &ps_ssfx_volumetric, (Fvector4{0, 0, 4, 1}), (Fvector4{1, 5, 16, 8}));

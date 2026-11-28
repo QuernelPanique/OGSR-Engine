@@ -6,6 +6,8 @@
 #include "irenderable.h"
 #include "icollidable.h"
 
+#include <atomic> // OP22 (28.11 perf): отметка владельца читается при постановке в очередь удаления.
+
 class IObjectPhysicsCollision;
 class IPhysicsShell;
 class ENGINE_API IRender_Sector;
@@ -54,6 +56,9 @@ private:
     // Some property variables
     ObjectProperties Props;
     u32 m_netID{}; // OP22 (id32): как раньше net_ID:16 из Props.storage = 0
+    // OP22 (28.11 perf): достаточно знать, что к объекту когда-либо прикрепляли ребёнка.
+    friend class CObjectList;
+    std::atomic<bool> m_ever_had_children{false};
     shared_str NameObject;
     shared_str NameSection;
     shared_str NameVisual;

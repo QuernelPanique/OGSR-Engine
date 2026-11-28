@@ -26,6 +26,8 @@
 
 namespace luabind
 {
+	// OP22 (28.11 perf): переиспользуем обработчик ошибок в пределах одной VM.
+	int op22_lua_pcall_cache = 1;
 	static unsigned op22_nofatal_count = 0; // OP22
 	unsigned get_op22_nofatal_count() { return op22_nofatal_count; }
 }
@@ -39,7 +41,23 @@ namespace luabind { namespace detail
 		if ( e )
 		{
 			int base = lua_gettop(L) - nargs;
-			lua_pushcfunction(L, e);
+			if (op22_lua_pcall_cache)
+			{
+				// OP22 (28.11 perf): реестр общий для корутин и очищается при lua_close.
+				static char error_handler_key;
+				lua_pushlightuserdata(L, &error_handler_key);
+				lua_rawget(L, LUA_REGISTRYINDEX);
+				if (lua_tocfunction(L, -1) != e)
+				{
+					lua_pop(L, 1);
+					lua_pushcfunction(L, e);
+					lua_pushlightuserdata(L, &error_handler_key);
+					lua_pushvalue(L, -2);
+					lua_rawset(L, LUA_REGISTRYINDEX);
+				}
+			}
+			else
+				lua_pushcfunction(L, e);
 			lua_insert(L, base);  // push pcall_callback under chunk and args
 			en = base;
   		}

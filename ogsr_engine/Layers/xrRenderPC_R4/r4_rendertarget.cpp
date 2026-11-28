@@ -350,7 +350,9 @@ CRenderTarget::CRenderTarget()
         }
     }
 
-    reset_3dss_rendertarget(true);
+    // OP22 (28.11 perf): по умолчанию RT линзы нужен только при первом прицеливании с масштабом выше 1.
+    if (!ps_op22_3dss_lazy_fsr)
+        reset_3dss_rendertarget(true);
     InitDLSS();
     InitFSR();
 
@@ -368,9 +370,11 @@ CRenderTarget::CRenderTarget()
     s_lut.create("ogsr_lut");
     s_ssr.create("ogsr_ssr");
     // OP22 (SSS 23): шейдеры проходов создаются только при включённых проходах - ошибка в них не роняет игру с выключенными
-    if (ps_op22_ssfx_ao_pass || ps_op22_ssfx_il_pass)
+    // OP22 (28.11 perf): шейдеры создаём для активного набора проходов AO/IL.
+    const bool ssfx_ao_il = RImplementation.ssfx_ao_pass_enabled() || RImplementation.ssfx_il_pass_enabled();
+    if (ssfx_ao_il)
         s_ssfx_ao.create("ssfx_ao");
-    if (ps_op22_ssfx_ao_pass || ps_op22_ssfx_il_pass || RImplementation.o.ssfx_sss || RImplementation.o.ssfx_sss_ext)
+    if (ssfx_ao_il || RImplementation.o.ssfx_sss || RImplementation.o.ssfx_sss_ext)
         s_op22_ssfx_mv.create("op22_ssfx_mv");
     if (RImplementation.o.ssfx_sss || RImplementation.o.ssfx_sss_ext)
         s_ssfx_sss.create("ssfx_sss");

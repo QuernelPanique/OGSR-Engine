@@ -12,6 +12,8 @@ void op22_gpu_mark(LPCSTR name); // конец фазы name (время от п
 // 3 точечные без тени, 4 прожекторы без тени; op22_gpu_count - только когда замер включён
 void op22_gpu_count(int what, u32 n);
 void op22_gpu_frame_end();
+// OP22 (28.11 perf): запросы принадлежат устройству, а не набору RT.
+void op22_gpu_release_queries();
 
 static void dummy(){}
 
@@ -26,6 +28,11 @@ private:
     u32 m_displayHeight{};
     bool m_temporalUpscaleInput{};
     bool m_resetTemporalHistory{true};
+    // OP22 (28.11 perf): история хранится отдельно для каждого метода и для прицела.
+    u32 m_lastAAMethod{u32(-1)};
+    float m_3dssScaleFactor{};
+    void UpdateTemporalAAMethod(u32 mode);
+    void CommitSceneColor(CBackend& cmd_list);
     // OP22 (28.11 perf): история отражений и активность атласа принадлежат этим RT.
     Fmatrix m_waterPreviousViewProj{};
     u32 m_waterHistoryFrame{};
@@ -396,7 +403,7 @@ private:
     ref_rt rt_smaa_blendtex;
 
     bool PhaseAA(CBackend& cmd_list, ID3D11Resource* reactiveMask); // OP22 (28.11 perf): передаём маску этого прохода.
-    bool Phase3DSSUpscale(CBackend& cmd_list);
+    bool Phase3DSSUpscale(bool needScope); // OP22 (28.11 perf): учитываем вход в прицел и снижение масштаба.
 
     void ProcessSMAA(CBackend& cmd_list);
     void ProcessTAA(CBackend& cmd_list);

@@ -208,6 +208,9 @@ public:
 private:
     CPhysicItem* m_object;
     CInventoryItem* m_item;
+    // OP22 (28.11 perf): вес для пружины поз хранится на экземпляре предмета.
+    mutable u32 m_op22_hud_weight_frame{u32(-1)};
+    mutable float m_op22_hud_weight{1.f};
 
 public:
     IC CPhysicItem& object() const
@@ -220,6 +223,7 @@ public:
         VERIFY(m_item);
         return (*m_item);
     }
+    float op22_HudPoseWeight() const; // OP22 (28.11 perf): общий вес для рук и модели предмета.
 
     virtual void on_renderable_Render(u32 context_id, IRenderable* root) = 0;
 

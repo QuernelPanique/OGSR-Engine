@@ -71,7 +71,7 @@ CSE_Abstract* xrServer::Process_spawn(NET_Packet& P, ClientID sender, BOOL bSpaw
         Phantom->ID = PerformIDgen(0xffff);
         Phantom->ID_Phantom = Phantom->ID; // Self-linked to avoid phantom-breeding
         Phantom->owner = NULL;
-        entities.insert(mk_pair(Phantom->ID, Phantom));
+        register_entity(Phantom); // OP22 (28.11 perf): фантом тоже входит в индекс CSE.
 
         Phantom->s_flags.set(M_SPAWN_OBJECT_PHANTOM, TRUE);
 
@@ -79,7 +79,7 @@ CSE_Abstract* xrServer::Process_spawn(NET_Packet& P, ClientID sender, BOOL bSpaw
         E->ID = PerformIDgen(E->ID);
         E->ID_Phantom = Phantom->ID;
         E->owner = CL;
-        entities.insert(mk_pair(E->ID, E));
+        register_entity(E); // OP22 (28.11 perf): единая регистрация CSE и индекса.
     }
     else
     {
@@ -89,7 +89,7 @@ CSE_Abstract* xrServer::Process_spawn(NET_Packet& P, ClientID sender, BOOL bSpaw
             E->ID = PerformIDgen(0xffff);
             E->owner = CL; //		= SelectBestClientToMigrateTo	(E);
             E->s_flags.set(M_SPAWN_OBJECT_PHANTOM, FALSE);
-            entities.insert(mk_pair(E->ID, E));
+            register_entity(E); // OP22 (28.11 perf): индексируем и клон фантома.
         }
         else
         {
@@ -103,7 +103,7 @@ CSE_Abstract* xrServer::Process_spawn(NET_Packet& P, ClientID sender, BOOL bSpaw
             }
             E->ID = PerformIDgen(E->ID);
             E->owner = CL;
-            entities.insert(mk_pair(E->ID, E));
+            register_entity(E); // OP22 (28.11 perf): индексируем и обычный спавн.
         }
     }
 

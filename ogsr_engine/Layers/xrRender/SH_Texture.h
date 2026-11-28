@@ -56,6 +56,8 @@ public:
 
     void surface_set(ID3DBaseTexture* surf);
     ID3DBaseTexture* surface_get() const;
+    // OP22 (28.11 perf): обмен уже созданными представлениями двух цветовых RT одинаковой формы.
+    void swap_render_target_surface(CTexture& other);
 
     virtual u32 get_Width()
     {

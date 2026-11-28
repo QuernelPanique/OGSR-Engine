@@ -31,7 +31,13 @@ bool CExoOutfit::Attach(PIItem pIItem, bool b_send_event)
     luabind::functor<void> f;
     if (!pIItem || !ai().script_engine().functor("op22_exo.attach", f))
         return inherited::Attach(pIItem, b_send_event);
+
+    // OP22 (28.11 perf): nofatal подавляет ошибку void-колбэка, поэтому проверяем счётчик до удаления батареи.
+    const auto errors_before = luabind::get_op22_nofatal_count();
     f(lua_game_object(), pIItem->object().lua_game_object());
+    if (luabind::get_op22_nofatal_count() != errors_before)
+        return false;
+
     if (b_send_event)
         pIItem->object().DestroyObject();
     return true;

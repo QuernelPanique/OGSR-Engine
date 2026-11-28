@@ -592,11 +592,18 @@ bool op22_gpu_init()
         D3D11_QUERY_DESC desc{};
         desc.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
         if (FAILED(HW.pDevice->CreateQuery(&desc, &f.disjoint)))
+        {
+            // OP22 (28.11 perf): при отказе освобождаем весь уже созданный набор.
+            op22_gpu_release_queries();
             return false;
+        }
         desc.Query = D3D11_QUERY_TIMESTAMP;
         for (auto& q : f.ts)
             if (FAILED(HW.pDevice->CreateQuery(&desc, &q)))
+            {
+                op22_gpu_release_queries(); // OP22 (28.11 perf): следующая попытка начнётся с пустых указателей.
                 return false;
+            }
     }
     op22_gpu_ready = true;
     return true;
@@ -633,6 +640,24 @@ void op22_gpu_collect(op22_gpu_frame_t& f)
     op22_gpu_frames++;
 }
 } // namespace
+
+// OP22 (28.11 perf): освобождаем запросы и забываем отсчёты уничтоженного устройства.
+void op22_gpu_release_queries()
+{
+    for (auto& f : op22_gpu_fr)
+    {
+        _RELEASE(f.disjoint);
+        for (auto& q : f.ts)
+            _RELEASE(q);
+        f = {};
+    }
+    op22_gpu_ready = op22_gpu_active = false;
+    op22_gpu_cur = op22_gpu_nacc = 0;
+    op22_gpu_frames = op22_gpu_cpu_frames = op22_gpu_last_print = 0;
+    op22_gpu_total = op22_gpu_cpu = 0.0;
+    std::fill(std::begin(op22_gpu_cnt), std::end(op22_gpu_cnt), 0.0);
+    std::fill(std::begin(op22_gpu_acc), std::end(op22_gpu_acc), 0.0);
+}
 
 void op22_gpu_frame_begin()
 {

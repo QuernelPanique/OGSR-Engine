@@ -11,9 +11,8 @@
 #include "ai_space.h"
 #include "level_graph.h"
 
-#define DEFAULT_RADIUS EPS_L
-
-bool CSpaceRestrictionBase::inside(u32 level_vertex_id, bool partially_inside) { return (inside(level_vertex_id, partially_inside, DEFAULT_RADIUS)); }
+// OP22 (28.11 perf): радиус совпадает с предварительной проверкой по Z.
+bool CSpaceRestrictionBase::inside(u32 level_vertex_id, bool partially_inside) { return (inside(level_vertex_id, partially_inside, default_radius)); }
 
 IC Fvector construct_position(u32 level_vertex_id, float x, float z) { return (Fvector().set(x, ai().level_graph().vertex_plane_y(level_vertex_id, x, z), z)); }
 

@@ -8,7 +8,11 @@
 
 #include "stdafx.h"
 #include "level_graph.h"
+#include <cmath>
+#include <limits>
 
+// OP22 (28.11 perf): поиск по кольцам с исходной метрикой контура.
+int g_op22_nearest_vertex_fast = 1;
 
 CLevelGraph::CLevelGraph(LPCSTR fName)
 {
@@ -44,6 +48,14 @@ u32 CLevelGraph::nearest_vertex_id(const Fvector& position) const
 {
     CLevelGraph::CPosition _node_position;
     vertex_position(_node_position, position);
+    // OP22 (28.11 perf): ограничиваем число колец, чтобы на пустой сетке сохранить цену полного поиска.
+    if (g_op22_nearest_vertex_fast)
+    {
+        const u32 id = nearest_vertex_id_in_grid(position);
+        if (valid_vertex_id(id))
+            return id;
+    }
+
     float min_dist = flt_max;
     u32 selected;
     set_invalid_vertex(selected);
@@ -59,6 +71,86 @@ u32 CLevelGraph::nearest_vertex_id(const Fvector& position) const
 
     VERIFY(valid_vertex_id(selected));
     return (selected);
+}
+
+// OP22 (28.11 perf): просматриваем все этажи каждой клетки, при равенстве сохраняем первый ID.
+u32 CLevelGraph::nearest_vertex_id_in_grid(const Fvector& position) const
+{
+    const auto begin = m_nodes->begin(), end = m_nodes->end();
+    const float cell = header().cell_size();
+    constexpr int world_limit_in_cells = 1 << 17;
+    constexpr u32 axis_limit = 2 * world_limit_in_cells;
+    if (begin == end || !m_row_length || m_row_length > axis_limit + 1 || !(cell >= 1.f / 1024 && cell <= 1024.f))
+        return u32(-1);
+
+    const auto& origin = header().box().min;
+    const u32 last_row = (end - 1)->position().xz() / m_row_length;
+    if (last_row > axis_limit)
+        return u32(-1);
+    const int last_x = static_cast<int>(last_row);
+    const int last_z = static_cast<int>(m_row_length - 1);
+    const float scale = cell * world_limit_in_cells;
+    const auto world = [cell](int index, float offset) { return float(index) * cell + offset; };
+    // Оставляем запас на округление при распаковке и интерполяции ребра в float.
+    if (!(std::abs(origin.x) <= scale && std::abs(origin.z) <= scale &&
+          std::abs(world(last_x, origin.x)) <= scale && std::abs(world(last_z, origin.z)) <= scale &&
+          std::abs(position.x) <= scale && std::abs(position.z) <= scale))
+        return u32(-1);
+
+    const int center_x = std::clamp(iFloor((position.x - origin.x) / cell + .5f), 0, last_x);
+    const int center_z = std::clamp(iFloor((position.z - origin.z) / cell + .5f), 0, last_z);
+    u32 selected = u32(-1);
+    float best = flt_max;
+    const auto visit = [&](int x, int low_z, int high_z) {
+        const u64 low = static_cast<u64>(x) * m_row_length + static_cast<u64>(low_z);
+        const u64 high = static_cast<u64>(x) * m_row_length + static_cast<u64>(high_z);
+        if (low > (std::numeric_limits<u32>::max)())
+            return;
+        auto node = std::lower_bound(begin, end, static_cast<u32>(low), &vertex::predicate2);
+        for (; node != end && node->position().xz() <= high; ++node)
+        {
+            const u32 id = vertex_id(node);
+            const float candidate = distance(position, node);
+            if (candidate < best || (candidate == best && id < selected && valid_vertex_id(selected)))
+            {
+                best = candidate;
+                selected = id;
+            }
+        }
+    };
+
+    for (int ring = 0; ring <= 16; ++ring)
+    {
+        const int left = center_x - ring, right = center_x + ring;
+        const int bottom = center_z - ring, top = center_z + ring;
+        for (int x = std::max(0, left); x <= std::min(last_x, right); ++x)
+        {
+            if (x == left || x == right)
+                visit(x, std::max(0, bottom), std::min(last_z, top));
+            else
+            {
+                if (bottom >= 0)
+                    visit(x, bottom, bottom);
+                if (top <= last_z)
+                    visit(x, top, top);
+            }
+        }
+
+        // Проекция контура меняет только Y. Для ребра берём полклетки и ещё клетку на округление.
+        double gap = std::numeric_limits<double>::infinity();
+        if (left > 0)
+            gap = std::min(gap, double(position.x) - world(left - 1, origin.x));
+        if (right < last_x)
+            gap = std::min(gap, world(right + 1, origin.x) - double(position.x));
+        if (bottom > 0)
+            gap = std::min(gap, double(position.z) - world(bottom - 1, origin.z));
+        if (top < last_z)
+            gap = std::min(gap, world(top + 1, origin.z) - double(position.z));
+        const double lower = (gap - 1.5 * cell) * .5;
+        if (valid_vertex_id(selected) && lower > 0 && lower * lower > best)
+            return selected;
+    }
+    return u32(-1);
 }
 
 u32 CLevelGraph::vertex_id(u32 current_node_id, const Fvector& position) const

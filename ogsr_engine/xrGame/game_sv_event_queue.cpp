@@ -1,5 +1,10 @@
 #include "stdafx.h"
 #include "game_sv_event_queue.h"
+// OP22 (28.11 perf): используем тот же переключатель для отложенных попаданий.
+#include "xrMessages.h"
+#include <atomic>
+
+extern std::atomic<bool> g_op22_net_event_queue;
 
 //
 GameEventQueue::GameEventQueue()
@@ -68,7 +73,15 @@ GameEvent* GameEventQueue::Create(NET_Packet& P, u16 type, u32 time, ClientID cl
         unused.pop_back();
         ge = ready.back();
     }
-    CopyMemory(&(ge->P), &P, sizeof(NET_Packet));
+    // OP22 (28.11 perf): для GE_HIT сохраняем полезные байты, курсор и время приёма.
+    if (type == GAME_EVENT_ON_HIT && g_op22_net_event_queue.load(std::memory_order_relaxed))
+    {
+        ge->P.construct(P.B.data, P.B.count);
+        ge->P.r_pos = P.r_pos;
+        ge->P.timeReceive = P.timeReceive;
+    }
+    else
+        CopyMemory(&(ge->P), &P, sizeof(NET_Packet));
     ge->sender = clientID;
     ge->time = time;
     ge->type = type;

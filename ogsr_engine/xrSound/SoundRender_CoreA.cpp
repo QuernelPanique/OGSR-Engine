@@ -81,9 +81,12 @@ void CSoundRender_CoreA::_restart()
 
     Msg("SOUND: restarting...");
 
-    inherited::_restart();
-
     std::scoped_lock<std::mutex> m(m_bLocked);
+    // OP22 (28.11 perf): сбрасываем кэш под мьютексом даже при неудачном переоткрытии устройства.
+    inherited::_restart();
+    m_efx_parameters_valid = false;
+    for (CSoundRender_Target* target : s_targets)
+        static_cast<CSoundRender_TargetA*>(target)->invalidate_parameters();
 
     if (init_device_list())
     {
@@ -96,16 +99,14 @@ void CSoundRender_CoreA::_restart()
         {
             const bool is_al_soft = deviceDesc.is_al_soft;
 
-            for (u32 it = 0; it < s_targets.size(); it++)
+            // OP22 (28.11 perf): старые отправки и объекты удаляем, только если EFX был доступен.
+            if (bEFX)
             {
-                CSoundRender_Target* T = s_targets[it];
-
-                T->alAuxInit(AL_EFFECTSLOT_NULL);
-
-                T->bEFX = false;
+                for (CSoundRender_Target* target : s_targets)
+                    target->alAuxInit(AL_EFFECTSLOT_NULL);
+                release_efx_objects();
+                bEFX = false;
             }
-
-            release_efx_objects();
 
             init_device_properties(is_al_soft);
 
@@ -115,7 +116,8 @@ void CSoundRender_CoreA::_restart()
 
                 if (bEFX)
                 {
-                    T->alAuxInit(slot);
+                    // OP22 (28.11 perf): snd_restart соблюдает текущий snd_efx.
+                    T->alAuxInit(m_efx_sends_muted ? AL_EFFECTSLOT_NULL : slot);
                 }
 
                 T->bEFX = bEFX;
@@ -309,7 +311,8 @@ void CSoundRender_CoreA::_initialize(int stage)
                 if (bEFX)
 
                 {
-                    T->alAuxInit(slot);
+                    // OP22 (28.11 perf): при snd_efx off новые цели стартуют без отправок.
+                    T->alAuxInit(m_efx_sends_muted ? AL_EFFECTSLOT_NULL : slot);
                 }
 
                 T->bAlSoft = is_al_soft;

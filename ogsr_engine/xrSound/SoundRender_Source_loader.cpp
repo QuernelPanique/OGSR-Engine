@@ -32,17 +32,24 @@ void CSoundRender_Source::decompress(u32 line, OggVorbis_File* ovf)
     VERIFY(ovf);
     // decompression of one cache-line
     u32 line_size = SoundRender->cache.get_linesize();
-    u32 buf_offs = (line * line_size) / (m_wformat.wBitsPerSample / 8) / m_wformat.nChannels;
-    u32 left_file = dwBytesTotal - buf_offs;
-    u32 left = (u32)_min(left_file, line_size);
-
-    // seek
-    u32 cur_pos = u32(ov_pcm_tell(ovf));
-    if (cur_pos != buf_offs)
-        ov_pcm_seek(ovf, buf_offs);
-
-     // decompress
+    // OP22 (28.11 perf): остаток считаем в байтах, позицию Vorbis — в кадрах PCM.
+    const u32 offset = line * line_size;
+    const u32 buf_offs = offset / m_wformat.nBlockAlign;
+    const u32 left = _min(dwBytesTotal - offset, line_size);
     const auto dest = SoundRender->cache.get_dataptr(CAT, line);
+
+    // OP22 (28.11 perf): при сбое позиционирования строка кэша содержит тишину.
+    if (ov_pcm_tell(ovf) != static_cast<ogg_int64_t>(buf_offs))
+    {
+        const int result = ov_pcm_seek(ovf, buf_offs);
+        if (result != 0)
+        {
+            Msg("! Vorbis: PCM seek failed (%d) in [%s]", result, pname.c_str());
+            ZeroMemory(dest, left);
+            return;
+        }
+    }
+
     if (m_wformat.wFormatTag == WAVE_FORMAT_IEEE_FLOAT)
         i_decompress(ovf, static_cast<float*>(dest), left);
     else

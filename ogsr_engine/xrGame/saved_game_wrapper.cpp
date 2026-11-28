@@ -20,8 +20,69 @@
 #include "alife_simulator.h"
 #include "alife_spawn_registry.h"
 #include "string_table.h"
+#include <limits>
+#include <memory>
 
 extern LPCSTR alife_section;
+
+// OP22 (28.11 perf): сохраняем блоки предпросмотра последнего сейва по пути и времени файла.
+int g_op22_save_preview_cache = 1;
+namespace
+{
+struct SavedGamePreview
+{
+    string_path path{};
+    WIN32_FILE_ATTRIBUTE_DATA stamp{};
+    u8 data[16 * 1024];
+    size_t size{};
+};
+
+bool preview_file_stamp(LPCSTR path, WIN32_FILE_ATTRIBUTE_DATA& stamp)
+{
+    const auto* file = FS.exist(path);
+    if (!file || file->vfs != (std::numeric_limits<size_t>::max)())
+        return false;
+
+    LPCSTR disk_path = file->real_file_path.empty() ? path : file->real_file_path.c_str();
+    return GetFileAttributesExA(disk_path, GetFileExInfoStandard, &stamp) != FALSE;
+}
+
+bool same_preview_stamp(const WIN32_FILE_ATTRIBUTE_DATA& a, const WIN32_FILE_ATTRIBUTE_DATA& b)
+{
+    return CompareFileTime(&a.ftLastWriteTime, &b.ftLastWriteTime) == 0 && CompareFileTime(&a.ftCreationTime, &b.ftCreationTime) == 0 &&
+        a.nFileSizeHigh == b.nFileSizeHigh && a.nFileSizeLow == b.nFileSizeLow;
+}
+
+// Оставляем чтение актёра при каждом запросе: у старых сейвов оно может выбирать персонажа и обновлять реестр A-Life.
+void remember_preview(SavedGamePreview& cache, LPCSTR path, const WIN32_FILE_ATTRIBUTE_DATA& stamp, IReader& reader, void* actor_data, size_t actor_size)
+{
+    constexpr size_t chunk_headers = 3 * 2 * sizeof(u32);
+    if (actor_size + chunk_headers >= sizeof(cache.data))
+        return;
+
+    const size_t time_size = reader.find_chunk(GAME_TIME_CHUNK_DATA);
+    void* time_data = reader.pointer();
+    BOOL compressed = FALSE;
+    const size_t spawn_size = reader.find_chunk(SPAWN_CHUNK_DATA, &compressed);
+    if (!time_size || !spawn_size || compressed || time_size + actor_size + spawn_size + chunk_headers > sizeof(cache.data))
+        return;
+
+    CMemoryWriter preview;
+    preview.reserve(time_size + actor_size + spawn_size + chunk_headers);
+    preview.w_chunk(GAME_TIME_CHUNK_DATA, time_data, time_size);
+    preview.w_chunk(OBJECT_CHUNK_DATA, actor_data, actor_size);
+    preview.w_chunk(SPAWN_CHUNK_DATA, reader.pointer(), spawn_size);
+
+    WIN32_FILE_ATTRIBUTE_DATA current{};
+    if (!preview_file_stamp(path, current) || !same_preview_stamp(stamp, current))
+        return;
+
+    strcpy_s(cache.path, path);
+    cache.stamp = current;
+    cache.size = preview.size();
+    memcpy(cache.data, preview.pointer(), cache.size);
+}
+}
 
 LPCSTR CSavedGameWrapper::saved_game_full_name(LPCSTR saved_game_name, string_path& result)
 {
@@ -71,34 +132,53 @@ bool CSavedGameWrapper::valid_saved_game(LPCSTR saved_game_name)
 
 CSavedGameWrapper::CSavedGameWrapper(LPCSTR saved_game_name)
 {
-    string_path file_name;
-    saved_game_full_name(saved_game_name, file_name);
-    R_ASSERT3(FS.exist(file_name), "There is no saved game ", file_name);
+    string_path preview_path;
+    saved_game_full_name(saved_game_name, preview_path);
+    R_ASSERT3(FS.exist(preview_path), "There is no saved game ", preview_path);
 
-    u32 magic = 0;
-
-    IReader* stream = FS.r_open(file_name);
-    if (!valid_saved_game(*stream, magic))
+    // OP22 (28.11 perf): на попадании читаем малый снимок и заново разрешаем уровень по текущему спавну.
+    static thread_local SavedGamePreview preview;
+    WIN32_FILE_ATTRIBUTE_DATA stamp{};
+    const bool cacheable = g_op22_save_preview_cache && preview_file_stamp(preview_path, stamp);
+    const bool cached = cacheable && preview.size && !xr_strcmp(preview_path, preview.path) && same_preview_stamp(stamp, preview.stamp);
+    const auto free_source = [](void* p) { xr_free(p); };
+    std::unique_ptr<void, decltype(free_source)> source_data(nullptr, free_source);
+    u8 preview_data[sizeof(preview.data)];
+    size_t reader_size;
+    void* reader_data;
+    if (cached)
     {
+        memcpy(preview_data, preview.data, preview.size);
+        reader_data = preview_data;
+        reader_size = preview.size;
+    }
+    else
+    {
+        u32 magic = 0;
+        IReader* stream = FS.r_open(preview_path);
+        if (!valid_saved_game(*stream, magic))
+        {
+            FS.r_close(stream);
+            CALifeTimeManager time_manager(alife_section);
+            m_game_time = time_manager.game_time();
+            m_actor_health = 1.f;
+            m_level_id = _LEVEL_ID(-1);
+            m_level_name = "";
+            return;
+        }
+
+        const u32 source_count = stream->r_u32();
+        source_data.reset(xr_malloc(source_count));
+        if (magic == 0)
+            R_ASSERT(ZSTD_decompress(source_data.get(), source_count, stream->pointer(), stream->length() - 3 * sizeof(u32)) == source_count);
+        else
+            rtc_decompress(source_data.get(), source_count, stream->pointer(), stream->length() - 3 * sizeof(u32));
         FS.r_close(stream);
-        CALifeTimeManager time_manager(alife_section);
-        m_game_time = time_manager.game_time();
-        m_actor_health = 1.f;
-        m_level_id = _LEVEL_ID(-1);
-        m_level_name = "";
-        return;
+        reader_data = source_data.get();
+        reader_size = source_count;
     }
 
-    u32 source_count = stream->r_u32();
-    void* source_data = xr_malloc(source_count);
-    if (magic == 0)
-        R_ASSERT(ZSTD_decompress(source_data, source_count, stream->pointer(), stream->length() - 3 * sizeof(u32)) == source_count);
-    else
-        rtc_decompress(source_data, source_count, stream->pointer(), stream->length() - 3 * sizeof(u32));
-    FS.r_close(stream);
-
-    IReader reader(source_data, source_count);
-
+    IReader reader(reader_data, reader_size);
     {
         CALifeTimeManager time_manager(alife_section);
         time_manager.load(reader);
@@ -107,12 +187,14 @@ CSavedGameWrapper::CSavedGameWrapper(LPCSTR saved_game_name)
 
     {
         R_ASSERT2(reader.find_chunk(OBJECT_CHUNK_DATA), "Can't find chunk OBJECT_CHUNK_DATA!");
+        const size_t actor_offset = reader.tell();
 #ifdef DEBUG
         u32 count =
 #endif
             reader.r_u32();
         VERIFY(count > 0);
         CSE_ALifeDynamicObject* object = CALifeObjectRegistry::get_object(reader);
+        const size_t actor_size = reader.tell() - actor_offset;
         VERIFY(object->ID == 0);
         CSE_ALifeCreatureActor* actor = smart_cast<CSE_ALifeCreatureActor*>(object);
         VERIFY(actor);
@@ -138,6 +220,7 @@ CSavedGameWrapper::CSavedGameWrapper(LPCSTR saved_game_name)
         }
         R->close();
 
+        string_path file_name;
         if (!FS.exist(file_name, "$game_spawn$", spawn_file_name, ".spawn"))
         {
             F_entity_Destroy(object);
@@ -198,7 +281,8 @@ CSavedGameWrapper::CSavedGameWrapper(LPCSTR saved_game_name)
         if (b_destroy_spawn)
             FS.r_close(spawn);
         F_entity_Destroy(object);
-    }
 
-    xr_free(source_data);
+        if (cacheable && !cached)
+            remember_preview(preview, preview_path, stamp, reader, static_cast<u8*>(reader.begin()) + actor_offset, actor_size);
+    }
 }

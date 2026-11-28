@@ -28,6 +28,7 @@
 #include "../WeaponAmmo.h"
 #include "UIProgressBar.h"
 #include "../op22_options.h"
+#include <utility>
 
 using namespace luabind;
 
@@ -132,8 +133,25 @@ public:
     }
 };
 
-// данные ячейки для скриптов: id ячейки, условие
-static xr_map<CUICellItem*, shared_str> g_cell_ids;
+// OP22 (28.11 perf): обходим те же корневые ячейки в порядке GetItemIdx одним проходом.
+int g_op22_ui_linear_scan = 1;
+
+template <class Visitor>
+static void op22_visit_cells(CUIDragDropListEx* list, Visitor visit)
+{
+    if (g_op22_ui_linear_scan)
+    {
+        u32 index = 0;
+        for (CUIWindow* child : list->m_container->GetChildWndList())
+            if (visit(smart_cast<CUICellItem*>(child), index++))
+                break;
+        return;
+    }
+
+    for (u32 index = 0, count = list->ItemsCount(); index < count; ++index)
+        if (visit(list->GetItemIdx(index), index))
+            break;
+}
 
 // список перетаскивания для скриптов: события ячеек в Lua
 class CUIOP22ScriptDDList : public CUIDragDropListEx
@@ -148,6 +166,18 @@ class CUIOP22ScriptDDList : public CUIDragDropListEx
     };
     xr_map<int, cb_t> m_cb;
     CUICellItem* m_focused{};
+    // OP22 (28.11 perf): колбэк выбора может перестроить список до завершения выбора.
+    CUICellItem* m_selecting{};
+
+    void forget_cell(CUICellItem* itm)
+    {
+        if (itm == m_script_selected)
+            m_script_selected = nullptr;
+        if (itm == m_focused)
+            m_focused = nullptr;
+        if (itm == m_selecting)
+            m_selecting = nullptr;
+    }
 
 public:
     CUICellItem* m_script_selected{};
@@ -211,41 +241,53 @@ public:
 
     bool on_selected(CUICellItem* itm)
     {
+        // OP22 (28.11 perf): колбэк видит прежний выбор, а удалённая в нём ячейка не становится выбранной.
+        m_selecting = itm;
         fire(int(GameObject::eCellItemSelect), itm);
-        m_script_selected = itm; // после колбэка: ОП-скрипт снимает выделение с прежней через GetSelectedCell
+        m_script_selected = std::exchange(m_selecting, nullptr);
         return false;
     }
     bool on_db_click(CUICellItem* itm) { return fire(OP22_CB_CELL_DBL_CLICK, itm) || true; } // без переноса движком
     bool on_start_drag(CUICellItem*) { return true; } // перенос в скриптовых окнах ОП - двойным кликом
     bool on_drop(CUICellItem*) { return true; }
 
-    virtual CUICellItem* RemoveItem(CUICellItem* itm, bool force_root)
+    void ClearAll(bool bDestroy) override
     {
-        if (itm == m_script_selected)
-            m_script_selected = nullptr;
-        if (itm == m_focused)
-            m_focused = nullptr;
-        return inherited::RemoveItem(itm, force_root);
+        // OP22 (28.11 perf): обнуляем ссылки до очистки контейнера.
+        m_script_selected = nullptr;
+        m_focused = nullptr;
+        m_selecting = nullptr;
+        inherited::ClearAll(bDestroy);
+    }
+
+    CUICellItem* RemoveItem(CUICellItem* itm, bool force_root) override
+    {
+        // OP22 (28.11 perf): из стопки может быть снята другая ячейка.
+        forget_cell(itm);
+        CUICellItem* removed = inherited::RemoveItem(itm, force_root);
+        forget_cell(removed);
+        return removed;
     }
 
     virtual void Update()
     {
         inherited::Update();
         CUICellItem* over = nullptr;
-        for (u32 i = 0, n = ItemsCount(); i < n; ++i)
-        {
-            CUICellItem* c = GetItemIdx(i);
-            if (c && c->CursorOverWindow())
+        // OP22 (28.11 perf): сохраняем первый результат наведения в порядке списка.
+        op22_visit_cells(this, [&over](CUICellItem* cell, u32) {
+            if (cell && cell->CursorOverWindow())
             {
-                over = c;
-                break;
+                over = cell;
+                return true;
             }
-        }
+            return false;
+        });
         if (over != m_focused)
         {
-            if (m_focused)
-                fire(int(GameObject::eCellItemFocusLost), m_focused);
-            m_focused = over;
+            // OP22 (28.11 perf): очистка в колбэке потери фокуса может сбросить новый фокус.
+            CUICellItem* previous = std::exchange(m_focused, over);
+            if (previous)
+                fire(int(GameObject::eCellItemFocusLost), previous);
             if (m_focused)
                 fire(int(GameObject::eCellItemFocus), m_focused);
         }
@@ -311,22 +353,29 @@ static CUICellItem* dd_GetSelectedCell(CUIDragDropListEx* l) { auto s = script_l
 static CUICellItem* dd_GetItemIdx(CUIDragDropListEx* l, u32 idx, bool) { return idx < l->ItemsCount() ? l->GetItemIdx(idx) : nullptr; }
 static int dd_GetItemPos(CUIDragDropListEx* l, CUICellItem* c)
 {
-    for (u32 i = 0, n = l->ItemsCount(); i < n; ++i)
-        if (l->GetItemIdx(i) == c)
-            return int(i);
-    return -1;
+    // OP22 (28.11 perf): определяем позицию за один проход.
+    int position = -1;
+    op22_visit_cells(l, [&](CUICellItem* cell, u32 index) {
+        if (cell != c)
+            return false;
+        position = int(index);
+        return true;
+    });
+    return position;
 }
 static CUICellItem* dd_GetCellAt(CUIDragDropListEx*, Fvector2) { return nullptr; }
 static CUICellItem* dd_GetCellByCellId(CUIDragDropListEx* l, LPCSTR id)
 {
-    for (u32 i = 0, n = l->ItemsCount(); i < n; ++i)
-    {
-        CUICellItem* c = l->GetItemIdx(i);
-        auto it = g_cell_ids.find(c);
-        if (it != g_cell_ids.end() && it->second == id)
-            return c;
-    }
-    return nullptr;
+    // OP22 (28.11 perf): ищем первый совпавший GUID, записанный в самой ячейке.
+    const shared_str key(id);
+    CUICellItem* result = nullptr;
+    op22_visit_cells(l, [&](CUICellItem* cell, u32) {
+        if (!cell || !cell->m_op22_cell_id || *cell->m_op22_cell_id != key)
+            return false;
+        result = cell;
+        return true;
+    });
+    return result;
 }
 static void dd_set_cb3(CUIDragDropListEx* l, int type, const luabind::functor<bool>& f, const luabind::object& o)
 {
@@ -348,11 +397,11 @@ static void dd_set_cb1(CUIDragDropListEx* l, int type)
 static u32 ci_ChildsCount(CUICellItem* c) { auto s = smart_cast<CUIOP22SectionCell*>(c); return s ? s->m_script_count : c->ChildsCount(); }
 static CUICellItem* ci_Child(CUICellItem* c, u32 i) { return i < c->ChildsCount() ? c->Child(i) : nullptr; }
 static bool ci_HasChilds(CUICellItem* c) { return ci_ChildsCount(c) > 0; }
-static void ci_SetCellId(CUICellItem* c, LPCSTR id) { g_cell_ids[c] = id; }
+// OP22 (28.11 perf): GUID освобождается с ячейкой, включая ячейки в стопках.
+static void ci_SetCellId(CUICellItem* c, LPCSTR id) { c->m_op22_cell_id = shared_str(id); }
 static LPCSTR ci_GetCellId(CUICellItem* c)
 {
-    auto it = g_cell_ids.find(c);
-    return it != g_cell_ids.end() ? it->second.c_str() : "";
+    return c->m_op22_cell_id ? c->m_op22_cell_id->c_str() : "";
 }
 static CUIDragDropListEx* ci_OwnerList(CUICellItem* c) { return c->OwnerList(); }
 static void ci_SetFocused(CUICellItem*, bool) {}
@@ -370,12 +419,12 @@ static LPCSTR ci_GetCellSection(CUICellItem* c)
 // у нас был пустым. Ячейки списка: с секцией скрипта (CUIOP22SectionCell) или с предметом. Остальные ячейки снимаются.
 static void dd_mark_sects(CUIDragDropListEx* l, const xr_vector<shared_str>& sects)
 {
-    for (u32 i = 0, n = l->ItemsCount(); i < n; ++i)
-    {
-        CUICellItem* c = l->GetItemIdx(i);
+    // OP22 (28.11 perf): применяем подсветку за один проход по ячейкам.
+    op22_visit_cells(l, [&sects](CUICellItem* c, u32) {
         const shared_str sect = ci_GetCellSection(c);
         c->m_select_armament = sect.size() && std::find(sects.begin(), sects.end(), sect) != sects.end();
-    }
+        return false;
+    });
 }
 static void dd_SetSuitable1(CUIDragDropListEx* l, LPCSTR sect)
 {
@@ -402,8 +451,11 @@ static void dd_ClearSuitables(CUIDragDropListEx* l)
 {
     if (!l)
         return;
-    for (u32 i = 0, n = l->ItemsCount(); i < n; ++i)
-        l->GetItemIdx(i)->m_select_armament = false;
+    // OP22 (28.11 perf): снимаем подсветку за один проход по ячейкам.
+    op22_visit_cells(l, [](CUICellItem* c, u32) {
+        c->m_select_armament = false;
+        return false;
+    });
 }
 static void ci_SetCellCondition(CUICellItem* c, float v)
 {
@@ -587,15 +639,15 @@ static void op22_mark(CUIDragDropListEx* l, const xr_vector<shared_str>* sects, 
 {
     if (!l)
         return;
-    for (u32 i = 0, n = l->ItemsCount(); i < n; ++i)
-    {
-        CUICellItem* c = l->GetItemIdx(i);
+    // OP22 (28.11 perf): обходим ячейки окна без повторного поиска по индексу.
+    op22_visit_cells(l, [sects, on](CUICellItem* c, u32) {
         auto it = static_cast<PIItem>(c->m_pData);
         if (!sects)
             c->m_select_armament = on;
         else if (it && std::find(sects->begin(), sects->end(), it->object().cNameSect()) != sects->end())
             c->m_select_armament = on;
-    }
+        return false;
+    });
 }
 static void op22_sects(const luabind::object& o, xr_vector<shared_str>& out)
 {

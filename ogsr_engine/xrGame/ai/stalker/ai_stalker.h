@@ -306,7 +306,8 @@ private:
         }
 
         IC bool operator<(const CTradeItem& trade_item) const;
-        IC bool operator==(u16 id) const;
+        // OP22 (28.11 perf): поиск предмета торговли по полному ID.
+        IC bool operator==(ALife::_OBJECT_ID id) const;
     };
 
 private:

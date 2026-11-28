@@ -195,7 +195,8 @@ public:
     void CreateDragItem(CUICellItem* itm);
 
     void DestroyDragItem();
-    void ClearAll(bool bDestroy);
+    // OP22 (28.11 perf): скриптовый список сбрасывает фокус и выбор до удаления ячеек.
+    virtual void ClearAll(bool bDestroy);
     void Compact();
     bool IsOwner(CUICellItem* itm);
     void clear_select_armament();
@@ -260,7 +261,9 @@ protected:
     Ivector2 GetItemPos(CUICellItem* itm);
     Ivector2 FindFreeCell(const Ivector2& size);
     bool HasFreeSpace(const Ivector2& size);
-    bool IsRoomFree(const Ivector2& pos, const Ivector2& size);
+    // OP22 (28.11 perf): при поиске можно узнать столбец первой занятой клетки.
+    bool IsRoomFree(const Ivector2& pos, const Ivector2& size, int* blocked_x = nullptr);
+    bool FindRoom(Ivector2& pos, const Ivector2& size, const Ivector2& oriented_size);
 
     bool AddSimilar(CUICellItem* itm);
     CUICellItem* FindSimilar(CUICellItem* itm);

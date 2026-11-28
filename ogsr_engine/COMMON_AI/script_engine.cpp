@@ -14,6 +14,9 @@
 #include <format>
 #include <tracy/TracyLua.hpp>
 
+// OP22 (28.11 perf): прямой поиск строкового ключа для functor и фабрики.
+int g_op22_lua_functor_lookup = 1;
+
 // FILE_HEADER нужен для того, чтобы классы luabind'а регистрировались внутри модуля в котором находятся, а не в _G
 // см. luabind/src/create_class.cpp
 constexpr const char* FILE_HEADER =
@@ -104,7 +107,14 @@ static int auto_load(lua_State* L)
         lua_pushnil(L);
         return 1;
     }
-    ai().script_engine().process_file_if_exists(lua_tostring(L, 2), false);
+    // OP22 (28.11 perf): после ошибки загрузки возвращаем nil, для поиска явно кладём исходный ключ.
+    const bool loaded = ai().script_engine().process_file_if_exists(lua_tostring(L, 2), false);
+    if (!loaded && luabind::get_op22_nofatal())
+    {
+        lua_pushnil(L);
+        return 1;
+    }
+    lua_pushvalue(L, 2);
     lua_rawget(L, 1);
     return 1;
 }
@@ -149,6 +159,9 @@ void CScriptEngine::init()
     extern void export_classes(lua_State * L);
     export_classes(LSVM); //Тут регистрируются все движковые функции, импортированные в скрипты
     luaL_openlibs(LSVM); //Инициализация функций LuaJIT
+    // OP22 (28.11 perf): запоминаем исходный loadstring до загрузки игровых скриптов.
+    extern void op22_init_dialog_chunk_cache(lua_State* L);
+    op22_init_dialog_chunk_cache(LSVM);
     setup_auto_load(); //Построение метатаблицы
     // OP22: прослойка API движка ОП 2.2 (keyvals, pr_queues, ...) - до _G.script, т.к. модули ОП зовут её при загрузке
     process_file_if_exists("op22_compat", false);
@@ -319,7 +332,28 @@ bool CScriptEngine::function_object(const char* function_to_call, luabind::objec
         }
     }
 
-    if (!this->object(name_space, function, type))
+    // OP22 (28.11 perf): читаем обычное строковое поле с уже найденной таблицы.
+    if (g_op22_lua_functor_lookup && *name_space)
+    {
+        if (!namespace_loaded(name_space, false))
+            return false;
+
+        auto* L = lua();
+        lua_pushstring(L, function);
+        lua_rawget(L, -2);
+        if (lua_type(L, -1) == type)
+        {
+            luabind::detail::lua_reference ref;
+            ref.set(L);
+            lua_pop(L, 1);
+            object = luabind::object(L, ref, true);
+            return true;
+        }
+        lua_pop(L, 1);
+        if (!this->object(function, type))
+            return false;
+    }
+    else if (!this->object(name_space, function, type))
         return false;
     auto lua_namespace = this->name_space(name_space);
     object = lua_namespace[function];
@@ -605,7 +639,9 @@ bool CScriptEngine::load_buffer(lua_State* L, const char* caBuffer, size_t tSize
     if (l_iErrorCode)
     {
         print_output(L, caScriptName, l_iErrorCode);
-        R_ASSERT(false); // НЕ ЗАКОММЕНТИРОВАТЬ!
+        // OP22 (28.11 perf): синтаксическая ошибка в nofatal допускает повтор, тело ещё не запускалось.
+        if (!luabind::get_op22_nofatal())
+            R_ASSERT(false); // НЕ ЗАКОММЕНТИРОВАТЬ!
         return false;
     }
     return true;
@@ -628,18 +664,26 @@ bool CScriptEngine::do_file(
     string_path l_caLuaFileName;
     strconcat(sizeof(l_caLuaFileName), l_caLuaFileName, "@", caScriptName); // KRodin: приводит путь к виду @f:\games\s.t.a.l.k.e.r\gamedata\scripts\***.script
 
-    bool loaded = load_buffer(lua(), reinterpret_cast<const char*>(l_tpFileReader->pointer()), (size_t)l_tpFileReader->elapsed(), l_caLuaFileName, caNameSpaceName);
+    // OP22 (28.11 perf): сохраняем высоту стека до компиляции и исполнения модуля.
+    auto* L = lua();
+    const int stack_top = lua_gettop(L);
+    bool loaded = load_buffer(L, reinterpret_cast<const char*>(l_tpFileReader->pointer()), (size_t)l_tpFileReader->elapsed(), l_caLuaFileName, caNameSpaceName);
 
     FS.r_close(l_tpFileReader);
     if (!loaded)
+    {
+        lua_settop(L, stack_top);
         return false;
+    }
 
-    int l_iErrorCode = lua_pcall(lua(), 0, 0, 0); // KRodin: без этого скрипты не работают!
+    int l_iErrorCode = lua_pcall(L, 0, 0, 0); // KRodin: без этого скрипты не работают!
     if (l_iErrorCode)
     {
-        print_output(lua(), caScriptName, l_iErrorCode);
+        print_output(L, caScriptName, l_iErrorCode);
         if (luabind::get_op22_nofatal()) // OP22: режим «не падать» - файл не загружен, игра идёт (ошибка уже в логе)
         {
+            lua_settop(L, stack_top);
+            // OP22 (28.11 perf): оставляем namespace после ошибки исполнения, чтобы не повторять уже выполненные регистрации.
             Msg("!! [OP22 nofatal] script file [%s] failed to load - namespace incomplete, game continues", caScriptName);
             return false;
         }
@@ -715,12 +759,20 @@ bool CScriptEngine::object(const char* identifier, int type)
     lua_pushnil(lua());
     while (lua_next(lua(), -2))
     {
-        if (lua_type(lua(), -1) == type && !xr_strcmp(identifier, lua_tostring(lua(), -2)))
+        if (lua_type(lua(), -1) == type)
         {
-            VERIFY(lua_gettop(lua()) >= 3);
-            lua_pop(lua(), 3);
-            VERIFY(lua_gettop(lua()) == start - 1);
-            return true;
+            // OP22 (28.11 perf): совместимый поиск по числовым ключам без изменения ключа для lua_next.
+            lua_pushvalue(lua(), -2);
+            const char* key = lua_tostring(lua(), -1);
+            const bool matches = key && !xr_strcmp(identifier, key);
+            lua_pop(lua(), 1);
+            if (matches)
+            {
+                VERIFY(lua_gettop(lua()) >= 3);
+                lua_pop(lua(), 3);
+                VERIFY(lua_gettop(lua()) == start - 1);
+                return true;
+            }
         }
         lua_pop(lua(), 1);
     }

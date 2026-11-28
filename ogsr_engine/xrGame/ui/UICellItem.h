@@ -2,6 +2,7 @@
 
 #include "UIStatic.h"
 #include "UIDialogWnd.h"
+#include <optional>
 
 class CUIDragItem;
 class CUIDragDropListEx;
@@ -62,6 +63,8 @@ public:
     static CUICellItem* m_mouse_selected_item;
     void SetOwnerList(CUIDragDropListEx* p);
     void* m_pData;
+    // OP22 (28.11 perf): скриптовый GUID живёт вместе с ячейкой и освобождается при её удалении.
+    std::optional<shared_str> m_op22_cell_id;
     Ivector2 m_op22_grid_orig{-1, -1}; // OP22: сетка предмета до списка с adjust_cells
     shared_str m_op22_cond_tex; // OP22: текстура делений состояния (op22_cond_tex списка)
     int m_op22_cond_n{};

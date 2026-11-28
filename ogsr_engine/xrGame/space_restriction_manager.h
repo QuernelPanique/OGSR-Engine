@@ -33,6 +33,9 @@ protected:
     typedef xr_map<ALife::_OBJECT_ID, CClientRestriction> CLIENT_RESTRICTIONS;
 
 private:
+    // OP22 (28.11 perf): применение готовых списков без прохода очистки.
+    void set_client_restriction(ALife::_OBJECT_ID id, shared_str base_out, shared_str base_in, shared_str merged_out, shared_str merged_in,
+                                bool expire_on_lookup = false);
 protected:
     SPACE_RESTRICTIONS m_space_restrictions;
     CLIENT_RESTRICTIONS* m_clients;
@@ -44,7 +47,7 @@ protected:
     IC void join_restrictions(shared_str& restrictions, shared_str update);
     IC void difference_restrictions(shared_str& restrictions, shared_str update);
     /*IC*/ CRestrictionPtr restriction(ALife::_OBJECT_ID id);
-    CRestrictionPtr restriction(shared_str out_restrictors, shared_str in_restrictors);
+    CRestrictionPtr restriction(shared_str out_restrictors, shared_str in_restrictors, bool expire_on_lookup = false);
     IC void collect_garbage();
     virtual void on_default_restrictions_changed();
 

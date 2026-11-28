@@ -25,6 +25,18 @@ std::atomic<bool> g_op22_reject_tail{true};
 static int op22_ray_reuse = 1;
 static int op22_reject_tail = 1;
 
+// OP22 (28.11 perf): переключатели очередей и поиска для сравнения с прежним путём.
+std::atomic<bool> g_op22_net_event_queue{true};
+std::atomic<bool> g_op22_connect_spawn_ids{true};
+std::atomic<bool> g_op22_cse_lookup{true};
+std::atomic<bool> g_op22_destroy_lookup{true};
+std::atomic<bool> g_op22_spawn_parent_index{true};
+static int op22_net_event_queue = 1;
+static int op22_connect_spawn_ids = 1;
+static int op22_cse_lookup = 1;
+static int op22_destroy_lookup = 1;
+static int op22_spawn_parent_index = 1;
+
 class CCC_Op22PerfSwitch : public CCC_Integer
 {
     std::atomic<bool>& active;
@@ -603,6 +615,13 @@ void CCC_Register()
     //CMD4(CCC_Float, "snd_occ_hf", &psSoundOcclusionHf, 0.f, 1.f);
     //CMD4(CCC_Float, "snd_occ_mtl", &psSoundOcclusionMtl, 0.f, 1.f);
     CMD2(CCC_Bool, "snd_enable_float_pcm", &snd_enable_float_pcm);
+    // OP22 (28.11 perf): независимое сравнение звуковых правок со старым путём.
+    CMD2(CCC_Bool, "op22_snd_static_occ", &op22_snd_static_occ);
+    CMD2(CCC_Bool, "op22_snd_al_cache", &op22_snd_al_cache);
+    CMD2(CCC_Bool, "op22_snd_target_search", &op22_snd_target_search);
+    CMD2(CCC_Bool, "op22_snd_pcm_block", &op22_snd_pcm_block);
+    CMD2(CCC_Bool, "op22_snd_acoustics_update", &op22_snd_acoustics_update);
+    CMD2(CCC_Bool, "op22_snd_efx_toggle", &op22_snd_efx_toggle);
 
 #ifdef DEBUG
     CMD1(CCC_DumpOpenFiles, "dump_open_files");
@@ -657,6 +676,12 @@ void CCC_Register()
     CMD4(CCC_Integer, "op22_hitch_ms", &g_op22_hitch_ms, 1, 10000);
     CMD3(CCC_Op22PerfSwitch, "op22_ray_reuse", &op22_ray_reuse, g_op22_ray_reuse);
     CMD3(CCC_Op22PerfSwitch, "op22_reject_tail", &op22_reject_tail, g_op22_reject_tail);
+    // OP22 (28.11 perf): отключение возвращает прежние копии и линейный поиск.
+    CMD3(CCC_Op22PerfSwitch, "op22_net_event_queue", &op22_net_event_queue, g_op22_net_event_queue);
+    CMD3(CCC_Op22PerfSwitch, "op22_connect_spawn_ids", &op22_connect_spawn_ids, g_op22_connect_spawn_ids);
+    CMD3(CCC_Op22PerfSwitch, "op22_cse_lookup", &op22_cse_lookup, g_op22_cse_lookup);
+    CMD3(CCC_Op22PerfSwitch, "op22_destroy_lookup", &op22_destroy_lookup, g_op22_destroy_lookup);
+    CMD3(CCC_Op22PerfSwitch, "op22_spawn_parent_index", &op22_spawn_parent_index, g_op22_spawn_parent_index);
     CMD4(CCC_Integer, "op22_timing_log", &g_op22_timing_log, 0, 1); // OP22: замеры окон/текстур/XML в лог
     CMD4(CCC_Integer, "op22_box_sleep", &g_op22_box_sleep, 0, 1);
     CMD4(CCC_Integer, "lua_gctimeout", &psLUA_GCTIMEOUT_MIN, 1000, 16000);

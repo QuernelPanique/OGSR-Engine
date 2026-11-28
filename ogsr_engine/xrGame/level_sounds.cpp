@@ -67,15 +67,26 @@ extern XRSOUND_API float SoundRenderGetOcculution(Fvector& P, float R, Fvector* 
 
 void SStaticSound::Update(u32 game_time, u32 global_time)
 {
-    Fvector occ[3];
-    float occluder_volume = SoundRenderGetOcculution(m_Position, .2f, occ);
-    float vol = m_Volume * occluder_volume;
-
-    if (ShouldPlay(static_cast<int>(game_time), m_ActiveTime))
+    // OP22 (28.11 perf): пустой кэш треугольника и прежние выборки Random даже без луча.
+    Fvector occ[3]{};
+    const bool active = ShouldPlay(static_cast<int>(game_time), m_ActiveTime);
+    const bool playing = m_Source._feedback() != nullptr;
+    const bool no_pause = m_PauseTime.x == 0 && m_PauseTime.y == 0;
+    float vol = 0.f;
+    if (!op22_snd_static_occ || (active && !playing && (no_pause || global_time >= m_NextTime)))
+        vol = m_Volume * SoundRenderGetOcculution(m_Position, .2f, occ);
+    else
     {
-        if (0 == m_Source._feedback())
+        // Те же две выборки и в том же порядке, что в Fvector::random_dir().
+        (void)Random.randF(PI);
+        (void)Random.randF(PI_MUL_2);
+    }
+
+    if (active)
+    {
+        if (!playing)
         {
-            if ((0 == m_PauseTime.x) && (0 == m_PauseTime.y))
+            if (no_pause)
             {
                 m_Source.play_at_pos(0, m_Position, sm_Looped);
                 m_Source.set_volume(vol);
@@ -111,7 +122,7 @@ void SStaticSound::Update(u32 game_time, u32 global_time)
     }
     else
     {
-        if (0 != m_Source._feedback())
+        if (playing)
             m_Source.stop_deffered();
     }
 }

@@ -5,15 +5,39 @@
 #include "xrserver_objects.h"
 #include "Level.h"
 
-xr_vector<ALife::_OBJECT_ID> g_perform_spawn_ids; // OP22 (id32)
+// OP22 (28.11 perf): отмечаем ID перед рекурсией, сохраняя обработку циклов и порядок спавна.
+#include <atomic>
+#include <unordered_set>
 
-void xrServer::Perform_connect_spawn(CSE_Abstract* E, xrClientData* CL, NET_Packet& P)
+extern std::atomic<bool> g_op22_connect_spawn_ids;
+
+struct xrServer::ConnectSpawnIds
 {
-    xr_vector<ALife::_OBJECT_ID>::iterator it = std::find(g_perform_spawn_ids.begin(), g_perform_spawn_ids.end(), E->ID);
-    if (it != g_perform_spawn_ids.end())
-        return;
+    const bool use_hash = g_op22_connect_spawn_ids.load(std::memory_order_relaxed);
+    std::unordered_set<ALife::_OBJECT_ID> indexed;
+    xr_vector<ALife::_OBJECT_ID> linear;
 
-    g_perform_spawn_ids.push_back(E->ID);
+    explicit ConnectSpawnIds(size_t count)
+    {
+        if (use_hash)
+            indexed.reserve(count);
+    }
+
+    bool visit(ALife::_OBJECT_ID id)
+    {
+        if (use_hash)
+            return indexed.insert(id).second;
+        if (std::find(linear.begin(), linear.end(), id) != linear.end())
+            return false;
+        linear.push_back(id);
+        return true;
+    }
+};
+
+void xrServer::Perform_connect_spawn(CSE_Abstract* E, xrClientData* CL, NET_Packet& P, ConnectSpawnIds& visited)
+{
+    if (!visited.visit(E->ID))
+        return;
 
     if (E->net_Processed)
         return;
@@ -23,7 +47,7 @@ void xrServer::Perform_connect_spawn(CSE_Abstract* E, xrClientData* CL, NET_Pack
     // Connectivity order
     CSE_Abstract* Parent = ID_to_entity(E->ID_Parent);
     if (Parent)
-        Perform_connect_spawn(Parent, CL, P);
+        Perform_connect_spawn(Parent, CL, P, visited); // OP22 (28.11 perf): родитель использует тот же набор посещённых ID.
 
     // Process
     Flags16 save = E->s_flags;
@@ -57,7 +81,7 @@ void xrServer::Perform_connect_spawn(CSE_Abstract* E, xrClientData* CL, NET_Pack
 
 void xrServer::SendConnectionData(IClient* _CL)
 {
-    g_perform_spawn_ids.clear();
+    ConnectSpawnIds visited(entities.size()); // OP22 (28.11 perf): отдельный набор на каждый вход.
     xrClientData* CL = (xrClientData*)_CL;
     NET_Packet P;
     u32 mode = net_flags(TRUE, TRUE);
@@ -66,7 +90,7 @@ void xrServer::SendConnectionData(IClient* _CL)
     for (; I != E; ++I)
         I->second->net_Processed = FALSE;
     for (I = entities.begin(); I != E; ++I)
-        Perform_connect_spawn(I->second, CL, P);
+        Perform_connect_spawn(I->second, CL, P, visited); // OP22 (28.11 perf): порядок задаёт прежняя карта entities.
 
     // Send "finished" signal
     P.w_begin(M_SV_CONFIG_FINISHED);

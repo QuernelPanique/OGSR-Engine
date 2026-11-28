@@ -30,7 +30,8 @@ static const int MAX_AMMO_ATTACH_COUNT = 10;
 
 IC bool CAI_Stalker::CTradeItem::operator<(const CTradeItem& trade_item) const { return (m_item->object().ID() < trade_item.m_item->object().ID()); }
 
-IC bool CAI_Stalker::CTradeItem::operator==(u16 id) const { return (m_item->object().ID() == id); }
+// OP22 (28.11 perf): учитываем старшие биты ID предмета при поиске.
+IC bool CAI_Stalker::CTradeItem::operator==(ALife::_OBJECT_ID id) const { return (m_item->object().ID() == id); }
 
 bool CAI_Stalker::tradable_item(CInventoryItem* inventory_item, const u32& current_owner_id)
 {

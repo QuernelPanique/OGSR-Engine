@@ -96,11 +96,9 @@ void CRender::create()
     o.distortion_enabled = TRUE; // !strstr(Core.Params, "-nodistort");
     o.distortion = o.distortion_enabled;
     o.disasm = (strstr(Core.Params, "-disasm")) ? TRUE : FALSE;
-    o.ssfx_water = ps_op22_ssfx_water ? TRUE : FALSE; // OP22 (SSS 23)
-    o.ssfx_volumetric = ps_op22_ssfx_volumetric ? TRUE : FALSE;
-    o.ssfx_glass = ps_op22_ssfx_glass ? TRUE : FALSE;
-    o.ssfx_sss = ps_op22_ssfx_sss ? TRUE : FALSE;
-    o.ssfx_sss_ext = ps_op22_ssfx_sss_ext ? TRUE : FALSE;
+    // OP22 (28.11 perf): начальный набор флагов для ресурсов SSS.
+    o.ssfx_safe_switches = ps_op22_ssfx_safe_switches != 0;
+    update_ssfx_options();
 
     o.dx11_enable_tessellation = HW.FeatureLevel >= D3D_FEATURE_LEVEL_11_0 && ps_r2_ls_flags_ext.test(R2FLAGEXT_ENABLE_TESSELLATION);
 
@@ -133,8 +131,24 @@ void CRender::create()
 #endif
 }
 
+// OP22 (28.11 perf): фиксируем переключатели на момент создания набора ресурсов.
+void CRender::update_ssfx_options()
+{
+    o.ssfx_water = ps_op22_ssfx_water != 0;
+    o.ssfx_volumetric = ps_op22_ssfx_volumetric != 0;
+    o.ssfx_glass = ps_op22_ssfx_glass != 0;
+    o.ssfx_sss = ps_op22_ssfx_sss != 0;
+    o.ssfx_sss_ext = ps_op22_ssfx_sss_ext != 0;
+    o.ssfx_ao_pass = ps_op22_ssfx_ao_pass != 0;
+    o.ssfx_il_pass = ps_op22_ssfx_il_pass != 0;
+}
+
+bool CRender::ssfx_ao_pass_enabled() const { return o.ssfx_safe_switches ? o.ssfx_ao_pass != 0 : ps_op22_ssfx_ao_pass != 0; }
+bool CRender::ssfx_il_pass_enabled() const { return o.ssfx_safe_switches ? o.ssfx_il_pass != 0 : ps_op22_ssfx_il_pass != 0; }
+
 void CRender::destroy()
 {
+    op22_gpu_release_queries(); // OP22 (28.11 perf): освобождаем запросы до уничтожения устройства D3D11.
 #ifdef DX10_FLUID_ENABLE
     FluidManager.Destroy();
 #endif
@@ -201,6 +215,10 @@ void CRender::reset_begin()
 
 void CRender::reset_end()
 {
+    // OP22 (28.11 perf): vid_restart создаёт RT и шейдеры с актуальными флагами SSS.
+    o.ssfx_safe_switches = ps_op22_ssfx_safe_switches != 0;
+    if (o.ssfx_safe_switches)
+        update_ssfx_options();
     Target = xr_new<CRenderTarget>();
 
     // AVO: let's reload details while changed details options on vid_restart
@@ -824,8 +842,9 @@ HRESULT CRender::shader_compile(LPCSTR name, DWORD const* pSrcData, UINT SrcData
     defines.emplace_back("SSFX_AO_QUALITY", c_ssfx_ao_quality);
     sprintf_s(c_ssfx_il_quality, "%d", std::clamp(ps_ssfx_il_quality, 16, 32));
     defines.emplace_back("SSFX_IL_QUALITY", c_ssfx_il_quality);
-    appendShaderOption(ps_op22_ssfx_ao_pass, "SSFX_AO_PASS", "1");
-    appendShaderOption(ps_op22_ssfx_il_pass, "SSFX_IL_PASS", "1");
+    // OP22 (28.11 perf): компилируем потребителей AO/IL с флагами того же набора RT.
+    appendShaderOption(ssfx_ao_pass_enabled(), "SSFX_AO_PASS", "1");
+    appendShaderOption(ssfx_il_pass_enabled(), "SSFX_IL_PASS", "1");
 
     // OP22 (SSS 23): вода - качество отражений и параллакса волн
     sprintf_s(c_ssfx_water_quality, "%d", u8(std::clamp(ps_ssfx_water_quality.x, 0.0f, 4.0f)));

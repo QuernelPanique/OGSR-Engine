@@ -163,7 +163,7 @@ void CLevel::ClientSend()
         CObject* O = Objects.o_get_by_iterator(i);
         if (O->net_Relevant() && !O->getDestroy())
         {
-            CSE_Abstract* E = Server->ID_to_entity(O->ID());
+            CSE_Abstract* E = Server->FindEntityForClientSend(O->ID()); // OP22 (28.11 perf): индекс 32-битных ID для экспорта.
             // OP22 (28.11): серверная запись по ID должна быть этим же объектом (та же секция). Вылет 28.11 11:30 (3.271):
             // CWeaponAmmo::net_Export получил запись другого класса -> smart_cast nullptr -> c0000005. Не падать: пропустить
             // выгрузку этого объекта и один раз записать обе стороны в лог.

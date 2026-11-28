@@ -14,6 +14,9 @@
 
 CUIDragItem* CUIDragDropListEx::m_drag_item = NULL;
 
+// OP22 (28.11 perf): ускоряем поиск свободной позиции в той же раскладке.
+int g_op22_inventory_grid_fast = 1;
+
 void CUICell::Clear()
 {
     m_bMainItem = false;
@@ -749,6 +752,24 @@ CUICellItem* CUICellContainer::RemoveItem(CUICellItem* itm, bool force_root)
     return itm;
 }
 
+// OP22 (28.11 perf): до найденного препятствия все следующие позиции строки накрывают ту же клетку.
+bool CUICellContainer::FindRoom(Ivector2& pos, const Ivector2& size, const Ivector2& oriented_size)
+{
+    const bool skip_blockers = g_op22_inventory_grid_fast && oriented_size.x > 1 && oriented_size.y > 0;
+    const int last_x = m_cellsCapacity.x - oriented_size.x;
+    for (pos.y = 0; pos.y <= m_cellsCapacity.y - oriented_size.y; ++pos.y)
+    {
+        for (pos.x = 0; pos.x <= last_x; ++pos.x)
+        {
+            int blocked_x = pos.x;
+            if (IsRoomFree(pos, size, skip_blockers ? &blocked_x : nullptr))
+                return true;
+            pos.x = std::min(blocked_x, last_x);
+        }
+    }
+    return false;
+}
+
 Ivector2 CUICellContainer::FindFreeCell(const Ivector2& _size)
 {
     Ivector2 tmp;
@@ -756,10 +777,8 @@ Ivector2 CUICellContainer::FindFreeCell(const Ivector2& _size)
     if (m_pParentDragDropList->GetVerticalPlacement())
         std::swap(size.x, size.y);
 
-    for (tmp.y = 0; tmp.y <= m_cellsCapacity.y - size.y; ++tmp.y)
-        for (tmp.x = 0; tmp.x <= m_cellsCapacity.x - size.x; ++tmp.x)
-            if (IsRoomFree(tmp, _size))
-                return tmp;
+    if (FindRoom(tmp, _size, size))
+        return tmp;
 
     if (m_pParentDragDropList->IsAutoGrow())
     {
@@ -769,10 +788,8 @@ Ivector2 CUICellContainer::FindFreeCell(const Ivector2& _size)
     else
     {
         m_pParentDragDropList->Compact();
-        for (tmp.y = 0; tmp.y <= m_cellsCapacity.y - size.y; ++tmp.y)
-            for (tmp.x = 0; tmp.x <= m_cellsCapacity.x - size.x; ++tmp.x)
-                if (IsRoomFree(tmp, _size))
-                    return tmp;
+        if (FindRoom(tmp, _size, size))
+            return tmp;
 
         Msg("!![CUICellContainer::FindFreeCell] There are no free room to place item");
     }
@@ -787,15 +804,10 @@ bool CUICellContainer::HasFreeSpace(const Ivector2& _size)
     if (m_pParentDragDropList->GetVerticalPlacement())
         std::swap(size.x, size.y);
 
-    for (tmp.y = 0; tmp.y <= m_cellsCapacity.y - size.y; ++tmp.y)
-        for (tmp.x = 0; tmp.x <= m_cellsCapacity.x - size.x; ++tmp.x)
-            if (IsRoomFree(tmp, _size))
-                return true;
-
-    return false;
+    return FindRoom(tmp, _size, size);
 }
 
-bool CUICellContainer::IsRoomFree(const Ivector2& pos, const Ivector2& _size)
+bool CUICellContainer::IsRoomFree(const Ivector2& pos, const Ivector2& _size, int* blocked_x)
 {
     Ivector2 tmp;
     Ivector2 size = _size;
@@ -810,7 +822,11 @@ bool CUICellContainer::IsRoomFree(const Ivector2& pos, const Ivector2& _size)
             CUICell& C = GetCellAt(tmp);
 
             if (!C.Empty() || C.cell_disabled)
+            {
+                if (blocked_x)
+                    *blocked_x = tmp.x;
                 return false;
+            }
         }
     return true;
 }

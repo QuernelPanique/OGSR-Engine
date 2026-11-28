@@ -298,7 +298,8 @@ BOOL CSpaceRestrictor::feel_touch_contact(CObject* O)
     return FALSE;
 }
 
-bool CSpaceRestrictor::active_contact(u16 id) const
+// OP22 (28.11 perf): сохраняем старшие биты ID при проверке контакта.
+bool CSpaceRestrictor::active_contact(u32 id) const
 {
     for (const auto& I : feel_touch)
         if (I->ID() == id)

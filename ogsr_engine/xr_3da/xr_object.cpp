@@ -397,6 +397,9 @@ CObject* CObject::H_SetParent(CObject* new_parent, bool just_before_destroy)
         spatial_unregister();
     else
         spatial_register();
+    // OP22 (28.11 perf): помечаем владельца до публикации связи и до OnH_A_Chield.
+    if (new_parent)
+        new_parent->m_ever_had_children.store(true, std::memory_order_relaxed);
     Parent = new_parent;
     if (nullptr == old_parent)
         OnH_A_Chield(); // after attach

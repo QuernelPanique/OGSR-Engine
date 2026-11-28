@@ -56,6 +56,8 @@ public:
     virtual BOOL net_Spawn(CSE_Abstract* data);
     virtual void net_Destroy();
     bool inside(const Fsphere& sphere);
+    // OP22 (28.11 perf): та же сфера, через которую проходят все пробы inside().
+    const Fsphere* prepared_bounds() const { return actual() ? &m_selfbounds : nullptr; }
     virtual void Center(Fvector& C) const;
     virtual float Radius() const;
     virtual BOOL UsedAI_Locations();
@@ -82,7 +84,8 @@ public:
     virtual void feel_touch_new(CObject*);
     virtual void feel_touch_delete(CObject*);
     virtual BOOL feel_touch_contact(CObject*);
-    bool active_contact(u16) const;
+    // OP22 (28.11 perf): контакт ищется по полному ID объекта.
+    bool active_contact(u32 id) const;
     float distance_to(Fvector&);
 };
 
