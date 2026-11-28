@@ -163,6 +163,17 @@ void CLevel::ClientSend()
         if (O->net_Relevant() && !O->getDestroy())
         {
             CSE_Abstract* E = Server->ID_to_entity(O->ID());
+            // OP22 (28.11): серверная запись по ID должна быть этим же объектом (та же секция). Вылет 28.11 11:30 (3.271):
+            // CWeaponAmmo::net_Export получил запись другого класса -> smart_cast nullptr -> c0000005. Не падать: пропустить
+            // выгрузку этого объекта и один раз записать обе стороны в лог.
+            if (E && E->s_name != O->cNameSect())
+            {
+                static xr_set<u32> reported;
+                if (reported.insert(O->ID()).second)
+                    Msg("! [OP22 nofatal] ClientSend: id [%u] client [%s] sect [%s] getDestroy [%d] but server entity [%s] sect [%s] id [%u] - net_Export skipped",
+                        O->ID(), O->cName().c_str(), O->cNameSect().c_str(), O->getDestroy() ? 1 : 0, E->name_replace(), E->s_name.c_str(), u32(E->ID));
+                continue;
+            }
             if (E)
                 O->net_Export(E);
         }

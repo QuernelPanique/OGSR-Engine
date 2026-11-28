@@ -223,6 +223,8 @@ void CWeaponAmmo::net_Export(CSE_Abstract* E)
 {
     inherited::net_Export(E);
     CSE_ALifeItemAmmo* ammo = smart_cast<CSE_ALifeItemAmmo*>(E);
+    if (!ammo) // OP22 (28.11): запись не патронов (вылет 28.11 11:30) - не писать в nullptr
+        return;
     ammo->a_elapsed = m_boxCurr;
 }
 
