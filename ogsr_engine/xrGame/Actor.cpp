@@ -841,9 +841,8 @@ void CActor::UpdateCL()
 
     if (g_Alive())
         PickupModeUpdate();
-    if (this == Actor())
-        op22_suppress_update(); // OP22 23.11: подавление огнём - спад, постэффект
 
+    // OP22 (28.11 perf): подавление уже применено в CLevel::OnFrame до обновления объектов.
     PickupModeUpdate_COD();
 
     if (Level().CurrentEntity() && this->ID() == Level().CurrentEntity()->ID())

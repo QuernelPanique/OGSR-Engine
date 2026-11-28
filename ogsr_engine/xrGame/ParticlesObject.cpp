@@ -74,7 +74,8 @@ void CParticlesObject::UpdateSpatial()
         if (0 == spatial.type)
         {
             // First 'valid' update - register
-            spatial.type = STYPE_RENDERABLE;
+            // OP22 (28.11 perf): возвращаем бит CPS_Instance при первой регистрации частицы.
+            spatial.type = STYPE_RENDERABLE | STYPE_PARTICLE;
             spatial.sphere.set(P, R);
             spatial_register();
         }

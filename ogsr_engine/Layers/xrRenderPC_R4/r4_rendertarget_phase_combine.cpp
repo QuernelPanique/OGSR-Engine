@@ -173,6 +173,23 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
 
     op22_gpu_mark("ssr");
 
+    // OP22 (28.11 perf): сохраняем HDR-цвет до воды, дождя, стекла и частиц.
+    const bool buildReactiveMask = ps_op22_fsr3_reactive && ps_r_pp_aa_mode == FSR3 && ps_pnv_mode != 2 && ps_pnv_mode != 3;
+    if (buildReactiveMask)
+    {
+        PIX_EVENT(fsr3_copy_opaque);
+        if (!rt_fsr3_opaque)
+        {
+            const u32 w = rt_Generic_0->dwWidth;
+            const u32 h = rt_Generic_0->dwHeight;
+            rt_fsr3_opaque.create("$user$op22_fsr3_opaque", w, h, rt_Generic_0->fmt);
+            rt_fsr3_reactive.create("$user$op22_fsr3_reactive", w, h, DXGI_FORMAT_R8_UNORM);
+            s_fsr3_reactive.create("op22_fsr3_reactive");
+        }
+        HW.get_context(cmd_list.context_id)->CopyResource(rt_fsr3_opaque->pSurface, rt_Generic_0->pSurface);
+        op22_gpu_mark("fsr3_copy_opaque");
+    }
+
     // OP22 (SSS 23): обычная вода - отражения в уменьшенном разрешении, размытие, волны и сама вода (до прямого прохода)
     if (RImplementation.o.ssfx_water)
         phase_ssfx_water(cmd_list);
@@ -228,6 +245,16 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
     }
 
     op22_gpu_mark("distort"); // OP22: подфаза блока постобработки (op22_gpu_stats)
+    // OP22 (28.11 perf): строим маску до тонмаппинга, пока оба цвета сопоставимы.
+    ID3D11Resource* reactiveMask = nullptr;
+    if (buildReactiveMask)
+    {
+        PIX_EVENT(fsr3_reactive_mask);
+        RenderScreenTriangle(cmd_list, rt_fsr3_reactive, s_fsr3_reactive->E[0]);
+        reactiveMask = rt_fsr3_reactive->pSurface;
+        op22_gpu_mark("fsr3_reactive");
+    }
+
     {
         // Perform blooming filter and distortion if needed
         cmd_list.set_Stencil(FALSE);
@@ -254,7 +281,7 @@ void CRenderTarget::phase_combine(CBackend& cmd_list)
     bool temporalOutput{false};
     if (ps_r_pp_aa_mode) // должно быть перед 3DSS
     {
-        temporalOutput = PhaseAA(cmd_list); // anti - aliasing
+        temporalOutput = PhaseAA(cmd_list, need_heatvision ? nullptr : reactiveMask); // OP22 (28.11 perf): маска относится к обычному цвету сцены.
     }
     else
     {
@@ -725,7 +752,11 @@ void CRenderTarget::phase_ssfx_water(CBackend& cmd_list)
 {
     auto& dsgraph = RImplementation.get_imm_context();
     if (dsgraph.mapWater.empty())
+    {
+        // OP22 (28.11 perf): история отражений устаревает, когда воды нет в кадре.
+        m_waterHistoryValid = false;
         return;
+    }
 
     PIX_EVENT(phase_ssfx_water);
 
@@ -735,11 +766,15 @@ void CRenderTarget::phase_ssfx_water(CBackend& cmd_list)
     auto& Env = g_pGamePersistent->Environment();
 
     // матрицы текущего/прошлого кадра для учёта прошлого кадра отражений (как Matrix_current/previous monolith)
-    static Fmatrix m_saved_viewproj;
+    // OP22 (28.11 perf): учитываем также пропущенные кадры сцены и пересоздание RT.
+    const bool useHistory = m_waterHistoryValid && Device.dwFrame - m_waterHistoryFrame == 1;
     Fmatrix m_previous, m_current;
-    m_previous.mul(m_saved_viewproj, Device.mInvView);
+    if (useHistory)
+        m_previous.mul(m_waterPreviousViewProj, Device.mInvView);
+    else
+        m_previous.set(Device.mProject);
     m_current.set(Device.mProject);
-    m_saved_viewproj.set(Device.mFullTransform);
+    m_waterPreviousViewProj.set(Device.mFullTransform);
 
     Fcolor clear_color;
     clear_color.set(0.f, 0.f, 0.f, 1.f);
@@ -758,12 +793,15 @@ void CRenderTarget::phase_ssfx_water(CBackend& cmd_list)
         dsgraph.r_dsgraph_render_water(s_ssfx_water_ssr->E[0]._get(), [&](CBackend& cl) {
             cl.set_c("m_current", m_current);
             cl.set_c("m_previous", m_previous);
+            cl.set_c("op22_water_use_history", useHistory ? 1.f : 0.f, 0.f, 0.f, 0.f); // OP22 (28.11 perf): вес истории после разрыва равен нулю.
         });
         cmd_list.SetViewport({0.f, 0.f, w, h, 0.f, 1.f});
     }
 
     // кадр отражений - для учёта прошлого в следующем кадре
     HW.get_context(cmd_list.context_id)->CopyResource(rt_ssfx_water->pSurface, rt_ssfx_temp->pSurface);
+    m_waterHistoryFrame = Device.dwFrame; // OP22 (28.11 perf): теперь история содержит отражения текущего кадра.
+    m_waterHistoryValid = true;
 
     // 2. размытие в половине разрешения: temp -> temp2 -> temp (или без размытия - копия)
     {
@@ -924,6 +962,8 @@ void CRenderTarget::phase_ssfx_sss_ext(CBackend& cmd_list, const light_Package& 
             s = nullptr;
         }
     }
+    // OP22 (28.11 perf): новый владелец слота всегда отбрасывает историю своего канала.
+    Fvector4 resetHistory[2]{};
     // новые лампы - в свободные слоты (по порядку важности)
     for (const cand_t& c : cands)
     {
@@ -933,7 +973,9 @@ void CRenderTarget::phase_ssfx_sss_ext(CBackend& cmd_list, const light_Package& 
         if (free == std::end(g_op22_sss_slots))
             break;
         *free = c.L;
-        op22_sss_set_id(c.L, int(free - std::begin(g_op22_sss_slots)));
+        const int slot = int(free - std::begin(g_op22_sss_slots));
+        resetHistory[slot / 4][slot % 4] = 1.f;
+        op22_sss_set_id(c.L, slot);
     }
 
     // положение ламп в пространстве вида + затухание (w: 1 - не видно ~ 0 - полностью, как в SSS 23)
@@ -960,14 +1002,16 @@ void CRenderTarget::phase_ssfx_sss_ext(CBackend& cmd_list, const light_Package& 
     // ~0.4 мс впустую). Освещение лампы без слота (op22_sss_id -1) канал не читает, так что пропуск картинку не меняет.
     // История прохода (prev в ssfx_sss_ext.ps, вес до 0.97) после пропуска устарела - перед первым кадром с лампой
     // очищается в 1 (= без тени, как пустой слот), чтобы не всплыла тень прежней лампы.
-    static bool pass_live[2]{};
     bool any_live = false;
     for (int pass = 0; pass < 2; pass++)
     {
         const bool live = std::any_of(g_op22_sss_slots + 4 * pass, g_op22_sss_slots + 4 * pass + 4, [](light* L) { return L != nullptr; });
-        if (live && !pass_live[pass])
+        if (live && !m_lampHistoryLive[pass])
+        {
             cmd_list.ClearRT(pass == 0 ? rt_ssfx_sss_ext : rt_ssfx_sss_ext2, Fcolor{1.f, 1.f, 1.f, 1.f});
-        pass_live[pass] = live;
+            resetHistory[pass].set(1.f, 1.f, 1.f, 1.f); // OP22 (28.11 perf): первый кадр атласа трассирует все каналы.
+        }
+        m_lampHistoryLive[pass] = live;
         any_live |= live;
     }
     if (!any_live)
@@ -975,12 +1019,13 @@ void CRenderTarget::phase_ssfx_sss_ext(CBackend& cmd_list, const light_Package& 
 
     for (int pass = 0; pass < 2; pass++)
     {
-        if (!pass_live[pass])
+        if (!m_lampHistoryLive[pass])
             continue; // правую/левую половину сведения читают только лампы этих слотов - их нет
         op22_ssfx_quad(cmd_list, rt_ssfx_sss_tmp, s_ssfx_sss->E[3 + pass], w, h, 1.0f, [&]() {
             cmd_list.set_c("m_current", Matrix_current);
             cmd_list.set_c("m_previous", Matrix_previous);
             cmd_list.set_c("id_offset", pass);
+            cmd_list.set_c("op22_lamp_history_reset", resetHistory[pass]); // OP22 (28.11 perf): маска сменившихся каналов RGBA.
             op22_set_tiles(cmd_list); // OP22 (28.11): клетки и для теней ламп
             for (u32 i = 0; i < 8; i++)
                 cmd_list.set_ca("lights_data", i, data[i]);

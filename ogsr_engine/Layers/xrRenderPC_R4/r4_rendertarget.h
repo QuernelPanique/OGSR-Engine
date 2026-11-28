@@ -26,6 +26,14 @@ private:
     u32 m_displayHeight{};
     bool m_temporalUpscaleInput{};
     bool m_resetTemporalHistory{true};
+    // OP22 (28.11 perf): история отражений и активность атласа принадлежат этим RT.
+    Fmatrix m_waterPreviousViewProj{};
+    u32 m_waterHistoryFrame{};
+    bool m_waterHistoryValid{};
+    bool m_lampHistoryLive[2]{};
+    // OP22 (28.11 perf): выделяем два буфера маски FSR3 при первом включении.
+    ref_rt rt_fsr3_opaque, rt_fsr3_reactive;
+    ref_shader s_fsr3_reactive;
     u32 dwAccumulatorClearMark;
     u32 dwFlareClearMark;
 
@@ -279,6 +287,8 @@ public:
     void phase_vol_accumulator(CBackend& cmd_list, bool cascade);
     void phase_blur(CBackend& cmd_list);
     void phase_dof(CBackend& cmd_list);
+    // OP22 (28.11 perf): одно условие для прохода DOF и копии его глубины.
+    bool needs_dof() const;
     void phase_lut(CBackend& cmd_list);
     void phase_gasmask_dudv(CBackend& cmd_list);
     void phase_nightvision(CBackend& cmd_list);
@@ -385,7 +395,7 @@ private:
     ref_rt rt_smaa_edgetex;
     ref_rt rt_smaa_blendtex;
 
-    bool PhaseAA(CBackend& cmd_list);
+    bool PhaseAA(CBackend& cmd_list, ID3D11Resource* reactiveMask); // OP22 (28.11 perf): передаём маску этого прохода.
     bool Phase3DSSUpscale(CBackend& cmd_list);
 
     void ProcessSMAA(CBackend& cmd_list);
@@ -396,7 +406,7 @@ private:
     void DestroyDLSS();
 
     void InitFSR();
-    bool ProcessFSR();
+    bool ProcessFSR(ID3D11Resource* reactiveMask = nullptr); // OP22 (28.11 perf): необязательная маска сцены.
     bool ProcessFSR_3DSS(const bool need_reset);
     void DestroyFSR();
 

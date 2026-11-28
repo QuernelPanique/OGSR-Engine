@@ -141,6 +141,9 @@ void CBulletManager::Clear() //Вызывается при загрузке и �
 {
     m_Bullets.clear();
     m_Events.clear();
+    // OP22 (28.11 perf): промахи с предыдущего уровня не переходят к новому актору.
+    m_suppress_actor_id = 0xffff;
+    m_suppress_misses.store(0, std::memory_order_relaxed);
 }
 
 SBullet& CBulletManager::AddBullet(const Fvector& position, const Fvector& direction, float starting_speed, float power, float impulse, u32 sender_id, u32 sendersweapon_id,
@@ -399,11 +402,22 @@ void CBulletManager::CommitRenderSet() // @ the end of frame
 {
     m_BulletsRendered = m_Bullets;
     // Msg("!![%s] size of m_BulletsRendered: [%u], m_Bullets: [%u], m_events: [%u]", __FUNCTION__, m_BulletsRendered.size(), m_Bullets.size(), m_Events.size());
+    // OP22 (28.11 perf): рабочему потоку для фильтра промахов достаточно ID игрока.
+    const CActor* actor = Actor();
+    m_suppress_actor_id = actor && actor->g_Alive() ? actor->ID() : 0xffff;
     if (g_mt_config.test(mtBullets))
         Device.add_to_seq_parallel(fastdelegate::MakeDelegate(this, &CBulletManager::UpdateWorkload));
     else
         CBulletManager::UpdateWorkload();
 }
+
+// OP22 (28.11 perf): забираем накопленные промахи после барьера, до запуска новой задачи пуль.
+u32 CBulletManager::TakeSuppressionMisses(u32 actor_id)
+{
+    const u32 count = m_suppress_misses.exchange(0, std::memory_order_relaxed);
+    return actor_id == m_suppress_actor_id ? count : 0;
+}
+
 void CBulletManager::CommitEvents() // @ the start of frame
 {
     for (auto& E : m_Events)

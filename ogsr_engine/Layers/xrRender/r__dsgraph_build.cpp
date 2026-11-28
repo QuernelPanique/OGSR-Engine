@@ -831,4 +831,16 @@ void R_dsgraph_structure::load(const xr_vector<CSector::level_sector_data_t>& se
     sector_portals_structure.load(sectors_data, portals_data);
 }
 
-void R_dsgraph_structure::unload() { sector_portals_structure.unload(); }
+void R_dsgraph_structure::unload()
+{
+    // OP22 (28.11 perf): после reset освобождаем ёмкость проходов при выгрузке уровня.
+    for (u32 i = 0; i < SHADER_PASSES_MAX; ++i)
+    {
+        mapNormalPasses[0][i].release_cached_nodes();
+        mapNormalPasses[1][i].release_cached_nodes();
+        mapMatrixPasses[0][i].release_cached_nodes();
+        mapMatrixPasses[1][i].release_cached_nodes();
+    }
+    mapDistort.release_cached_nodes();
+    sector_portals_structure.unload();
+}

@@ -1,6 +1,9 @@
 #include "stdafx.h"
 #include "xrserver.h"
 #include "xrserver_objects.h"
+#include <atomic>
+
+extern std::atomic<bool> g_op22_reject_tail;
 
 bool xrServer::Process_event_reject(NET_Packet& P, const ClientID sender, const u32 time, const u32 id_parent, const u32 id_entity, bool send_message) // OP22 (id32)
 {
@@ -41,7 +44,10 @@ bool xrServer::Process_event_reject(NET_Packet& P, const ClientID sender, const 
     }
 
     auto& children = e_parent->children;
-    const auto child = std::find(children.begin(), children.end(), id_entity);
+    // OP22 (28.11 perf): при снятии последнего ребёнка не просматриваем весь список.
+    const auto child = g_op22_reject_tail.load(std::memory_order_relaxed) && !children.empty() && children.back() == id_entity
+        ? children.end() - 1
+        : std::find(children.begin(), children.end(), id_entity);
     if (child == children.end())
     {
         MsgDbg("! ERROR: SV: can't find children [%d] of parent [%d]", id_entity, e_parent);

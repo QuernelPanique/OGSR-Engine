@@ -75,10 +75,15 @@ public:
         xr_delete(items);
         xr_delete(trees);
     }
-};
 
-using mapNormal_T = xr_map<SPass*, mapNormalItems, pass_ptr_less>;
-using mapNormalPasses_T = mapNormal_T[SHADER_PASSES_MAX];
+    // OP22 (28.11 perf): сохраняем ёмкость контейнеров, сбрасываем данные и SSA прохода.
+    void clear()
+    {
+        items->clear();
+        trees->clear();
+        ssa = 0.f;
+    }
+};
 
 struct _MatrixItem
 {
@@ -113,14 +118,66 @@ public:
     mapMatrixItems() { items = xr_new<mapMatrixDirect>(); }
 
     ~mapMatrixItems() { xr_delete(items); }
+
+    // OP22 (28.11 perf): сохраняем буфер объектов для следующего прохода.
+    void clear() { items->clear(); }
 };
 
-using mapMatrix_T = xr_map<SPass*, mapMatrixItems, pass_ptr_less>;
+// OP22 (28.11 perf): сохраняем извлечённые узлы без ссылок на шейдеры и визуалы.
+// У каждой карты каждого контекста свой пул. Сравниваются только ключи активного прохода.
+template <class Items>
+class ReusablePassMap
+{
+    using Map = xr_map<SPass*, Items, pass_ptr_less>;
+    Map m_active;
+    xr_vector<typename Map::node_type> m_free;
+
+public:
+    using const_iterator = typename Map::const_iterator;
+
+    bool empty() const { return m_active.empty(); }
+    auto size() const { return m_active.size(); }
+    const_iterator begin() const { return m_active.cbegin(); }
+    const_iterator end() const { return m_active.cend(); }
+
+    Items& operator[](SPass* pass)
+    {
+        const auto pos = m_active.lower_bound(pass);
+        if (pos != m_active.end() && !m_active.key_comp()(pass, pos->first))
+            return pos->second;
+
+        if (m_free.empty())
+            return m_active.try_emplace(pos, pass)->second;
+
+        auto node = std::move(m_free.back());
+        m_free.pop_back();
+        node.key() = pass;
+        return m_active.insert(pos, std::move(node))->second;
+    }
+
+    void clear()
+    {
+        m_free.reserve(m_free.size() + m_active.size());
+        while (!m_active.empty())
+        {
+            auto node = m_active.extract(m_active.begin());
+            node.mapped().clear();
+            node.key() = nullptr;
+            m_free.push_back(std::move(node));
+        }
+    }
+
+    void release_cached_nodes() { m_free.clear(); } // OP22 (28.11 perf): освобождаем буферы прежнего уровня.
+};
+
+using mapNormal_T = ReusablePassMap<mapNormalItems>;
+using mapNormalPasses_T = mapNormal_T[SHADER_PASSES_MAX];
+using mapMatrix_T = ReusablePassMap<mapMatrixItems>;
 using mapMatrixPasses_T = mapMatrix_T[SHADER_PASSES_MAX];
 
 // Top level
 using mapSorted_T = xr_fixed_map<float, _MatrixItemS>;
-using mapSortedLarge_T = xr_map<SPass*, mapMatrixItems, pass_ptr_less>;
+using mapSortedLarge_T = mapMatrix_T;
 
 // LOD
 struct _LodItem

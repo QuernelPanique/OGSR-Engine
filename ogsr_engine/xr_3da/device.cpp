@@ -15,8 +15,68 @@
 #include "../xrGame/embedded_editor/embedded_editor_main.h"
 #include "op22_frame_profile.h"
 #include "op22_parallel_jobs.h"
+#include <atomic>
+#include <limits>
 
 extern int g_op22_frame_stats;
+
+// OP22 (28.11 perf): счётчик в мкс и метка кадра хранятся вместе, чтобы запоздавшая задача не попала в следующий кадр.
+int g_op22_hitch_log = 1;
+int g_op22_hitch_ms = 20;
+static std::atomic<u64> op22_hitch_times[static_cast<unsigned>(Op22HitchStage::count)]{};
+
+Op22HitchTimer::Op22HitchTimer(Op22HitchStage stage, bool enabled)
+    : stage(stage), frame_tag(enabled ? static_cast<unsigned>(op22_hitch_times[static_cast<unsigned>(stage)].load(std::memory_order_relaxed) >> 32) : 0)
+{
+    if (frame_tag)
+        started = Clock::now();
+}
+
+Op22HitchTimer::~Op22HitchTimer()
+{
+    if (!frame_tag)
+        return;
+
+    const auto elapsed = static_cast<u64>(std::chrono::duration_cast<std::chrono::microseconds>(Clock::now() - started).count());
+    auto& counter = op22_hitch_times[static_cast<unsigned>(stage)];
+    u64 previous = counter.load(std::memory_order_relaxed);
+    while ((previous >> 32) == frame_tag)
+    {
+        const auto total = std::min<u64>(static_cast<u32>(previous) + elapsed, (std::numeric_limits<u32>::max)());
+        if (counter.compare_exchange_weak(previous, (u64(frame_tag) << 32) | total, std::memory_order_relaxed))
+            break;
+    }
+}
+
+static void op22_hitch_begin()
+{
+    static u32 frame_tag{};
+    if (++frame_tag == 0)
+        ++frame_tag;
+    for (auto& counter : op22_hitch_times)
+        counter.store(u64(frame_tag) << 32, std::memory_order_relaxed);
+}
+
+static void op22_hitch_finish(const Op22FrameProfile& profile, bool in_game)
+{
+    const auto now = Op22FrameProfile::Clock::now();
+    float times[static_cast<unsigned>(Op22HitchStage::count)];
+    for (unsigned i = 0; i < static_cast<unsigned>(Op22HitchStage::count); ++i)
+        times[i] = static_cast<float>(static_cast<u32>(op22_hitch_times[i].exchange(0, std::memory_order_relaxed))) / 1000.f;
+
+    const float present_wait = times[static_cast<unsigned>(Op22HitchStage::present_wait)];
+    const float total = Op22FrameProfile::milliseconds(now - profile.started) - present_wait;
+    static Op22FrameProfile::Tick last{};
+    if (!in_game || total <= static_cast<float>(g_op22_hitch_ms) || (last != Op22FrameProfile::Tick{} && now - last < std::chrono::milliseconds(100)))
+        return;
+
+    last = now;
+    Msg("[OP22 hitch] frame=%u total=%.2f update=%.2f draw=%.2f wait=%.2f gc=%.2f alife=%.2f destroy=%.2f spawn=%.2f tex=%.2f",
+        Device.dwFrame, total, profile.sample.update, profile.sample.draw, profile.sample.wait + present_wait,
+        times[static_cast<unsigned>(Op22HitchStage::gc)], times[static_cast<unsigned>(Op22HitchStage::alife)],
+        times[static_cast<unsigned>(Op22HitchStage::destroy)], times[static_cast<unsigned>(Op22HitchStage::spawn)],
+        times[static_cast<unsigned>(Op22HitchStage::tex)]);
+}
 
 //#define LOG_SECOND_THREAD_STATS
 
@@ -236,6 +296,11 @@ void CRenderDevice::on_idle()
     {
         ZoneScoped;
 
+        // OP22 (28.11 perf): ждём до ввода и FrameMove, вне загрузки и предзагрузки.
+        if (b_is_Active && !dwPrecacheFrame && !load_screen_renderer.b_registered && (!pApp || !pApp->IsLoading()) &&
+            m_pRender && ::Render)
+            m_pRender->WaitForFrameLatency();
+
 #ifdef LOG_SECOND_THREAD_STATS
         const auto FrameStartTime = std::chrono::high_resolution_clock::now();
 #endif
@@ -252,7 +317,11 @@ void CRenderDevice::on_idle()
             ImGui::NewFrame();
         }
 
-        Op22FrameProfile op22_profile(g_op22_frame_stats > 1 && g_pGameLevel);
+        // OP22 (28.11 perf): измеряем игровой кадр и закрываем счётчики даже при переходе к загрузке.
+        const bool op22_hitch = g_op22_hitch_log && g_op22_ingame && g_pGameLevel && b_is_Active && !dwPrecacheFrame && !load_screen_renderer.b_registered;
+        Op22FrameProfile op22_profile(g_op22_frame_stats > 1 && g_pGameLevel, op22_hitch);
+        if (op22_hitch)
+            op22_hitch_begin();
         const Fvector op22_previous_direction = vCameraDirection;
         const auto op22_update_start = op22_profile.now();
 
@@ -265,15 +334,17 @@ void CRenderDevice::on_idle()
 
         if (!g_loading_events.empty()) // that is to avoid loading screen flickering
         {
+            if (op22_hitch)
+                op22_hitch_finish(op22_profile, false);
             pApp->LoadDraw();
 
             return;
         }
 
-        const auto op22_camera_start = op22_profile.now();
+        const auto op22_camera_start = op22_profile.now(op22_profile.detailed);
         OnCameraUpdated(false);
         op22_profile.sample.camera = op22_profile.since(op22_camera_start);
-        if (op22_profile.enabled)
+        if (op22_profile.detailed)
             op22_profile.sample.turn = rad2deg(acosf(std::clamp(op22_previous_direction.dotproduct(vCameraDirection), -1.f, 1.f)));
 
         const auto SecondThreadStartTime = std::chrono::high_resolution_clock::now();
@@ -284,10 +355,11 @@ void CRenderDevice::on_idle()
 
             const auto SecondThreadTasksStartTime = std::chrono::high_resolution_clock::now();
 
-            auto op22_task_start = op22_profile.now();
+            // OP22 (28.11 perf): дешёвый журнал обходится без таймеров отдельных фоновых задач.
+            auto op22_task_start = op22_profile.now(op22_profile.detailed);
             g_sound_update.OnFrame();
             op22_profile.sample.sound = op22_profile.since(op22_task_start);
-            op22_task_start = op22_profile.now();
+            op22_task_start = op22_profile.now(op22_profile.detailed);
 
             // add_to_awaiters(TTAPI->submit([]() { g_sound_render.OnFrame(); }));
 
@@ -301,10 +373,10 @@ void CRenderDevice::on_idle()
                 auto size = seqParallel.size();
                 while (size > 0)
                 {
-                    const auto op22_identity = op22_profile.enabled ? Op22DelegateIdentity(seqParallel.front().GetMemento()).code() : 0;
-                    const auto op22_job_start = op22_profile.now();
+                    const auto op22_identity = op22_profile.detailed ? Op22DelegateIdentity(seqParallel.front().GetMemento()).code() : 0;
+                    const auto op22_job_start = op22_profile.now(op22_profile.detailed);
                     seqParallel.front()();
-                    if (op22_profile.enabled)
+                    if (op22_profile.detailed)
                         op22_jobs.record(op22_identity, op22_image_base, op22_image_end, op22_profile.since(op22_job_start));
                     seqParallel.pop_front();
 
@@ -324,7 +396,7 @@ void CRenderDevice::on_idle()
                 psLUA_GCTIMEOUT = std::max(psLUA_GCTIMEOUT_MIN, static_cast<int>(GCTime));
                 op22_profile.sample.gc_budget = psLUA_GCTIMEOUT;
                 add_to_awaiters(TTAPI->submit([&op22_profile] {
-                    const auto gc_started = op22_profile.now();
+                    const auto gc_started = op22_profile.now(op22_profile.detailed);
                     g_pGameLevel->script_gc();
                     op22_profile.sample.gc = op22_profile.since(gc_started);
                 }));
@@ -333,7 +405,7 @@ void CRenderDevice::on_idle()
             {
                 ZoneScopedN("seqFrameMT");
 
-                op22_task_start = op22_profile.now();
+                op22_task_start = op22_profile.now(op22_profile.detailed);
                 seqFrameMT.Process(rp_Frame); // only PHWorld and NetProcessor
                 op22_profile.sample.physics = op22_profile.since(op22_task_start);
             }
@@ -349,7 +421,7 @@ void CRenderDevice::on_idle()
         {
             ZoneScopedN("DoRender");
 
-            const auto op22_begin_start = op22_profile.now();
+            const auto op22_begin_start = op22_profile.now(op22_profile.detailed);
             const bool op22_render_ready = Begin();
             op22_profile.sample.begin = op22_profile.since(op22_begin_start);
             if (op22_render_ready)
@@ -368,7 +440,7 @@ void CRenderDevice::on_idle()
 
                 {
                     ZoneScopedN("DoRender End");
-                    const auto op22_end_start = op22_profile.now();
+                    const auto op22_end_start = op22_profile.now(op22_profile.detailed);
                     End();
                     op22_profile.sample.present = op22_profile.since(op22_end_start);
                 }
@@ -429,6 +501,13 @@ void CRenderDevice::on_idle()
         extern void LogD3D11DebugMessages();
         LogD3D11DebugMessages();
 
+        // OP22 (28.11 perf): учитываем прогрев или экран загрузки, включившиеся внутри кадра.
+        if (op22_hitch)
+        {
+            const bool in_game = g_op22_ingame && g_pGameLevel && !op22_profile.sample.precache && !dwPrecacheFrame &&
+                !load_screen_renderer.b_registered && g_loading_events.empty();
+            op22_hitch_finish(op22_profile, in_game);
+        }
         op22_profile.finish();
         FrameMark;
     }

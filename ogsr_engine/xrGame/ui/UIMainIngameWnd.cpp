@@ -1030,23 +1030,44 @@ void CUIMainIngameWnd::op22_qs_update()
         return;
     const bool show_empty = op22_opt("hud_qsp_empty_slot_visible", true);
     CInventory& inv = m_pActor->inventory();
+
+    // OP22 (28.11 perf): один обход, рюкзак перед поясом, отдельный счётчик для каждого слота.
+    struct SlotItems
+    {
+        shared_str section;
+        PIItem first{};
+        u32 count{};
+    } items[5];
+    bool has_sections = false;
+    for (int i = 0; i < 5; ++i)
+    {
+        if (const LPCSTR section = f(i); section && section[0])
+        {
+            items[i].section = section;
+            has_sections = true;
+        }
+    }
+    if (has_sections)
+    {
+        for (const TIItemContainer* list : {&inv.m_ruck, &inv.m_belt})
+            for (PIItem it : *list)
+            {
+                const shared_str section = it->object().cNameSect();
+                if (!section)
+                    continue;
+                for (auto& slot : items)
+                    if (slot.section == section)
+                    {
+                        if (!slot.first)
+                            slot.first = it;
+                        ++slot.count;
+                    }
+            }
+    }
     for (int i = 0; i < 5; ++i)
     {
         Op22QuickSlot& q = m_op22_qs[i];
-        LPCSTR sect = f(i);
-        PIItem first = nullptr;
-        u32 cnt = 0;
-        if (sect && sect[0])
-        {
-            for (const TIItemContainer* list : {&inv.m_ruck, &inv.m_belt})
-                for (PIItem it : *list)
-                    if (it->object().cNameSect() == sect)
-                    {
-                        if (!first)
-                            first = it;
-                        ++cnt;
-                    }
-        }
+        const PIItem first = items[i].first;
         q.back->Show(first || show_empty);
         q.icon->Show(first != nullptr);
         q.count->Show(first != nullptr);
@@ -1065,7 +1086,7 @@ void CUIMainIngameWnd::op22_qs_update()
             q.icon->SetWndPos(Fvector2().set((m_op22_qs_cell.x - sz.x) / 2, (m_op22_qs_cell.y - sz.y) / 2));
             q.icon->SetWndSize(sz);
             string16 t;
-            xr_sprintf(t, "%u", cnt);
+            xr_sprintf(t, "%u", items[i].count);
             q.count->SetText(t);
         }
         LPCSTR kn = dik_to_keyname(get_action_dik(EGameActions(kUSE_QUICK_SLOT0 + i)));

@@ -20,6 +20,7 @@ xr_vector<op22_pickup_mark_t> g_op22_pickup_marks; // OP22
 
 // OP22 23.11: подавление огнём (op22_suppression.h)
 #include "op22_suppression.h"
+#include "Level_Bullet_Manager.h"
 #include "../xr_3da/CameraManager.h"
 #include "../xr_3da/EffectorPP.h"
 #include "ActorEffector.h" // CActorCameraManager
@@ -44,22 +45,21 @@ public:
     }
 };
 
-void op22_suppress_near_miss(u32 shooter_id)
-{
-    CActor* a = Actor();
-    if (!a || !a->g_Alive() || shooter_id == a->ID() || g_op22_suppress_cfg.add <= 0.f)
-        return;
-    g_op22_suppress = _min(1.f, g_op22_suppress + g_op22_suppress_cfg.add);
-    op22_suppress_t = Device.fTimeGlobal;
-}
-
 void op22_suppress_update()
 {
     CActor* a = Actor();
+    // OP22 (28.11 perf): применяем промахи прошлого кадра только на главном потоке.
+    const u32 misses = Level().BulletManager().TakeSuppressionMisses(a ? a->ID() : 0xffff);
     if (!a || !a->g_Alive())
     {
         g_op22_suppress = 0.f;
         return;
+    }
+    if (misses && g_op22_suppress_cfg.add > 0.f)
+    {
+        for (u32 i = 0; i < misses && g_op22_suppress < 1.f; ++i)
+            g_op22_suppress = _min(1.f, g_op22_suppress + g_op22_suppress_cfg.add);
+        op22_suppress_t = Device.fTimeGlobal;
     }
     if (g_op22_suppress <= 0.f)
         return;

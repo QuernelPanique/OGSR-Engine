@@ -9,6 +9,7 @@
 #include "client_spawn_manager.h"
 #include "..\xr_3da\xr_object.h"
 #include "..\xr_3da\IGame_Persistent.h"
+#include "../xr_3da/op22_frame_profile.h"
 
 void CLevel::cl_Process_Spawn(NET_Packet& P)
 {
@@ -209,6 +210,8 @@ CSE_Abstract* CLevel::spawn_item(LPCSTR section, const Fvector& position, u32 le
 
 void CLevel::ProcessGameSpawns()
 {
+    // OP22 (28.11 perf): учитываем спавн из очереди, включая обработку детей.
+    const Op22HitchTimer timer(Op22HitchStage::spawn, !game_spawn_queue.empty());
     CSE_Abstract* trader = nullptr;
     while (!game_spawn_queue.empty())
     {

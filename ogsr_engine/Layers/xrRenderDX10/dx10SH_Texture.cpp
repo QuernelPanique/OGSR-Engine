@@ -4,6 +4,7 @@
 #include "../xrRender/ResourceManager.h"
 
 #include "../../xr_3da/render.h"
+#include "../../xr_3da/op22_frame_profile.h"
 
 #include "../../xr_3da/tntQAVI.h"
 #include "../../xr_3da/xrTheora_Surface.h"
@@ -357,6 +358,8 @@ void CTexture::Load(const char* Name)
         }
     } op22_t(Name);
 
+    // OP22 (28.11 perf): суммируем реальные загрузки текстур в игровом кадре.
+    const Op22HitchTimer timer(Op22HitchStage::tex);
     Preload(Name);
 
     // Check for OGM

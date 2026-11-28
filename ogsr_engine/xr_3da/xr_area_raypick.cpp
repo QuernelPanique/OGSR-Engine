@@ -7,12 +7,16 @@
 #include "igame_level.h"
 #include "x_ray.h"
 #include "GameFont.h"
+#include <atomic>
+#include <optional>
 
 #ifdef DEBUG
 #include <d3d9.h>
 #endif
 
 using namespace collide;
+
+extern std::atomic<bool> g_op22_ray_reuse;
 
 //--------------------------------------------------------------------------------
 // RayTest - Occluded/No
@@ -166,9 +170,36 @@ BOOL CObjectSpace::_RayQuery(collide::rq_results& r_dest, const collide::ray_def
     ZoneScoped;
     ZoneValue(static_cast<uint64_t>(R.range));
 
+    // OP22 (28.11 perf): сохраняем ёмкость буферов потока, а вложенному лучу даём свои.
+    struct Scratch
+    {
+        collide::rq_results hits;
+        xr_vector<ISpatial*> candidates;
+        bool in_use{};
+    };
+    struct ScratchLease
+    {
+        Scratch& scratch;
+        ~ScratchLease() { scratch.in_use = false; }
+    };
+
+    std::optional<Scratch> local;
+    Scratch* scratch = nullptr;
+    if (g_op22_ray_reuse.load(std::memory_order_relaxed))
+    {
+        static thread_local Scratch cached;
+        if (!cached.in_use)
+            scratch = &cached;
+    }
+    if (!scratch)
+        scratch = &local.emplace();
+    scratch->in_use = true;
+    const ScratchLease lease{*scratch};
+
     // initialize query
     r_dest.r_clear();
-    collide::rq_results r_temp;
+    auto& r_temp = scratch->hits;
+    r_temp.r_clear();
 
     rq_target s_mask = rqtStatic;
     rq_target d_mask = rq_target(((R.tgt & rqtObject) ? rqtObject : rqtNone) | ((R.tgt & rqtObstacle) ? rqtObstacle : rqtNone) | ((R.tgt & rqtShape) ? rqtShape : rqtNone));
@@ -189,7 +220,7 @@ BOOL CObjectSpace::_RayQuery(collide::rq_results& r_dest, const collide::ray_def
     // Test dynamic
     if (R.tgt & d_mask)
     {
-        xr_vector<ISpatial*> r_spatial;
+        auto& r_spatial = scratch->candidates;
         // Traverse object database
         const u32 d_flags = STYPE_COLLIDEABLE | ((R.tgt & rqtObstacle) ? STYPE_OBSTACLE : 0) | ((R.tgt & rqtShape) ? STYPE_SHAPE : 0);
         g_SpatialSpace->q_ray(r_spatial, 0, d_flags, R.start, R.dir, R.range);

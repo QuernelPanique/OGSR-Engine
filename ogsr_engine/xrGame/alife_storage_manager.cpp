@@ -53,8 +53,6 @@ CALifeStorageManager::~CALifeStorageManager() {}
 
 void CALifeStorageManager::save(LPCSTR save_name, bool update_name)
 {
-    strcpy_s(g_last_saved_game, save_name);
-
     string_path save;
     strcpy_s(save, m_save_name);
     if (save_name)
@@ -65,13 +63,14 @@ void CALifeStorageManager::save(LPCSTR save_name, bool update_name)
     {
         if (!xr_strlen(m_save_name))
         {
-            Log("There is no file name specified!");
+            // OP22 (28.11 perf): отсутствие имени тоже считается ошибкой сохранения.
+            Log("! save failed: no file name specified");
             return;
         }
     }
 
     u32 source_count;
-    u32 dest_count;
+    size_t dest_count;
     void* dest_data;
     {
         CMemoryWriter stream;
@@ -90,23 +89,34 @@ void CALifeStorageManager::save(LPCSTR save_name, bool update_name)
         dest_count = ZSTD_compressBound(source_count);
         dest_data = xr_malloc(dest_count);
         dest_count = ZSTD_compress(dest_data, dest_count, source_data, source_count, 1);
-        R_ASSERT(!ZSTD_isError(dest_count));
+        // OP22 (28.11 perf): при сбое сжатия сохраняем предыдущий слот и его имя.
+        if (ZSTD_isError(dest_count))
+        {
+            Msg("! save failed: cannot compress '%s': %s", m_save_name, ZSTD_getErrorName(dest_count));
+            xr_free(dest_data);
+            strcpy_s(m_save_name, save);
+            return;
+        }
     }
 
-    string_path temp;
-    FS.update_path(temp, "$game_saves$", m_save_name);
-    IWriter* writer = FS.w_open(temp);
-    writer->w_u32(u32(0));
-    writer->w_u32(g_op22_alife_id32 ? ALIFE_VERSION : 10); // OP22 (id32): как в заголовке ALife
-
-    writer->w_u32(source_count);
-    writer->w(dest_data, dest_count);
+    // OP22 (28.11 perf): публикуем сейв с прежним заголовком только после успешной записи.
+    string_path file_name;
+    FS.update_path(file_name, "$game_saves$", m_save_name);
+    const u32 save_header[]{0, g_op22_alife_id32 ? u32(ALIFE_VERSION) : 10u, source_count};
+    const bool saved = FS.w_save_atomic(file_name, save_header, sizeof(save_header), dest_data, dest_count);
     xr_free(dest_data);
-    FS.w_close(writer);
+    if (!saved)
+    {
+        strcpy_s(m_save_name, save);
+        return;
+    }
+
+    if (save_name)
+        strcpy_s(g_last_saved_game, save_name);
 #ifdef DEBUG
-    Msg("* Game %s is successfully saved to file '%s' (%d bytes compressed to %d)", m_save_name, temp, source_count, dest_count + 4);
+    Msg("* Game %s is successfully saved to file '%s' (%u bytes compressed to %zu)", m_save_name, file_name, source_count, dest_count + sizeof(u32));
 #else // DEBUG
-    Msg("* Game %s is successfully saved to file '%s'", m_save_name, temp);
+    Msg("* Game %s is successfully saved to file '%s'", m_save_name, file_name);
 #endif // DEBUG
 
     if (!update_name)

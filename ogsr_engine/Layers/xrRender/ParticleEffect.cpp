@@ -534,13 +534,12 @@ void CParticleEffect::Render(CBackend& cmd_list, float, bool)
     {
         if (m_Def && m_Def->m_Flags.is(CPEDef::dfSprite))
         {
-            u32 dwOffset, dwCount;
-
-            FVF::LIT* pv_start = (FVF::LIT*)RImplementation.Vertex.Lock(p_cnt * 4 * 4, geom->vb_stride, dwOffset);
+            // OP22 (28.11 perf): FillSprite пишет четыре вершины на частицу.
+            u32 dwOffset;
+            const u32 dwCount = p_cnt << 2;
+            FVF::LIT* pv_start = (FVF::LIT*)RImplementation.Vertex.Lock(ps_op22_particles_opt ? dwCount : dwCount * 4, geom->vb_stride, dwOffset);
 
             ParticleRenderStream(*this, particles, pv_start, 0, p_cnt);
-
-            dwCount = p_cnt << 2;
 
             RImplementation.Vertex.Unlock(dwCount, geom->vb_stride);
             if (dwCount)

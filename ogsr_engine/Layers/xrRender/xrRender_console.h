@@ -184,6 +184,8 @@ extern int ps_op22_ssfx_sss;
 extern int ps_op22_ssfx_tiles; // OP22 (28.11)
 extern int ps_op22_terrain_height;
 extern int ps_op22_ssfx_sss_ext; // OP22 (SSS 23): экранные тени от ламп
+// OP22 (28.11 perf): переключатели ожидания кадра, сэмплеров, частиц, FSR3 и копии глубины.
+extern int ps_op22_present_wait_early, ps_op22_upscale_mipbias, ps_op22_particles_opt, ps_op22_fsr3_reactive, ps_op22_skip_unused_dof_copy;
 extern int ps_op22_gpu_stats; // OP22: время фаз кадра на видеокарте в лог // OP22: высоты деталей земли из _bump#.a для параллакса
 
 extern ECORE_API float ps_r__opt_dist;

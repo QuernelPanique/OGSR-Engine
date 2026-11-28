@@ -4,7 +4,6 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
-#include "op22_suppression.h" // OP22
 #include "Level_Bullet_Manager.h"
 #include "entity.h"
 #include "../xr_3da/gamemtllib.h"
@@ -31,6 +30,13 @@
 
 //расстояния не пролетев которого пуля не трогает того кто ее пустил
 #define PARENT_IGNORE_DIST 3.f
+
+// OP22 (28.11 perf): отбрасываем выстрелы самого игрока и атомарно считаем остальные промахи.
+void CBulletManager::op22_suppress_near_miss(u32 actor_id, u32 shooter_id)
+{
+    if (m_suppress_actor_id == actor_id && shooter_id != actor_id)
+        m_suppress_misses.fetch_add(1, std::memory_order_relaxed);
+}
 
 // test callback функция
 //   object - object for testing
@@ -127,8 +133,8 @@ BOOL CBulletManager::test_callback(const collide::ray_defs& rd, CObject* object,
                             Fvector pt;
                             pt.mad(bullet->pos, bullet->dir, dist);
                             bullet_manager.PlayWhineSound(bullet, initiator, pt);
-                            if (actor) // OP22 23.11: близкий промах - подавление огнём (op22_suppression.h)
-                                op22_suppress_near_miss(bullet->parent_id);
+                            if (actor) // OP22 (28.11 perf): передаём промах через счётчик менеджера пуль.
+                                bullet_manager.op22_suppress_near_miss(actor->ID(), bullet->parent_id);
                         }
                     }
                     else

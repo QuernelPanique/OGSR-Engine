@@ -64,7 +64,8 @@ public:
     }
 
     bool ThisInstanceIsGlobal() const;
-    void WaitOnSwapChain() const;
+    // OP22 (28.11 perf): ранний вызов блокируется, поздний сохраняет прежний опрос.
+    void WaitOnSwapChain(bool early = false);
 
 private:
     bool b_modern{};
@@ -78,6 +79,7 @@ private:
     ID3D11DeviceContext* d3d_contexts_pool[R__NUM_CONTEXTS]{};
 
     HANDLE m_frameLatencyWaitableObject{};
+    u32 m_earlyWaitFrame{u32(-1)}; // OP22 (28.11 perf): кадр, уже получивший сигнал очереди.
 };
 
 extern ECORE_API CHW HW;

@@ -3,6 +3,26 @@
 #include <algorithm>
 #include <chrono>
 
+// OP22 (28.11 perf): замеры участков кадра из главного и рабочих потоков.
+enum class Op22HitchStage { gc, alife, destroy, spawn, tex, present_wait, count };
+
+class Op22HitchTimer
+{
+    using Clock = std::chrono::steady_clock;
+    const Op22HitchStage stage;
+    const unsigned frame_tag;
+    Clock::time_point started{};
+
+public:
+    explicit Op22HitchTimer(Op22HitchStage stage, bool enabled = true);
+    ~Op22HitchTimer();
+    Op22HitchTimer(const Op22HitchTimer&) = delete;
+    Op22HitchTimer& operator=(const Op22HitchTimer&) = delete;
+};
+
+extern int g_op22_hitch_log;
+extern int g_op22_hitch_ms;
+
 // Wall-clock timings, not GPU timestamp queries. The worker fields are read
 // only after all futures for this frame have been joined by on_idle().
 struct Op22FrameProfile
@@ -20,13 +40,15 @@ struct Op22FrameProfile
         int gc_budget{}, precache{};
     } sample;
 
+    // OP22 (28.11 perf): подробная статистика и журнал рывков включаются независимо.
+    const bool detailed;
     const bool enabled;
     const Tick started;
 
-    explicit Op22FrameProfile(bool active) : enabled(active), started(now()) {}
+    Op22FrameProfile(bool detailed, bool hitch) : detailed(detailed), enabled(detailed || hitch), started(now()) {}
 
-    Tick now() const { return enabled ? Clock::now() : Tick{}; }
-    float since(Tick from) const { return enabled ? milliseconds(Clock::now() - from) : 0.f; }
+    Tick now(bool measure = true) const { return enabled && measure ? Clock::now() : Tick{}; }
+    float since(Tick from) const { return from != Tick{} ? milliseconds(Clock::now() - from) : 0.f; }
 
     static float milliseconds(Clock::duration time)
     {
@@ -35,7 +57,7 @@ struct Op22FrameProfile
 
     void finish()
     {
-        if (!enabled)
+        if (!detailed)
             return;
 
         const auto current = Clock::now();

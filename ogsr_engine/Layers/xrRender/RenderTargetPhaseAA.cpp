@@ -805,7 +805,7 @@ public:
         resetHistory = true;
     }
 
-    bool Draw()
+    bool Draw(ID3D11Resource* reactiveMask = nullptr) // OP22 (28.11 perf): отдельный апскейл прицела вызывает без маски.
     {
         if (!fsr_created)
         {
@@ -823,7 +823,9 @@ public:
         dispatchParameters.motionVectors = ffxGetResourceDX11(RImplementation.Target->rt_Velocity->pSurface, GetFfxResourceDescriptionDX11(RImplementation.Target->rt_Velocity->pSurface), L"FSR3_InputMotionVectors");
         dispatchParameters.exposure = ffxGetResourceDX11(nullptr, {}, L"FSR3_InputExposure");
 
-        dispatchParameters.reactive = ffxGetResourceDX11(nullptr, {}, L"FSR3_InputReactiveMap");
+        // OP22 (28.11 perf): основная сцена передаёт R8-маску, у отдельного апскейла прицела она пуста.
+        dispatchParameters.reactive = reactiveMask ? ffxGetResourceDX11(reactiveMask, GetFfxResourceDescriptionDX11(reactiveMask), L"FSR3_InputReactiveMap")
+                                                   : ffxGetResourceDX11(nullptr, {}, L"FSR3_InputReactiveMap");
         dispatchParameters.transparencyAndComposition = ffxGetResourceDX11(nullptr, {}, L"FSR3_TransparencyAndCompositionMap");
 
         dispatchParameters.dilatedDepth = ffxGetResourceDX11(dilatedDepth, GetFfxResourceDescriptionDX11(dilatedDepth), L"FSR3_dilatedDepth", FFX_RESOURCE_STATE_UNORDERED_ACCESS);
@@ -909,7 +911,7 @@ void CRenderTarget::ResetTemporalHistory()
     Fsr3WrapperScope.RequestHistoryReset();
 }
 
-bool CRenderTarget::ProcessFSR()
+bool CRenderTarget::ProcessFSR(ID3D11Resource* reactiveMask)
 {
     PIX_EVENT(FSR);
 
@@ -923,7 +925,7 @@ bool CRenderTarget::ProcessFSR()
         }
     }
 
-    if (!Fsr3Wrapper.Draw())
+    if (!Fsr3Wrapper.Draw(reactiveMask)) // OP22 (28.11 perf): маска действительна только для текущего вызова.
     {
         Msg("!![%s] FAILED FSR DRAW!", __FUNCTION__);
         return false;
@@ -951,7 +953,7 @@ bool CRenderTarget::ProcessFSR_3DSS(const bool need_reset)
 }
 //*****************************************************************************************************
 
-bool CRenderTarget::PhaseAA(CBackend& cmd_list)
+bool CRenderTarget::PhaseAA(CBackend& cmd_list, ID3D11Resource* reactiveMask)
 {
     bool temporalOutput = false;
 
@@ -972,7 +974,7 @@ bool CRenderTarget::PhaseAA(CBackend& cmd_list)
             u_setrt(cmd_list, get_width(cmd_list), get_height(cmd_list), nullptr, nullptr, nullptr, nullptr);
             RImplementation.rmNormal(cmd_list);
 
-            temporalOutput = ProcessFSR();
+            temporalOutput = ProcessFSR(reactiveMask); // OP22 (28.11 perf): FSR учитывает прозрачность только основного прохода.
             if (!temporalOutput)
                 ps_r_pp_aa_mode = TAA;
             break;

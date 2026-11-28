@@ -104,7 +104,9 @@ void CRender::calculate_particles_async()
         CFrustum v{};
         v.CreateFromMatrix(Device.mFullTransform, FRUSTUM_P_LRTB + FRUSTUM_P_FAR);
 
-        g_SpatialSpace->q_frustum(lstParticlesCalculation, 0, STYPE_RENDERABLE | STYPE_PARTICLE, v);
+        // OP22 (28.11 perf): запрос с маской по любому биту отбирает только частицы.
+        const u32 mask = ps_op22_particles_opt ? STYPE_PARTICLE : (STYPE_RENDERABLE | STYPE_PARTICLE);
+        g_SpatialSpace->q_frustum(lstParticlesCalculation, 0, mask, v);
 
         //Msg("Particles calculation: %d objects", lstParticlesCalculation.size());
 

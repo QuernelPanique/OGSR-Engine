@@ -162,7 +162,6 @@ CLocatorAPI::CLocatorAPI()
     SYSTEM_INFO sys_inf;
     GetSystemInfo(&sys_inf);
     dwAllocGranularity = sys_inf.dwAllocationGranularity;
-    dwOpenCounter = 0;
 }
 
 CLocatorAPI::~CLocatorAPI()
@@ -995,7 +994,8 @@ bool CLocatorAPI::check_for_file(LPCSTR path, LPCSTR _fname, string_path& fname_
     if (I == files.end())
         return (false);
 
-    ++dwOpenCounter;
+    // OP22 (28.11 perf): счётчик не синхронизирует сами чтения.
+    dwOpenCounter.fetch_add(1, std::memory_order_relaxed);
     desc = &*I;
     return (true);
 }
@@ -1098,6 +1098,54 @@ void CLocatorAPI::w_close(IWriter*& S)
             Register(fname, VFS_STANDARD_FILE, 0, st.st_size, st.st_size, (u32)st.st_mtime);
         }
     }
+}
+
+// OP22 (28.11 perf): не трогаем старый сейв до успешной записи и закрытия временного файла.
+bool CLocatorAPI::w_save_atomic(LPCSTR name, const void* header, size_t header_size, const void* data, size_t data_size)
+{
+    string256 target;
+    if (xr_strlen(name) >= sizeof(target)) // Register хранит полный путь в string256.
+    {
+        Msg("! save failed: path too long '%s'", name);
+        return false;
+    }
+    strcpy_s(target, name);
+    xr_strlwr(target);
+    const std::string temp = std::string(target) + ".tmp";
+    VerifyPath(temp);
+
+    FILE* stream = _fsopen(temp.c_str(), "wb", SH_DENYWR);
+    if (!stream)
+    {
+        Msg("! save failed: cannot open '%s' (errno %d)", temp.c_str(), errno);
+        return false;
+    }
+
+    const bool written = fwrite(header, 1, header_size, stream) == header_size && fwrite(data, 1, data_size, stream) == data_size;
+    const bool closed = fclose(stream) == 0;
+    if (!written || !closed)
+    {
+        Msg("! save failed: cannot %s '%s'", written ? "close" : "write", temp.c_str());
+        DeleteFileA(temp.c_str());
+        return false;
+    }
+
+    struct _stat st{};
+    if (_stat(temp.c_str(), &st) != 0)
+    {
+        Msg("! save failed: cannot stat '%s' (errno %d)", temp.c_str(), errno);
+        DeleteFileA(temp.c_str());
+        return false;
+    }
+    if (!MoveFileExA(temp.c_str(), target, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+    {
+        Msg("! save failed: cannot replace '%s' (Win32 error %lu)", target, GetLastError());
+        DeleteFileA(temp.c_str());
+        return false;
+    }
+
+    Register(target, VFS_STANDARD_FILE, 0, st.st_size, st.st_size, static_cast<u32>(st.st_mtime));
+    return true;
 }
 
 CLocatorAPI::files_it CLocatorAPI::file_find_it(LPCSTR fname)

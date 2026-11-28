@@ -25,5 +25,5 @@ struct op22_suppress_cfg_t
 extern op22_suppress_cfg_t g_op22_suppress_cfg;
 extern float g_op22_suppress; // текущий уровень 0..1
 
-void op22_suppress_near_miss(u32 shooter_id); // пуля прошла рядом с актором и не попала
-void op22_suppress_update(); // каждый кадр из CActor::UpdateCL: спад, постэффект
+// OP22 (28.11 perf): в начале CLevel::OnFrame применяем промахи, спад и постэффект.
+void op22_suppress_update();

@@ -6,6 +6,7 @@
 
 #include "weaponammo.h"
 #include "tracer.h"
+#include <atomic>
 //структура, описывающая пулю и ее свойства в полете
 struct SBullet
 {
@@ -82,6 +83,11 @@ private:
     collide::rq_results rq_storage;
     xr_vector<ISpatial*> rq_spatial;
     collide::rq_results m_rq_results;
+
+    // OP22 (28.11 perf): ID игрока задан до запуска расчёта пуль и действует до барьера кадра.
+    u32 m_suppress_actor_id{0xffff};
+    std::atomic<u32> m_suppress_misses{};
+    void op22_suppress_near_miss(u32 actor_id, u32 shooter_id);
 
 private:
     using BulletVec = xr_vector<SBullet>;
@@ -181,6 +187,7 @@ public:
 
     void CommitEvents(); // @ the start of frame
     void CommitRenderSet(); // @ the end of frame
+    u32 TakeSuppressionMisses(u32 actor_id);
     void Render();
 };
 

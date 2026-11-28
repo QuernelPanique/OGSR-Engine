@@ -287,7 +287,8 @@ void IReader::r(void* p, size_t cnt)
         bShow = TRUE;
     if (bShow)
     {
-        FS.dwOpenCounter++;
+        // OP22 (28.11 perf): отладочные чтения обновляют тот же атомарный счётчик.
+        FS.dwOpenCounter.fetch_add(1, std::memory_order_relaxed);
     }
 #endif
 };

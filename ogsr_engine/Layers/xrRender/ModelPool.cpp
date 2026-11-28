@@ -581,14 +581,16 @@ void CModelPool::ClearPool(BOOL b_complete)
 {
     for (auto& I : Pool)
     {
-        if (!b_complete && vis_prefetch_ini)
+        // OP22 (28.11 perf): решение о выгрузке базовой модели относится только к этой записи.
+        BOOL discard_complete = b_complete;
+        if (!discard_complete && vis_prefetch_ini)
         {
             std::string s(I.first.c_str());
             if (m_prefetched.find(s) == m_prefetched.end() && !vis_prefetch_ini->line_exist("prefetch", I.first.c_str()))
-                b_complete = TRUE;
+                discard_complete = TRUE;
         }
 
-        Discard(I.second, b_complete);
+        Discard(I.second, discard_complete);
     }
     Pool.clear();
 }

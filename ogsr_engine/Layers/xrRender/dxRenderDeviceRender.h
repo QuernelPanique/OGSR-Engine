@@ -38,6 +38,9 @@ public:
 
     IResourceManager* GetResourceManager() const override;
 
+    // OP22 (28.11 perf): вход в ожидание swapchain из цикла устройства.
+    void WaitForFrameLatency() override;
+
 public:
     CResourceManager* Resources;
 

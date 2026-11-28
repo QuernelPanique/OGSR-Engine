@@ -37,4 +37,7 @@ public:
 
     virtual void OnAssetsChanged() = 0;
     virtual IResourceManager* GetResourceManager() const = 0;
+
+    // OP22 (28.11 perf): ожидание очереди GPU до обновления кадра.
+    virtual void WaitForFrameLatency() = 0;
 };

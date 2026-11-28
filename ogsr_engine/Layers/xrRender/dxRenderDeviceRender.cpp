@@ -193,3 +193,11 @@ void dxRenderDeviceRender::OnAssetsChanged()
 }
 
 IResourceManager* dxRenderDeviceRender::GetResourceManager() const { return Resources; }
+
+// OP22 (28.11 perf): раннее ожидание требует готового D3D-устройства.
+void dxRenderDeviceRender::WaitForFrameLatency()
+{
+    if (ps_op22_present_wait_early && Resources && RImplementation.Target && HW.pDevice && HW.m_pSwapChain && GetDeviceState() == dsOK &&
+        SUCCEEDED(HW.pDevice->GetDeviceRemovedReason()))
+        HW.WaitOnSwapChain(true);
+}

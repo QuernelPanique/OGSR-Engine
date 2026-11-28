@@ -9,6 +9,7 @@
 #include "NET_Server_Trash/net_utils.h"
 
 #include "CustomHUD.h"
+#include "op22_frame_profile.h"
 
 class fClassEQ
 {
@@ -198,6 +199,8 @@ void CObjectList::ProcessDestroyQueue()
     // Destroy
     if (!destroy_queue.empty())
     {
+        // OP22 (28.11 perf): замеряем непустую очередь вместе с уведомлениями net_Relcase.
+        const Op22HitchTimer timer(Op22HitchStage::destroy);
         // Info
         for (auto oit = objects_active.begin(); oit != objects_active.end(); oit++)
             for (int it = destroy_queue.size() - 1; it >= 0; it--)

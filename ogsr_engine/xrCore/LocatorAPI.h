@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <atomic>
+
 #pragma warning(push)
 #pragma warning(disable : 4995)
 #include <io.h>
@@ -156,7 +158,8 @@ public:
     };
     Flags32 m_Flags;
     u32 dwAllocGranularity;
-    u32 dwOpenCounter;
+    // OP22 (28.11 perf): счётчик чтений общий для потоков загрузки.
+    std::atomic<u32> dwOpenCounter{0};
 
 private:
     void file_from_cache_impl(IReader*& R, LPCSTR fname, const file& desc);
@@ -194,6 +197,8 @@ public:
     IWriter* w_open_ex(LPCSTR initial, LPCSTR N);
     IC IWriter* w_open_ex(LPCSTR N) { return w_open_ex(nullptr, N); }
     void w_close(IWriter*& S);
+    // OP22 (28.11 perf): записать сейв целиком и опубликовать его в VFS после замены.
+    bool w_save_atomic(LPCSTR name, const void* header, size_t header_size, const void* data, size_t data_size);
 
     const file* exist(LPCSTR N);
     const file* exist(LPCSTR path, LPCSTR name);

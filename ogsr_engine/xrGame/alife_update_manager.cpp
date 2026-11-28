@@ -19,6 +19,7 @@
 #include "level.h"
 #include "graph_engine.h"
 #include "../xr_3da/x_ray.h"
+#include "../xr_3da/op22_frame_profile.h"
 #include "restriction_space.h"
 
 #include "mt_config.h"
@@ -97,6 +98,8 @@ void CALifeUpdateManager::update_scheduled(bool init_ef)
 
 void CALifeUpdateManager::update()
 {
+    // OP22 (28.11 perf): считаем switch и scheduled в том потоке, где они выполнены.
+    const Op22HitchTimer timer(Op22HitchStage::alife);
     const bool profile = g_op22_frame_stats > 1;
     const auto started = profile ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
     update_switch();

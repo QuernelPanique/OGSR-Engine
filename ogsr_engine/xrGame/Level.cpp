@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../xr_3da/op22_frame_profile.h"
 #include "../xr_3da/fdemorecord.h"
 #include "ui/UITextureMaster.h" // OP22
 #include "../xr_3da/fdemoplay.h"
@@ -17,6 +18,7 @@
 #include "Physics.h"
 #include "ShootingObject.h"
 #include "Level_Bullet_Manager.h"
+#include "op22_suppression.h"
 #include "script_engine.h"
 #include "infoportion.h"
 #include "patrol_path_storage.h"
@@ -404,6 +406,8 @@ void CLevel::OnFrame()
 
     ProcessGameEvents();
 
+    // OP22 (28.11 perf): применяем промахи прошлого кадра к живому актору после обработки событий.
+    op22_suppress_update();
     MapManager().Update();
     // Inherited update
     inherited::OnFrame();
@@ -844,6 +848,8 @@ void CLevel::script_gc() const
 {
     ZoneScoped;
 
+    // OP22 (28.11 perf): замеряем явные вызовы GC во всех режимах.
+    const Op22HitchTimer timer(Op22HitchStage::gc);
     //int memory_before_kb = lua_gc(ai().script_engine().lua(), LUA_GCCOUNT, 0);
 
     switch (ps_lua_gc_method)

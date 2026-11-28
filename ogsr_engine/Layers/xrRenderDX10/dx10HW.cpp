@@ -285,6 +285,13 @@ void CHW::DestroyDevice()
 
     _SHOW_REF("refCount:m_pSwapChain", m_pSwapChain);
     _RELEASE(m_pSwapChain);
+    // OP22 (28.11 perf): при уничтожении swapchain закрываем его дескриптор ожидания.
+    if (m_frameLatencyWaitableObject)
+    {
+        CloseHandle(m_frameLatencyWaitableObject);
+        m_frameLatencyWaitableObject = nullptr;
+    }
+    m_earlyWaitFrame = u32(-1);
 
     for (auto& id : d3d_contexts_pool)
     {
@@ -373,8 +380,23 @@ bool CHW::ThisInstanceIsGlobal() const
     return this == &HW;
 }
 
-void CHW::WaitOnSwapChain() const 
-{ 
+void CHW::WaitOnSwapChain(bool early)
+{
+    // OP22 (28.11 perf): блокируем поток без опроса и не ждём повторно при переключении в этом кадре.
+    if (!m_frameLatencyWaitableObject)
+        return;
+
+    if (early)
+    {
+        ZoneScopedN("PresentWaitEarly");
+        if (WaitForSingleObjectEx(m_frameLatencyWaitableObject, 1000, TRUE) == WAIT_OBJECT_0)
+            m_earlyWaitFrame = Device.dwFrame + 1;
+        return;
+    }
+
+    if (m_earlyWaitFrame == Device.dwFrame)
+        return;
+
     // https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitforsingleobject
 
     /*

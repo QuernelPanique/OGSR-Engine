@@ -11,11 +11,32 @@
 #include "IGame_Persistent.h"
 #include "LightAnimLibrary.h"
 #include "IInputReceiver.h"
+#include "op22_frame_profile.h"
+#include <atomic>
 
 int psLUA_GCSTEP{128}; // 10;
 int psLUA_GCTIMEOUT{2000}, psLUA_GCTIMEOUT_MIN{2000}; // in micro seconds
 u32 ps_lua_gc_method{gc_timeout};
 constexpr xr_token lua_gc_method_token[]{{"gc_default", gc_default}, {"gc_step", gc_step}, {"gc_timeout", gc_timeout}, {}};
+
+// OP22 (28.11 perf): рабочие потоки читают переключатели оптимизаций атомарно.
+std::atomic<bool> g_op22_ray_reuse{true};
+std::atomic<bool> g_op22_reject_tail{true};
+static int op22_ray_reuse = 1;
+static int op22_reject_tail = 1;
+
+class CCC_Op22PerfSwitch : public CCC_Integer
+{
+    std::atomic<bool>& active;
+
+public:
+    CCC_Op22PerfSwitch(LPCSTR name, int* setting, std::atomic<bool>& active) : CCC_Integer(name, setting, 0, 1), active(active) {}
+    void Execute(LPCSTR args) override
+    {
+        CCC_Integer::Execute(args);
+        active.store(GetValue() != 0, std::memory_order_relaxed);
+    }
+};
 
 void IConsole_Command::add_to_LRU(shared_str const& arg)
 {
@@ -631,6 +652,11 @@ void CCC_Register()
     extern int g_op22_frame_stats;
     extern int g_op22_box_sleep;
     CMD4(CCC_Integer, "op22_frame_stats", &g_op22_frame_stats, 0, 2);
+    // OP22 (28.11 perf): порог журнала рывков и переключатели для сравнения в игре.
+    CMD4(CCC_Integer, "op22_hitch_log", &g_op22_hitch_log, 0, 1);
+    CMD4(CCC_Integer, "op22_hitch_ms", &g_op22_hitch_ms, 1, 10000);
+    CMD3(CCC_Op22PerfSwitch, "op22_ray_reuse", &op22_ray_reuse, g_op22_ray_reuse);
+    CMD3(CCC_Op22PerfSwitch, "op22_reject_tail", &op22_reject_tail, g_op22_reject_tail);
     CMD4(CCC_Integer, "op22_timing_log", &g_op22_timing_log, 0, 1); // OP22: замеры окон/текстур/XML в лог
     CMD4(CCC_Integer, "op22_box_sleep", &g_op22_box_sleep, 0, 1);
     CMD4(CCC_Integer, "lua_gctimeout", &psLUA_GCTIMEOUT_MIN, 1000, 16000);

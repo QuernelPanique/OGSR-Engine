@@ -15,6 +15,10 @@
 #include "../xrRenderDX10/3DFluid/dx103DFluidManager.h"
 #include "../xrRender/ShaderResourceTraits.h"
 #include "../../xr_3da/x_ray.h"
+#include "../../xr_3da/op22_frame_profile.h"
+
+#include <cstdio>
+#include <string_view>
 
 CRender RImplementation;
 
@@ -645,14 +649,21 @@ static HRESULT create_shader(LPCSTR const pTarget, DWORD const* buffer, u32 cons
 //--------------------------------------------------------------------------------------------------------------
 class includer final : public ID3DInclude
 {
-    IReader* R{};
+    // OP22 (28.11 perf): вложенные include живут до Close своего буфера.
+    xr_vector<std::pair<LPCVOID, IReader*>> readers;
 
 public:
+    ~includer()
+    {
+        for (auto& entry : readers)
+            FS.r_close(entry.second);
+    }
+
     HRESULT __stdcall Open(D3D10_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes) override
     {
         string_path pname;
         strconcat(sizeof(pname), pname, RImplementation.getShaderPath(), pFileName);
-        R = FS.r_open(fsgame::game_shaders, pname);
+        IReader* R = FS.r_open(fsgame::game_shaders, pname);
         if (!R)
         {
             // possibly in shared directory or somewhere else - open directly
@@ -664,14 +675,19 @@ public:
         R->skip_bom(pFileName);
 
         *ppData = R->pointer();
-        *pBytes = R->elapsed();
+        *pBytes = static_cast<UINT>(R->elapsed());
+        readers.emplace_back(*ppData, R);
         return D3D_OK;
     }
 
-    HRESULT __stdcall Close(LPCVOID) override
+    HRESULT __stdcall Close(LPCVOID data) override
     {
-        if (R)
-            FS.r_close(R);
+        const auto it = std::find_if(readers.begin(), readers.end(), [data](const auto& entry) { return entry.first == data; });
+        if (it == readers.end())
+            return E_INVALIDARG;
+
+        FS.r_close(it->second);
+        readers.erase(it);
         return D3D_OK;
     }
 };
@@ -867,6 +883,7 @@ HRESULT CRender::shader_compile(LPCSTR name, DWORD const* pSrcData, UINT SrcData
     LPD3DBLOB pErrorBuf{};
     HRESULT _result{E_FAIL};
     u32 crc{};
+    bool cache_path_valid{};
 
     if (ps_r2_ls_flags_ext.test(R2FLAGEXT_SHADER_CACHE))
     {
@@ -878,8 +895,30 @@ HRESULT CRender::shader_compile(LPCSTR name, DWORD const* pSrcData, UINT SrcData
         _RELEASE(pShaderBuf);
         _RELEASE(pErrorBuf);
 
-        sprintf_s(file, "%s\\%s-%s-%x", file_name, pFunctionName, pTarget, Flags);
-        if (SUCCEEDED(_result) && FS.exist(file))
+        // OP22 (28.11 perf): FNV-1a по именам и значениям в порядке D3D, чтобы варианты кэша не вытесняли друг друга.
+        constexpr u64 fnv_prime = 1099511628211ull;
+        u64 macro_hash = 14695981039346656037ull;
+        for (const auto& macro : defines)
+        {
+            if (!macro.Name)
+                break;
+
+            for (const auto* part : {macro.Name, macro.Definition})
+            {
+                if (part)
+                    for (const unsigned char ch : std::string_view(part))
+                    {
+                        macro_hash ^= ch;
+                        macro_hash *= fnv_prime;
+                    }
+                macro_hash *= fnv_prime; // Разделитель NUL между полями.
+            }
+        }
+
+        const int cache_path_length = std::snprintf(file, sizeof(file), "%s\\%s-%s-%lx-%016llx", file_name, pFunctionName, pTarget, Flags,
+            static_cast<unsigned long long>(macro_hash));
+        cache_path_valid = cache_path_length > 0 && static_cast<size_t>(cache_path_length) < sizeof(string256); // Предел Register в VFS.
+        if (cache_path_valid && SUCCEEDED(_result) && FS.exist(file))
         {
             IReader* fp = FS.r_open(file);
 
@@ -908,7 +947,7 @@ HRESULT CRender::shader_compile(LPCSTR name, DWORD const* pSrcData, UINT SrcData
         _result = D3DCompile(pSrcData, SrcDataLen, "", defines.data(), &Includer, pFunctionName, pTarget, Flags, 0, &pShaderBuf, &pErrorBuf);
         if (SUCCEEDED(_result))
         {
-            if (ps_r2_ls_flags_ext.test(R2FLAGEXT_SHADER_CACHE) && crc)
+            if (ps_r2_ls_flags_ext.test(R2FLAGEXT_SHADER_CACHE) && cache_path_valid && crc)
             {
                 Msg("--Compiling shader [%s] [%s] [%s]", name, pTarget, pFunctionName);
 
@@ -1006,12 +1045,17 @@ void CRender::Begin()
         id.cmd_list.OnFrameBegin();
     }
 
-    // state main state parms on frame start only
+    // OP22 (28.11 perf): обновляем сдвиг основных сэмплеров по фактическому render-размеру.
     float mipBias = ps_r__tf_Mipbias;
     if (Target && Target->GetRenderWidth() < Target->GetDisplayWidth())
     {
         const float renderScale = static_cast<float>(Target->GetRenderWidth()) / static_cast<float>(Target->GetDisplayWidth());
-        mipBias += std::log2(renderScale);
+        // OP22 (28.11 perf): при FSR3/DLSS - рекомендация AMD/NVIDIA log2(render/display) - 1 (Quality: -1.58) вместо ручного
+        // r__tf_mipbias (он подобран для родного разрешения); при 0 - как было: ручной сдвиг + log2(render/display).
+        if (ps_op22_upscale_mipbias && (ps_r_pp_aa_mode == FSR3 || ps_r_pp_aa_mode == DLSS))
+            mipBias = std::log2(renderScale) - 1.f;
+        else
+            mipBias += std::log2(renderScale);
     }
     SSManager.SetParams(ps_r__tf_Anisotropic, mipBias);
 
@@ -1049,9 +1093,13 @@ void CRender::End()
         cleanup_contexts();
     }
 
+    // OP22 (28.11 perf): прежнее ожидание перед Present доступно через консоль.
+    if (!ps_op22_present_wait_early)
     {
         ZoneScopedN("PresentWait");
 
+        // OP22 (28.11 perf): вычитаем ожидание очереди кадров из времени работы.
+        const Op22HitchTimer timer(Op22HitchStage::present_wait);
         HW.WaitOnSwapChain(); // wait for prev Present to finish. not sure that it is best place to wait, but it works
     }
 
@@ -1072,6 +1120,8 @@ void CRender::End()
 
             if (frameTime < targetFrameTime)
             {
+                // OP22 (28.11 perf): лимит FPS тоже не считается работой кадра.
+                const Op22HitchTimer timer(Op22HitchStage::present_wait);
                 // считаем сколько спать
                 const auto remainingTime = targetFrameTime - frameTime;
                 const auto sleepTime = remainingTime / 1000ll;
@@ -1098,6 +1148,8 @@ void CRender::End()
     {
         ZoneScopedN("Present");
 
+        // OP22 (28.11 perf): Present может ждать GPU или вертикальной синхронизации.
+        const Op22HitchTimer timer(Op22HitchStage::present_wait);
         if (psDeviceFlags.test(rsVSync))
             {
                 // 512: DXGI_PRESENT_ALLOW_TEARING - allows for true V-Sync off with flip model

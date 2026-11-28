@@ -1,9 +1,17 @@
 #include "stdafx.h"
 
-void CRenderTarget::phase_dof(CBackend& cmd_list)
+// OP22 (28.11 perf): учитываем тепловизор и параметры того же прохода DOF.
+bool CRenderTarget::needs_dof() const
 {
     const auto& dof_params = shader_exports.get_dof_params();
-    if (fis_zero(dof_params.x) && fis_zero(dof_params.y) && fis_zero(dof_params.z) && fis_zero(dof_params.w))
+    return ps_pnv_mode != 2 && ps_pnv_mode != 3 &&
+        !(fis_zero(dof_params.x) && fis_zero(dof_params.y) && fis_zero(dof_params.z) && fis_zero(dof_params.w));
+}
+
+void CRenderTarget::phase_dof(CBackend& cmd_list)
+{
+    // OP22 (28.11 perf): условие совпадает с проверкой перед копированием глубины.
+    if (!needs_dof())
         return;
 
     PIX_EVENT(phase_DOF);

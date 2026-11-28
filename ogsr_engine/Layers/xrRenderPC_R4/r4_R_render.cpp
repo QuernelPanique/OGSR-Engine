@@ -274,8 +274,6 @@ void CRender::Render()
 
     PIX_EVENT(CRender_Render);
 
-    VERIFY(0 == mapDistort.size());
-
     Target->BeginTemporalUpscaleInput();
     Target->u_setrt(cmd_list, Target->GetRenderWidth(), Target->GetRenderHeight(), nullptr, nullptr, nullptr, nullptr);
     rmNormal(cmd_list);
@@ -410,6 +408,8 @@ void CRender::Render()
                 _RELEASE(res);
             }
             dsgraph.r_dsgraph_render_hud();
+            // OP22 (28.11 perf): глубину до отрисовки оптики читает только активный проход DOF.
+            if (!ps_op22_skip_unused_dof_copy || Target->needs_dof())
             {
                 PIX_EVENT(copy_zbuffer_scope_depth);
 
@@ -551,7 +551,8 @@ void CRender::Render()
     // wait occ results for next frame lights
     LP_normal.vis_update();
 
-    VERIFY(0 == mapDistort.size());
+    // OP22 (28.11 perf): очередь искажений проверяем после сведения, когда её уже отрисовали.
+    VERIFY(!o.distortion_enabled || dsgraph.mapDistort.empty());
 }
 
 
@@ -730,8 +731,6 @@ void CRender::render_forward()
 
     auto& dsgraph = get_imm_context();
     CBackend& cmd_list = dsgraph.cmd_list;
-
-    VERIFY(0 == mapDistort.size());
 
     //******* Main render - second order geometry (the one, that doesn't support deffering)
     //.todo: should be done inside "combine" with estimation of of luminance, tone-mapping, etc.

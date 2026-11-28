@@ -41,6 +41,7 @@ public:
     void LoadStage();
     void LoadDraw() const;
     void LoadForceFinish();
+    bool IsLoading() const { return ll_dwReference != 0; } // OP22 (28.11 perf): пропуск ожидания swapchain внутри загрузки.
 
     void SetLoadStageTitle(pcstr ls_title);
 

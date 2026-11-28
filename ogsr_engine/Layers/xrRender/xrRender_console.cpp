@@ -277,6 +277,12 @@ Fvector4 ps_ssfx_water_setup2{0.8f, 6.0f, 0.3f, 0.5f}; // Reflection, Specular, 
 int ps_op22_ssfx_volumetric = 0; // 1 - включено, нужен перезапуск (буферы и шейдеры)
 int ps_op22_gpu_stats = 0; // OP22: 1 - раз в 5 с в лог: мс видеокарты по фазам кадра и мс кадра процессора (сразу)
 int ps_op22_ssfx_sss_ext = 0; // OP22 (SSS 23): 1 - экранные тени от ламп (8 ближних прожекторов/ламп с тенью; трава, земля, оружие), нужен перезапуск
+// OP22 (28.11 perf): значения переключателей рендера для сравнения в игре.
+int ps_op22_present_wait_early = 1;
+int ps_op22_upscale_mipbias = 1;
+int ps_op22_particles_opt = 1;
+int ps_op22_fsr3_reactive = 0;
+int ps_op22_skip_unused_dof_copy = 1;
 int ps_op22_terrain_height = 0; // OP22: 1 - параллакс земли берёт высоту из альфы _bump# деталей (у цветных текстур ОП альфа = 255 - плоско), нужен перезапуск
 int ps_op22_ssfx_sss = 0; // OP22 (SSS 23): 1 - экранные тени солнца отдельным проходом SSS 22 (учёт прошлого кадра, размытие), нужен перезапуск
 Fvector4 ps_ssfx_sss{1.0f, 1.0f, 1.0f, 0.0f}; // Dir Len, Omni Len, Grass shadows, -
@@ -1077,6 +1083,12 @@ void xrRender_initconsole()
     CMD4(CCC_Integer, "op22_terrain_height", &ps_op22_terrain_height, 0, 1);
     CMD4(CCC_Integer, "op22_ssfx_sss_ext", &ps_op22_ssfx_sss_ext, 0, 1);
     CMD4(CCC_Integer, "op22_gpu_stats", &ps_op22_gpu_stats, 0, 1);
+    // OP22 (28.11 perf): регистрация переключателей.
+    CMD4(CCC_Integer, "op22_present_wait_early", &ps_op22_present_wait_early, 0, 1);
+    CMD4(CCC_Integer, "op22_upscale_mipbias", &ps_op22_upscale_mipbias, 0, 1);
+    CMD4(CCC_Integer, "op22_particles_opt", &ps_op22_particles_opt, 0, 1);
+    CMD4(CCC_Integer, "op22_fsr3_reactive", &ps_op22_fsr3_reactive, 0, 1);
+    CMD4(CCC_Integer, "op22_skip_unused_dof_copy", &ps_op22_skip_unused_dof_copy, 0, 1);
     CMD4(CCC_Vector4, "ssfx_sss", &ps_ssfx_sss, (Fvector4{0, 0, 0, 0}), (Fvector4{3, 3, 1, 1}));
     CMD4(CCC_Vector4, "ssfx_sss_quality", &ps_ssfx_sss_quality, (Fvector4{1, 1, 0, 0}), (Fvector4{24, 12, 1, 1}));
     CMD4(CCC_Vector4, "ssfx_volumetric", &ps_ssfx_volumetric, (Fvector4{0, 0, 4, 1}), (Fvector4{1, 5, 16, 8}));

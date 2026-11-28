@@ -61,11 +61,16 @@ void CExoOutfit::op22_update(u32 actor_state)
         return;
     m_op22_time = Device.dwTimeGlobal + 1000;
 
-    luabind::functor<float> f;
+    luabind::functor<luabind::object> f;
     if (ai().script_engine().functor("op22_exo.update", f))
     {
-        m_op22_charge = f(lua_game_object(), m_op22_ms_move, m_op22_ms_sprint, m_op22_jumps);
-        m_op22_powered = m_op22_charge != 0.f;
+        // OP22 (28.11 perf): pcall подставляет nil при nofatal, а нулевой заряд остаётся допустимым результатом.
+        const luabind::object charge = f(lua_game_object(), m_op22_ms_move, m_op22_ms_sprint, m_op22_jumps);
+        if (!luabind::get_op22_nofatal() || (charge.is_valid() && charge.type() != LUA_TNIL))
+        {
+            m_op22_charge = luabind::object_cast<float>(charge);
+            m_op22_powered = m_op22_charge != 0.f;
+        }
     }
     m_op22_ms_move = m_op22_ms_sprint = 0.f;
     m_op22_jumps = 0;

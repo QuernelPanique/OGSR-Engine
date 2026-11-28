@@ -192,13 +192,23 @@ void CLevel::ClientSave()
         // Msg( "save:iterating:%d:%s", P->ID(), *P->cName() );
         if (P && !P->getDestroy() && P->net_SaveRelevant())
         {
-            NET_Packet Packet;
+            // OP22 (28.11 perf): как в ClientSend, не передаём пакет записи с чужой секцией.
+            const auto section_mismatch = [O](CSE_Abstract* E) {
+                if (!E || E->s_name == O->cNameSect())
+                    return false;
+                Msg("! [OP22 nofatal] ClientSave: id [%u] client [%s] sect [%s] but server entity [%s] sect [%s] id [%u] - packet skipped",
+                    u32(O->ID()), O->cName().c_str(), O->cNameSect().c_str(), E->name_replace(), E->s_name.c_str(), u32(E->ID));
+                return true;
+            };
+            if (section_mismatch(Server->ID_to_entity(O->ID())))
+                continue;
 
+            NET_Packet Packet;
             P->net_Save(Packet); // вызов save(NET_Packet& output_packet)
 
+            // OP22 (28.11 perf): net_Save вызывает Lua, поэтому заново ищем и сверяем запись перед загрузкой пакета.
             CSE_Abstract* E = Server->ID_to_entity(O->ID());
-
-            if (E)
+            if (E && !section_mismatch(E))
             {
                 E->net_Ready = TRUE;
                 E->load(Packet);

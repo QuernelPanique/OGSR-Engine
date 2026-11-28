@@ -35,18 +35,17 @@ void R_dsgraph_structure::r_dsgraph_render_graph_static(const u32 _priority, con
             STextureList* textures{};
 
             normalSorted.reserve(map.size());
-            for (auto it = map.cbegin(); it != map.cend(); ++it)
+            // OP22 (28.11 perf): сортируем только проходы с геометрией.
+            for (auto it = map.begin(); it != map.end(); ++it)
             {
-                normalSorted.push_back(it);
+                if (!it->second.items->empty() || !it->second.trees->empty())
+                    normalSorted.push_back(it);
             }
 
             std::ranges::sort(normalSorted, [](const auto& a, const auto& b) { return a->second.ssa > b->second.ssa; });
 
             for (auto& it : normalSorted)
             {
-                if (it->second.items->empty() && it->second.trees->empty())
-                    continue;
-
                 cmd_list.set_VS(it->first->vs);
                 cmd_list.set_GS(it->first->gs);
                 cmd_list.set_PS(it->first->ps);
@@ -126,12 +125,9 @@ void R_dsgraph_structure::r_dsgraph_render_graph_static(const u32 _priority, con
                         }
                     }
                 }
-
-                items.items->clear();
-                items.trees->clear();
             }
             normalSorted.clear();
-            map.clear();
+            map.clear(); // OP22 (28.11 perf): возвращаем узлы и очищаем данные прохода.
         }
     }
 }
@@ -189,9 +185,8 @@ void R_dsgraph_structure::r_dsgraph_render_graph_dynamic(u32 _priority)
                     cmd_list.lod.set_lod(lod);
                     item.pVisual->Render(cmd_list, lod, phase != CRender::PHASE_NORMAL);
                 }
-                items.items->clear();
             }
-            map.clear();
+            map.clear(); // OP22 (28.11 perf): возвращаем узлы в пул динамики.
         }
     }
 
@@ -289,9 +284,8 @@ void render_large_map(const u32 context_id, mapSortedLarge_T& map)
             dsgraph.cmd_list.lod.set_lod(lod);
             item.pVisual->Render(dsgraph.cmd_list, lod, dsgraph.phase != CRender::PHASE_NORMAL);
         }
-        items.items->clear();
     }
-    map.clear();
+    map.clear(); // OP22 (28.11 perf): возвращаем узлы в пул искажений.
 }
 } // namespace
 
